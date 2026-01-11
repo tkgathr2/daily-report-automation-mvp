@@ -1,10 +1,10 @@
 /**
- * 日報くん
+ * 日報くん（WEBアプリ版）
  *
- * Googleカレンダーと営業KPIシートから情報を取得し、
- * 日報の下書きを自動生成 → 編集 → ワンクリックでSlack送信できるシステム
+ * Googleカレンダーから今日の予定を取得し、
+ * WEBブラウザ上で表示・編集・コピー → Slack送信できるWEBアプリ
  *
- * @version 1.0
+ * @version 2.0
  * @author Claude Code
  */
 
@@ -12,215 +12,29 @@
 // 定数定義
 // ============================================
 
-// シート名
-const SHEET_NAME_KPI = 'KPI';
-const SHEET_NAME_DRAFT = 'DailyReport_Draft';
-const SHEET_NAME_CONFIG = 'Config';
+// スクリプトプロパティキー
+const PROPERTY_WEBHOOK_URL = 'SLACK_WEBHOOK_URL';
 
-// 列インデックス（DailyReport_Draftシート）
-const COL_DATE = 0;  // A列：日付
-const COL_SCHEDULE = 1;  // B列：スケジュール本文
-const COL_KPI = 2;  // C列：KPI本文
-const COL_GOOD = 3;  // D列：上手く行ったこと
-const COL_BAD = 4;  // E列：上手く行かなかったこと
-const COL_TOMORROW = 5;  // F列：明日やること
-const COL_SLACK_TEXT = 6;  // G列：Slack投稿本文
-const COL_SENT = 7;  // H列：送信済み
-const COL_SENT_DATETIME = 8;  // I列：送信日時
+// タイムゾーン
+const TIMEZONE = 'Asia/Tokyo';
 
-// 列インデックス（KPIシート）
-const COL_KPI_DATE = 0;  // A列：日付
-const COL_KPI_VISIT = 1;  // B列：訪問数
-
-// Config設定項目名
-const CONFIG_CALENDAR_ID = 'CALENDAR_ID';
-const CONFIG_WEBHOOK_URL = 'SLACK_WEBHOOK_URL';
-const CONFIG_CHANNEL = 'SLACK_CHANNEL';
+// 日付フォーマット
+const DATE_FORMAT = 'yyyy/MM/dd';
+const TIME_FORMAT = 'HH:mm';
 
 // ============================================
-// メイン関数
+// WEBアプリエントリーポイント
 // ============================================
 
 /**
- * スプレッドシートを開いた際にカスタムメニューを追加
+ * WEBアプリのエントリーポイント
+ * HTMLファイルを返却する
+ * @returns {HtmlOutput} HTMLページ
  */
-function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('日報システム')
-    .addItem('日報生成', 'generateDailyReport')
-    .addItem('日報送信', 'sendToSlack')
-    .addToUi();
-}
-
-/**
- * 日報下書き生成のメイン関数
- * カレンダー予定とKPIデータを取得し、DailyReport_Draftシートに下書きを生成
- */
-function generateDailyReport() {
-  Logger.log('日報生成開始');
-
-  try {
-    // 今日の日付を取得
-    const todayString = getTodayDateString();
-    Logger.log('対象日付：' + todayString);
-
-    // Configシートから設定値を取得
-    const calendarId = getConfigValue(CONFIG_CALENDAR_ID);
-    if (!calendarId) {
-      return; // エラーはgetConfigValue内で表示済み
-    }
-    Logger.log('カレンダーID取得完了：' + calendarId);
-
-    // カレンダーから予定を取得
-    const events = getCalendarEvents(todayString, calendarId);
-    if (events === null) {
-      return; // エラーはgetCalendarEvents内で表示済み
-    }
-    Logger.log('カレンダー予定取得完了：' + events.length + '件');
-
-    // スケジュール本文をフォーマット
-    const scheduleText = formatScheduleText(events);
-    Logger.log('スケジュール本文：' + scheduleText);
-
-    // KPIシートからデータを取得
-    const kpiData = getKPIData(todayString);
-    if (kpiData === null) {
-      return; // エラーはgetKPIData内で表示済み
-    }
-    Logger.log('KPIデータ取得完了：訪問数=' + kpiData.visit);
-
-    // KPI本文をフォーマット
-    const kpiText = formatKPIText(kpiData);
-    Logger.log('KPI本文：' + kpiText);
-
-    // DailyReport_Draftシートを取得
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const draftSheet = ss.getSheetByName(SHEET_NAME_DRAFT);
-    if (!draftSheet) {
-      showError('エラー：DailyReport_Draftシートが見つかりません。シート名を確認してください。');
-      return;
-    }
-
-    // 該当日の行を検索
-    const rowIndex = findRowByDate(draftSheet, todayString, COL_DATE);
-
-    // 行データを準備
-    const today = new Date();
-    const rowData = [
-      todayString,      // A列：日付
-      scheduleText,     // B列：スケジュール本文
-      kpiText,          // C列：KPI本文
-      '',               // D列：上手く行ったこと（空欄）
-      '',               // E列：上手く行かなかったこと（空欄）
-      '',               // F列：明日やること（空欄）
-      '',               // G列：Slack投稿本文（送信時に生成）
-      'FALSE',          // H列：送信済み
-      ''                // I列：送信日時（空欄）
-    ];
-
-    if (rowIndex > 0) {
-      // 既存行を上書き（手入力欄は保持）
-      const existingData = draftSheet.getRange(rowIndex, 1, 1, 9).getValues()[0];
-      rowData[COL_GOOD] = existingData[COL_GOOD] || '';  // 上手く行ったこと
-      rowData[COL_BAD] = existingData[COL_BAD] || '';   // 上手く行かなかったこと
-      rowData[COL_TOMORROW] = existingData[COL_TOMORROW] || '';  // 明日やること
-      rowData[COL_SENT] = existingData[COL_SENT] || 'FALSE';  // 送信済みフラグ
-      rowData[COL_SENT_DATETIME] = existingData[COL_SENT_DATETIME] || '';  // 送信日時
-
-      draftSheet.getRange(rowIndex, 1, 1, 9).setValues([rowData]);
-      Logger.log('既存行を上書き：行番号=' + rowIndex);
-    } else {
-      // 新規行を追加
-      draftSheet.appendRow(rowData);
-      Logger.log('新規行を追加');
-    }
-
-    // 完了メッセージ
-    Browser.msgBox('日報生成完了', '日報下書きを生成しました。\\n対象日：' + todayString, Browser.Buttons.OK);
-    Logger.log('日報生成完了');
-
-  } catch (error) {
-    Logger.log('日報生成エラー：' + error.message);
-    showError('エラー：日報生成中に予期しないエラーが発生しました。\\n詳細：' + error.message);
-  }
-}
-
-/**
- * Slack送信のメイン関数
- * DailyReport_Draftシートから当日の日報を取得し、Slackに送信
- */
-function sendToSlack() {
-  Logger.log('Slack送信開始');
-
-  try {
-    // 今日の日付を取得
-    const todayString = getTodayDateString();
-    Logger.log('対象日付：' + todayString);
-
-    // Configシートから設定値を取得
-    const webhookUrl = getConfigValue(CONFIG_WEBHOOK_URL);
-    if (!webhookUrl) {
-      return; // エラーはgetConfigValue内で表示済み
-    }
-    Logger.log('Webhook URL取得完了');
-
-    const channel = getConfigValue(CONFIG_CHANNEL);
-    if (!channel) {
-      return; // エラーはgetConfigValue内で表示済み
-    }
-    Logger.log('チャンネル名取得完了：' + channel);
-
-    // DailyReport_Draftシートを取得
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const draftSheet = ss.getSheetByName(SHEET_NAME_DRAFT);
-    if (!draftSheet) {
-      showError('エラー：DailyReport_Draftシートが見つかりません。シート名を確認してください。');
-      return;
-    }
-
-    // 該当日の行を検索
-    const rowIndex = findRowByDate(draftSheet, todayString, COL_DATE);
-    if (rowIndex < 0) {
-      showError('エラー：本日（' + todayString + '）の日報が存在しません。先に「日報生成」を実行してください。');
-      return;
-    }
-
-    // 行データを取得
-    const rowData = draftSheet.getRange(rowIndex, 1, 1, 9).getValues()[0];
-
-    // 送信済みフラグをチェック
-    const sentFlag = String(rowData[COL_SENT]).toUpperCase();
-    if (sentFlag === 'TRUE') {
-      showError('エラー：この日報は既に送信済みです。再送信する場合は、送信済みフラグをFALSEに変更してください。');
-      return;
-    }
-
-    // Slack投稿本文を生成
-    const slackText = formatDailyReportText(rowData);
-    Logger.log('Slack投稿本文生成完了');
-
-    // Slackに送信
-    const success = sendSlackMessage(webhookUrl, channel, slackText);
-    if (!success) {
-      return; // エラーはsendSlackMessage内で表示済み
-    }
-
-    // 送信成功時：送信済みフラグと送信日時を更新
-    const now = new Date();
-    const sentDatetime = Utilities.formatDate(now, 'Asia/Tokyo', 'yyyy/MM/dd HH:mm:ss');
-
-    draftSheet.getRange(rowIndex, COL_SLACK_TEXT + 1).setValue(slackText);  // G列：Slack投稿本文
-    draftSheet.getRange(rowIndex, COL_SENT + 1).setValue('TRUE');  // H列：送信済み
-    draftSheet.getRange(rowIndex, COL_SENT_DATETIME + 1).setValue(sentDatetime);  // I列：送信日時
-
-    // 完了メッセージ
-    Browser.msgBox('送信完了', 'Slackへの送信が完了しました。\\nチャンネル：' + channel + '\\n送信日時：' + sentDatetime, Browser.Buttons.OK);
-    Logger.log('Slack送信完了：' + sentDatetime);
-
-  } catch (error) {
-    Logger.log('Slack送信エラー：' + error.message);
-    showError('エラー：Slack送信中に予期しないエラーが発生しました。\\n詳細：' + error.message);
-  }
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('日報くん')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // ============================================
@@ -228,36 +42,35 @@ function sendToSlack() {
 // ============================================
 
 /**
- * カレンダーから指定日の予定を取得
- * @param {string} dateString - 日付文字列（YYYY/MM/DD形式）
- * @param {string} calendarId - カレンダーID
- * @returns {Array|null} イベント配列、エラー時はnull
+ * 今日のカレンダー予定を取得
+ * プライマリカレンダーから当日の予定を取得し、フォーマット済みテキストを返却
+ * @returns {string} フォーマット済み予定テキスト、またはエラーメッセージ
  */
-function getCalendarEvents(dateString, calendarId) {
+function getTodayEvents() {
+  Logger.log('カレンダー予定取得開始');
+
   try {
-    // 日付をパース
-    const parts = dateString.split('/');
-    const year = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;  // 月は0始まり
-    const day = parseInt(parts[2], 10);
+    // 今日の日付を取得
+    const todayString = getTodayDateString();
+    Logger.log('対象日付：' + todayString);
 
-    // 開始時刻と終了時刻を設定（JST基準）
-    const startTime = new Date(year, month, day, 0, 0, 0);
-    const endTime = new Date(year, month, day, 23, 59, 59);
+    // 今日の開始時刻と終了時刻を設定
+    const today = new Date();
+    const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+    const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-    // カレンダーを取得
+    // プライマリカレンダーを取得
     let calendar;
     try {
-      calendar = CalendarApp.getCalendarById(calendarId);
+      calendar = CalendarApp.getCalendarById('primary');
     } catch (e) {
-      Logger.log('カレンダー取得エラー：' + e.message);
-      showError('エラー：カレンダーIDが無効です。ConfigシートのCALENDAR_IDを確認してください。');
-      return null;
+      Logger.log('カレンダーアクセスエラー：' + e.message);
+      return 'エラー：カレンダーへのアクセス権限がありません。権限を確認してください。';
     }
 
     if (!calendar) {
-      showError('エラー：カレンダーIDが無効です。ConfigシートのCALENDAR_IDを確認してください。');
-      return null;
+      Logger.log('カレンダー取得失敗：プライマリカレンダーが見つかりません');
+      return 'エラー：カレンダーへのアクセス権限がありません。権限を確認してください。';
     }
 
     // 予定を取得
@@ -266,15 +79,10 @@ function getCalendarEvents(dateString, calendarId) {
       events = calendar.getEvents(startTime, endTime);
     } catch (e) {
       Logger.log('カレンダー予定取得エラー：' + e.message);
-      if (e.message.includes('forbidden') || e.message.includes('permission')) {
-        showError('エラー：カレンダーへのアクセス権限がありません。カレンダーの共有設定を確認してください。');
-      } else if (e.message.includes('rate') || e.message.includes('limit')) {
-        showError('エラー：APIの利用制限に達しました。しばらく時間をおいてから再度お試しください。');
-      } else {
-        showError('エラー：カレンダーIDが無効です。ConfigシートのCALENDAR_IDを確認してください。');
-      }
-      return null;
+      return 'エラー：カレンダーから予定を取得できませんでした。しばらく時間をおいてから再度お試しください。';
     }
+
+    Logger.log('カレンダー予定取得完了：' + events.length + '件');
 
     // イベント情報を配列に変換
     const eventList = [];
@@ -293,23 +101,26 @@ function getCalendarEvents(dateString, calendarId) {
       return a.startTime.getTime() - b.startTime.getTime();
     });
 
-    return eventList;
+    // テキスト形式にフォーマット
+    const scheduleText = formatScheduleText(eventList);
+    Logger.log('スケジュールテキスト生成完了');
+
+    return scheduleText;
 
   } catch (error) {
-    Logger.log('getCalendarEventsエラー：' + error.message);
-    showError('エラー：カレンダー予定の取得中にエラーが発生しました。\\n詳細：' + error.message);
-    return null;
+    Logger.log('getTodayEventsエラー：' + error.message);
+    return 'エラー：予期しないエラーが発生しました。詳細：' + error.message;
   }
 }
 
 /**
- * スケジュール本文をフォーマット
+ * イベント配列をテキスト形式にフォーマット
  * @param {Array} events - イベント配列
- * @returns {string} フォーマット済みスケジュール本文
+ * @returns {string} フォーマット済みテキスト
  */
 function formatScheduleText(events) {
   if (!events || events.length === 0) {
-    return '・予定なし';
+    return '';  // 予定が0件の場合は空文字列
   }
 
   const lines = [];
@@ -320,8 +131,8 @@ function formatScheduleText(events) {
       lines.push('・' + event.title + '（終日）');
     } else {
       // 通常イベント
-      const startTimeStr = Utilities.formatDate(event.startTime, 'Asia/Tokyo', 'HH:mm');
-      const endTimeStr = Utilities.formatDate(event.endTime, 'Asia/Tokyo', 'HH:mm');
+      const startTimeStr = Utilities.formatDate(event.startTime, TIMEZONE, TIME_FORMAT);
+      const endTimeStr = Utilities.formatDate(event.endTime, TIMEZONE, TIME_FORMAT);
       lines.push('・' + event.title + ' ' + startTimeStr + '-' + endTimeStr);
     }
   }
@@ -330,118 +141,43 @@ function formatScheduleText(events) {
 }
 
 // ============================================
-// KPI関連関数
+// Slack送信関連関数
 // ============================================
 
 /**
- * KPIシートから指定日のデータを取得
- * @param {string} dateString - 日付文字列（YYYY/MM/DD形式）
- * @returns {Object|null} KPIデータオブジェクト、エラー時はnull
+ * Slackに投稿
+ * @param {string} text - テキストエリアの内容
+ * @param {string} channel - チャンネル名（#から始まる）
+ * @returns {string} 成功/失敗メッセージ
  */
-function getKPIData(dateString) {
+function sendToSlack(text, channel) {
+  Logger.log('Slack送信開始');
+
   try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const kpiSheet = ss.getSheetByName(SHEET_NAME_KPI);
-
-    if (!kpiSheet) {
-      showError('エラー：KPIシートが見つかりません。シート名を確認してください。');
-      return null;
+    // チャンネル名のバリデーション
+    if (!channel || !channel.startsWith('#')) {
+      Logger.log('チャンネル名エラー：' + channel);
+      return 'エラー：チャンネル名が無効です。#から始まる形式で入力してください。';
     }
 
-    // 該当日の行を検索
-    const rowIndex = findRowByDate(kpiSheet, dateString, COL_KPI_DATE);
-    if (rowIndex < 0) {
-      showError('エラー：KPIシートに本日（' + dateString + '）のデータが存在しません。KPIシートにデータを入力してください。');
-      return null;
+    // Webhook URLを取得
+    const webhookUrl = getWebhookUrl();
+    if (!webhookUrl) {
+      Logger.log('Webhook URL未設定');
+      return 'エラー：Slack Webhook URLが設定されていません。設定を確認してください。';
     }
 
-    // 行データを取得
-    const rowData = kpiSheet.getRange(rowIndex, 1, 1, 4).getValues()[0];
+    // 今日の日付を取得
+    const todayString = getTodayDateString();
 
-    // 訪問数を取得・バリデーション
-    let visitCount = rowData[COL_KPI_VISIT];
+    // Slack投稿本文を生成
+    const slackMessage = formatSlackMessage(todayString, text);
+    Logger.log('Slack投稿本文生成完了');
 
-    // 空の場合は0として扱う
-    if (visitCount === '' || visitCount === null || visitCount === undefined) {
-      visitCount = 0;
-    } else if (typeof visitCount !== 'number') {
-      // 数値でない場合
-      showError('エラー：KPIシートの訪問数が数値ではありません。整数を入力してください。');
-      return null;
-    } else if (visitCount < 0) {
-      // 負の値の場合
-      showError('エラー：KPIシートの訪問数が負の値です。0以上の整数を入力してください。');
-      return null;
-    }
-
-    return {
-      date: dateString,
-      visit: Math.floor(visitCount)  // 整数に変換
-    };
-
-  } catch (error) {
-    Logger.log('getKPIDataエラー：' + error.message);
-    showError('エラー：KPIデータの取得中にエラーが発生しました。\\n詳細：' + error.message);
-    return null;
-  }
-}
-
-/**
- * KPI本文をフォーマット
- * @param {Object} kpiData - KPIデータオブジェクト
- * @returns {string} フォーマット済みKPI本文
- */
-function formatKPIText(kpiData) {
-  return '・訪問数：' + kpiData.visit + '件';
-}
-
-// ============================================
-// Slack関連関数
-// ============================================
-
-/**
- * 日報本文をフォーマット（Slack投稿用）
- * @param {Array} rowData - DailyReport_Draftシートの行データ
- * @returns {string} フォーマット済み日報本文
- */
-function formatDailyReportText(rowData) {
-  const dateStr = rowData[COL_DATE];
-  const scheduleText = rowData[COL_SCHEDULE] || '・予定なし';
-  const kpiText = rowData[COL_KPI] || '・訪問数：0件';
-  const goodText = rowData[COL_GOOD] || '（未記入）';
-  const badText = rowData[COL_BAD] || '（未記入）';
-  const tomorrowText = rowData[COL_TOMORROW] || '（未記入）';
-
-  // 日付をフォーマット
-  let formattedDate = dateStr;
-  if (dateStr instanceof Date) {
-    formattedDate = Utilities.formatDate(dateStr, 'Asia/Tokyo', 'yyyy/MM/dd');
-  }
-
-  // Slack投稿本文を生成
-  const text = '【日報】' + formattedDate + '\n\n' +
-    '■ 本日のスケジュール\n' + scheduleText + '\n\n' +
-    '■ KPI実績\n' + kpiText + '\n\n' +
-    '■ 上手く行ったこと\n' + (goodText.trim() === '' ? '（未記入）' : goodText) + '\n\n' +
-    '■ 上手く行かなかったこと\n' + (badText.trim() === '' ? '（未記入）' : badText) + '\n\n' +
-    '■ 明日やること\n' + (tomorrowText.trim() === '' ? '（未記入）' : tomorrowText);
-
-  return text;
-}
-
-/**
- * Slackにメッセージを送信
- * @param {string} webhookUrl - Webhook URL
- * @param {string} channel - チャンネル名
- * @param {string} text - 投稿本文
- * @returns {boolean} 成功時true、失敗時false
- */
-function sendSlackMessage(webhookUrl, channel, text) {
-  try {
     // リクエストボディを作成
     const payload = {
       channel: channel,
-      text: text
+      text: slackMessage
     };
 
     // リクエストオプションを設定
@@ -449,11 +185,21 @@ function sendSlackMessage(webhookUrl, channel, text) {
       method: 'post',
       contentType: 'application/json',
       payload: JSON.stringify(payload),
-      muteHttpExceptions: true  // HTTPエラーでも例外を投げない
+      muteHttpExceptions: true
     };
 
     // Slackに送信
-    const response = UrlFetchApp.fetch(webhookUrl, options);
+    let response;
+    try {
+      response = UrlFetchApp.fetch(webhookUrl, options);
+    } catch (e) {
+      Logger.log('Slack送信エラー：' + e.message);
+      if (e.message.includes('Invalid argument') || e.message.includes('Invalid URL')) {
+        return 'エラー：Slack Webhook URLが無効です。設定を確認してください。';
+      }
+      return 'エラー：Slackへの送信に失敗しました。ネットワーク接続を確認してください。';
+    }
+
     const responseCode = response.getResponseCode();
     const responseText = response.getContentText();
 
@@ -461,81 +207,57 @@ function sendSlackMessage(webhookUrl, channel, text) {
 
     // レスポンスをチェック
     if (responseCode === 200 && responseText === 'ok') {
-      return true;
+      Logger.log('Slack送信完了');
+      return '送信成功：Slackに投稿しました。';
     } else if (responseCode === 404) {
-      showError('エラー：Slack Webhook URLが無効です。ConfigシートのSLACK_WEBHOOK_URLを確認してください。');
-      return false;
-    } else if (responseCode === 400 && responseText.includes('channel')) {
-      showError('エラー：Slackチャンネル名が無効です。ConfigシートのSLACK_CHANNELを確認してください。');
-      return false;
+      return 'エラー：Slack Webhook URLが無効です。設定を確認してください。';
     } else {
-      showError('エラー：Slackへの送信に失敗しました。ネットワーク接続を確認してください。');
-      return false;
+      return 'エラー：Slackへの送信に失敗しました。ネットワーク接続を確認してください。';
     }
 
   } catch (error) {
-    Logger.log('sendSlackMessageエラー：' + error.message);
-    if (error.message.includes('Invalid argument') || error.message.includes('Invalid URL')) {
-      showError('エラー：Slack Webhook URLが無効です。ConfigシートのSLACK_WEBHOOK_URLを確認してください。');
-    } else {
-      showError('エラー：Slackへの送信に失敗しました。ネットワーク接続を確認してください。');
-    }
-    return false;
+    Logger.log('sendToSlackエラー：' + error.message);
+    return 'エラー：予期しないエラーが発生しました。詳細：' + error.message;
   }
 }
 
+/**
+ * Slack投稿本文を生成
+ * @param {string} date - 日付（YYYY/MM/DD形式）
+ * @param {string} text - テキストエリアの内容
+ * @returns {string} Slack投稿本文
+ */
+function formatSlackMessage(date, text) {
+  return '【日報】' + date + '\n\n■ 本日のスケジュール\n' + text;
+}
+
 // ============================================
-// 設定・ユーティリティ関数
+// 設定管理関数
 // ============================================
 
 /**
- * Configシートから設定値を取得
- * @param {string} key - 設定項目名
- * @returns {string|null} 設定値、エラー時はnull
+ * スクリプトプロパティからWebhook URLを取得
+ * @returns {string|null} Webhook URL、未設定の場合はnull
  */
-function getConfigValue(key) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const configSheet = ss.getSheetByName(SHEET_NAME_CONFIG);
-
-    if (!configSheet) {
-      showError('エラー：Configシートが見つかりません。シート名を確認してください。');
-      return null;
-    }
-
-    // Configシートのデータを取得
-    const data = configSheet.getDataRange().getValues();
-
-    // 設定項目を検索（1行目はヘッダーなのでスキップ）
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][0] === key) {
-        const value = data[i][1];
-        if (value === '' || value === null || value === undefined) {
-          showError('エラー：Configシートの設定項目（' + key + '）の値が空です。');
-          return null;
-        }
-        return String(value);
-      }
-    }
-
-    // 設定項目が見つからない（各設定項目ごとにメッセージを分ける）
-    if (key === CONFIG_CALENDAR_ID) {
-      showError('エラー：ConfigシートにCALENDAR_IDが設定されていません。');
-    } else if (key === CONFIG_WEBHOOK_URL) {
-      showError('エラー：ConfigシートにSLACK_WEBHOOK_URLが設定されていません。');
-    } else if (key === CONFIG_CHANNEL) {
-      showError('エラー：ConfigシートにSLACK_CHANNELが設定されていません。');
-    } else {
-      showError('エラー：Configシートに必須設定項目（' + key + '）が設定されていません。');
-    }
-    return null;
-
-  } catch (error) {
-    Logger.log('getConfigValueエラー：' + error.message);
-    showError('エラー：設定値の取得中にエラーが発生しました。\\n詳細：' + error.message);
-    return null;
-  }
+function getWebhookUrl() {
+  const properties = PropertiesService.getScriptProperties();
+  const url = properties.getProperty(PROPERTY_WEBHOOK_URL);
+  return url || null;
 }
+
+/**
+ * スクリプトプロパティにWebhook URLを設定
+ * @param {string} url - Webhook URL
+ */
+function setWebhookUrl(url) {
+  const properties = PropertiesService.getScriptProperties();
+  properties.setProperty(PROPERTY_WEBHOOK_URL, url);
+  Logger.log('Webhook URL設定完了');
+}
+
+// ============================================
+// ユーティリティ関数
+// ============================================
 
 /**
  * 今日の日付をYYYY/MM/DD形式で取得
@@ -543,49 +265,5 @@ function getConfigValue(key) {
  */
 function getTodayDateString() {
   const today = new Date();
-  return Utilities.formatDate(today, 'Asia/Tokyo', 'yyyy/MM/dd');
-}
-
-/**
- * 指定日付の行を検索
- * @param {Sheet} sheet - 検索対象のシート
- * @param {string} dateString - 日付文字列（YYYY/MM/DD形式）
- * @param {number} dateColumnIndex - 日付列のインデックス（0始まり）
- * @returns {number} 行番号（1始まり）、見つからない場合は-1
- */
-function findRowByDate(sheet, dateString, dateColumnIndex) {
-  const data = sheet.getDataRange().getValues();
-
-  // 1行目はヘッダーなのでスキップ
-  for (let i = 1; i < data.length; i++) {
-    const cellValue = data[i][dateColumnIndex];
-
-    // セルの値が空の場合はスキップ
-    if (cellValue === '' || cellValue === null || cellValue === undefined) {
-      continue;
-    }
-
-    // 日付を文字列に変換して比較
-    let cellDateString;
-    if (cellValue instanceof Date) {
-      cellDateString = Utilities.formatDate(cellValue, 'Asia/Tokyo', 'yyyy/MM/dd');
-    } else {
-      cellDateString = String(cellValue);
-    }
-
-    if (cellDateString === dateString) {
-      return i + 1;  // 行番号は1始まり
-    }
-  }
-
-  return -1;  // 見つからない場合
-}
-
-/**
- * エラーメッセージを表示
- * @param {string} message - エラーメッセージ
- */
-function showError(message) {
-  Logger.log('エラー：' + message);
-  Browser.msgBox('エラー', message, Browser.Buttons.OK);
+  return Utilities.formatDate(today, TIMEZONE, DATE_FORMAT);
 }

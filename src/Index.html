@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* ============================================
+       基本スタイル
+       ============================================ */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f5f5f5;
+      padding: 20px;
+    }
+
+    /* ============================================
+       コンテナ
+       ============================================ */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+
+    /* ============================================
+       ヘッダー
+       ============================================ */
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: #7f8c8d;
+    }
+
+    /* ============================================
+       セクション
+       ============================================ */
+    .section {
+      margin-bottom: 25px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+
+    /* ============================================
+       ボタン
+       ============================================ */
+    .btn {
+      display: inline-block;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: bold;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background-color: #3498db;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background-color: #2980b9;
+    }
+
+    .btn-primary:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background-color: #95a5a6;
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background-color: #7f8c8d;
+    }
+
+    .btn-success {
+      background-color: #27ae60;
+      color: #fff;
+    }
+
+    .btn-success:hover {
+      background-color: #219a52;
+    }
+
+    .btn-success:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+
+    /* ============================================
+       テキストエリア
+       ============================================ */
+    .textarea-container {
+      margin: 15px 0;
+    }
+
+    textarea {
+      width: 100%;
+      height: 300px;
+      padding: 15px;
+      font-size: 14px;
+      font-family: inherit;
+      line-height: 1.8;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      resize: vertical;
+      transition: border-color 0.3s ease;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    /* ============================================
+       フォーム
+       ============================================ */
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 5px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      font-size: 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    .form-hint {
+      font-size: 12px;
+      color: #7f8c8d;
+      margin-top: 5px;
+    }
+
+    /* ============================================
+       Slack送信フォーム
+       ============================================ */
+    .slack-form {
+      background-color: #f8f9fa;
+      padding: 20px;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .slack-form .section-title {
+      margin-bottom: 15px;
+    }
+
+    /* ============================================
+       メッセージ表示
+       ============================================ */
+    .message {
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.success {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+
+    .message.error {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+
+    /* ============================================
+       ローディング
+       ============================================ */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: #7f8c8d;
+    }
+
+    .loading.show {
+      display: block;
+    }
+
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #e0e0e0;
+      border-top-color: #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ============================================
+       ボタングループ
+       ============================================ */
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ============================================
+       レスポンシブ対応
+       ============================================ */
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+
+      .container {
+        padding: 20px;
+      }
+
+      .header h1 {
+        font-size: 20px;
+      }
+
+      .btn {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- ヘッダー -->
+    <div class="header">
+      <h1>日報くん</h1>
+      <p>今日の予定を取得してSlackに送信</p>
+    </div>
+
+    <!-- 予定取得セクション -->
+    <div class="section">
+      <button id="btnGetEvents" class="btn btn-primary" onclick="loadEvents()">
+        今日の予定を取得
+      </button>
+    </div>
+
+    <!-- ローディング表示 -->
+    <div id="loading" class="loading">
+      <span class="loading-spinner"></span>
+      <span>読み込み中...</span>
+    </div>
+
+    <!-- テキストエリア -->
+    <div class="section textarea-container">
+      <div class="section-title">予定データ（編集可能）</div>
+      <textarea id="scheduleText" placeholder="「今日の予定を取得」ボタンをクリックすると、ここにカレンダーの予定が表示されます。"></textarea>
+    </div>
+
+    <!-- コピーボタン -->
+    <div class="section">
+      <button id="btnCopy" class="btn btn-secondary" onclick="copyToClipboard()">
+        コピー
+      </button>
+    </div>
+
+    <!-- Slack送信フォーム -->
+    <div class="section slack-form">
+      <div class="section-title">Slack送信</div>
+      <div class="form-group">
+        <label for="channelInput">チャンネル名</label>
+        <input type="text" id="channelInput" placeholder="#daily-report" value="#daily-report">
+        <p class="form-hint">#から始まる形式で入力してください（例：#daily-report）</p>
+      </div>
+      <button id="btnSendSlack" class="btn btn-success" onclick="sendSlack()">
+        Slackに投稿
+      </button>
+    </div>
+
+    <!-- メッセージ表示エリア -->
+    <div id="message" class="message"></div>
+  </div>
+
+  <script>
+    // ============================================
+    // 状態管理
+    // ============================================
+    let isLoading = false;
+
+    // ============================================
+    // 予定取得
+    // ============================================
+    function loadEvents() {
+      if (isLoading) return;
+
+      // ローディング表示
+      showLoading(true);
+      hideMessage();
+
+      // ボタンを無効化
+      document.getElementById('btnGetEvents').disabled = true;
+
+      // GAS関数を呼び出し
+      google.script.run
+        .withSuccessHandler(onLoadEventsSuccess)
+        .withFailureHandler(onLoadEventsFailure)
+        .getTodayEvents();
+    }
+
+    function onLoadEventsSuccess(result) {
+      showLoading(false);
+      document.getElementById('btnGetEvents').disabled = false;
+
+      // エラーチェック
+      if (result && result.startsWith('エラー：')) {
+        showMessage(result, true);
+        return;
+      }
+
+      // テキストエリアに表示
+      document.getElementById('scheduleText').value = result;
+
+      // 予定が0件の場合のメッセージ
+      if (!result || result.trim() === '') {
+        showMessage('今日の予定はありません。', false);
+      } else {
+        showMessage('予定を取得しました。', false);
+      }
+    }
+
+    function onLoadEventsFailure(error) {
+      showLoading(false);
+      document.getElementById('btnGetEvents').disabled = false;
+      showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
+    }
+
+    // ============================================
+    // コピー機能
+    // ============================================
+    function copyToClipboard() {
+      const text = document.getElementById('scheduleText').value;
+
+      if (!text || text.trim() === '') {
+        showMessage('コピーするテキストがありません。', true);
+        return;
+      }
+
+      navigator.clipboard.writeText(text).then(function() {
+        showMessage('コピーしました。', false);
+      }).catch(function(error) {
+        // フォールバック：テキストエリアを選択してコピー
+        const textarea = document.getElementById('scheduleText');
+        textarea.select();
+        document.execCommand('copy');
+        showMessage('コピーしました。', false);
+      });
+    }
+
+    // ============================================
+    // Slack送信
+    // ============================================
+    function sendSlack() {
+      if (isLoading) return;
+
+      const text = document.getElementById('scheduleText').value;
+      const channel = document.getElementById('channelInput').value.trim();
+
+      // バリデーション
+      if (!text || text.trim() === '') {
+        showMessage('送信するテキストがありません。先に「今日の予定を取得」を実行してください。', true);
+        return;
+      }
+
+      if (!channel) {
+        showMessage('エラー：チャンネル名を入力してください。', true);
+        return;
+      }
+
+      if (!channel.startsWith('#')) {
+        showMessage('エラー：チャンネル名が無効です。#から始まる形式で入力してください。', true);
+        return;
+      }
+
+      // ローディング表示
+      showLoading(true);
+      hideMessage();
+
+      // ボタンを無効化
+      document.getElementById('btnSendSlack').disabled = true;
+
+      // GAS関数を呼び出し
+      google.script.run
+        .withSuccessHandler(onSendSlackSuccess)
+        .withFailureHandler(onSendSlackFailure)
+        .sendToSlack(text, channel);
+    }
+
+    function onSendSlackSuccess(result) {
+      showLoading(false);
+      document.getElementById('btnSendSlack').disabled = false;
+
+      // 結果を表示
+      const isError = result && result.startsWith('エラー：');
+      showMessage(result, isError);
+    }
+
+    function onSendSlackFailure(error) {
+      showLoading(false);
+      document.getElementById('btnSendSlack').disabled = false;
+      showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
+    }
+
+    // ============================================
+    // ユーティリティ関数
+    // ============================================
+    function showLoading(show) {
+      isLoading = show;
+      const loadingElement = document.getElementById('loading');
+      if (show) {
+        loadingElement.classList.add('show');
+      } else {
+        loadingElement.classList.remove('show');
+      }
+    }
+
+    function showMessage(text, isError) {
+      const messageElement = document.getElementById('message');
+      messageElement.textContent = text;
+      messageElement.className = 'message show ' + (isError ? 'error' : 'success');
+
+      // 成功メッセージは5秒後に自動で消す
+      if (!isError) {
+        setTimeout(function() {
+          hideMessage();
+        }, 5000);
+      }
+    }
+
+    function hideMessage() {
+      const messageElement = document.getElementById('message');
+      messageElement.classList.remove('show');
+    }
+  </script>
+</body>
+</html>
