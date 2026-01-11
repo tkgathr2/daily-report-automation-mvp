@@ -1,0 +1,86 @@
+# 日報自動生成システム MVP - デバッグログ
+
+## 実装日時
+2026-01-11
+
+## 実装完了チェックポイント
+- [x] CP-01: スプレッドシートの初期設定（手動・実装範囲外）
+- [x] CP-02: GASスクリプトの基本構造作成
+- [x] CP-03: カレンダー連携実装
+- [x] CP-04: KPIシート連携実装
+- [x] CP-05: 日報下書き生成実装
+- [x] CP-06: Slack送信機能実装
+- [x] CP-07: エラーハンドリング実装
+- [x] CP-08: 統合テスト・バグチェック
+
+## 実装済み関数一覧
+1. onOpen() - カスタムメニュー追加
+2. generateDailyReport() - 日報下書き生成
+3. sendToSlack() - Slack送信
+4. getCalendarEvents(dateString, calendarId) - カレンダー予定取得
+5. formatScheduleText(events) - スケジュール本文フォーマット
+6. getKPIData(dateString) - KPIデータ取得
+7. formatKPIText(kpiData) - KPI本文フォーマット
+8. formatDailyReportText(rowData) - 日報本文フォーマット
+9. sendSlackMessage(webhookUrl, channel, text) - Slack送信
+10. getConfigValue(key) - 設定値取得
+11. getTodayDateString() - 今日の日付取得
+12. findRowByDate(sheet, dateString, dateColumnIndex) - 行検索
+13. showError(message) - エラー表示
+
+## エラーメッセージ実装確認
+- [x] ERR_CALENDAR_ID_INVALID
+- [x] ERR_CALENDAR_PERMISSION
+- [x] ERR_CALENDAR_API_LIMIT
+- [x] ERR_CALENDAR_ID_MISSING
+- [x] ERR_KPI_DATA_NOT_FOUND
+- [x] ERR_KPI_VISIT_NEGATIVE
+- [x] ERR_KPI_VISIT_NOT_NUMBER
+- [x] ERR_KPI_SHEET_NOT_FOUND
+- [x] ERR_ALREADY_SENT
+- [x] ERR_WEBHOOK_URL_INVALID
+- [x] ERR_SLACK_CHANNEL_INVALID
+- [x] ERR_SLACK_SEND_FAILED
+- [x] ERR_REPORT_NOT_FOUND
+- [x] ERR_WEBHOOK_URL_MISSING
+- [x] ERR_SLACK_CHANNEL_MISSING
+- [x] ERR_CONFIG_SHEET_NOT_FOUND
+- [x] ERR_CONFIG_VALUE_EMPTY
+- [x] ERR_DRAFT_SHEET_NOT_FOUND
+
+## NG例チェック（すべて問題なし）
+1. カレンダー予定が取得できないのにエラーなく処理が継続する → OK
+2. KPIシートに該当日の行がないのにエラーなく処理が継続する → OK
+3. 送信済みフラグがTRUEのまま送信できてしまう → OK
+4. 空の日報（手入力欄が全て空）が送信できない → OK（送信可能）
+5. 同日の日報を生成しようとしてエラーになる → OK（上書き処理）
+6. 送信成功後に送信済みフラグが更新されない → OK
+7. Configシートの設定が読み込めないのにエラーなく処理が継続する → OK
+8. Slack送信失敗時に送信済みフラグがTRUEになってしまう → OK
+9. エラーメッセージが分かりにくい → OK（日本語メッセージ）
+10. 終日イベントが通常イベントと同じ形式で表示される → OK（「（終日）」表記）
+11. 予定のソート順が不定 → OK（開始時刻の昇順）
+12. 手入力欄の改行が正しく反映されない → OK
+
+## 受け入れ条件チェック（すべて満足）
+1. カレンダー連携 → OK
+2. KPI連携 → OK
+3. 自動生成 → OK
+4. 手入力 → OK
+5. Slack投稿本文の自動結合 → OK
+6. 送信機能 → OK
+7. 二重送信防止 → OK
+8. エラーハンドリング → OK
+9. 設定管理 → OK
+10. 過去日の編集・再送信 → OK
+
+## 注意事項
+- スプレッドシートの初期設定（CP-01）は手動で行う必要があります
+- 以下のシートを作成してください：
+  1. KPI（日付、訪問数、架電数、商談数）
+  2. DailyReport_Draft（日付、スケジュール本文、KPI本文、上手く行ったこと、上手く行かなかったこと、明日やること、Slack投稿本文、送信済み、送信日時）
+  3. Config（設定項目、設定値）
+- Configシートには以下の設定を追加してください：
+  - CALENDAR_ID: GoogleカレンダーID
+  - SLACK_WEBHOOK_URL: Slack Incoming Webhook URL
+  - SLACK_CHANNEL: 投稿先チャンネル名（#から始まる）
