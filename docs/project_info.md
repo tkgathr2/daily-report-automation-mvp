@@ -29,13 +29,13 @@ https://github.com/tkgathr2/daily-report-automation-mvp
 
 ## プロジェクト説明
 
-Googleカレンダーと営業KPIシートから情報を取得し、
-日報の下書きを自動生成 → 編集 → ワンクリックでSlack送信できる「日報くん」システム
+Googleカレンダーから今日の予定を取得し、
+WEBブラウザ上で表示・編集・コピー → Slack送信できる「日報くん」WEBアプリ
 
 ## 技術スタック
 
 - Google Apps Script (GAS)
-- Google Spreadsheet
+- GAS HTMLサービス（WEBアプリ）
 - Google Calendar API
 - Slack Incoming Webhook
 
