@@ -15,11 +15,13 @@
 - 他のプロジェクトとの衝突を避けるため、具体的な機能名を含む
 - 英語表記で、GitHubの命名規則に準拠
 
-### GitHubリポジトリURL（想定）
+### GitHubリポジトリURL
 
 ```
-https://github.com/[ユーザー名]/daily-report-automation-mvp
+https://github.com/tkgathr2/daily-report-automation-mvp
 ```
+
+**リポジトリ状態：** 作成済み・プッシュ完了
 
 ## ローカルフォルダ名
 
@@ -40,3 +42,11 @@ Googleカレンダーと営業KPIシートから情報を取得し、
 ## 作成日
 
 2026-01-11
+
+## GitHubリポジトリ情報
+
+- **リポジトリ名：** daily-report-automation-mvp
+- **URL：** https://github.com/tkgathr2/daily-report-automation-mvp
+- **公開設定：** Public
+- **作成日：** 2026-01-11
+- **プッシュ完了：** 完了
