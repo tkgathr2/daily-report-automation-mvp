@@ -315,11 +315,16 @@
       <textarea id="scheduleText" placeholder="「今日の予定を取得」ボタンをクリックすると、ここにカレンダーの予定が表示されます。"></textarea>
     </div>
 
-    <!-- コピーボタン -->
+    <!-- コピー・更新ボタン -->
     <div class="section">
-      <button id="btnCopy" class="btn btn-secondary" onclick="copyToClipboard()">
-        コピー
-      </button>
+      <div class="button-group">
+        <button id="btnCopy" class="btn btn-secondary" onclick="copyToClipboard()">
+          コピー
+        </button>
+        <button id="btnRefreshEvents" class="btn btn-primary" onclick="loadEvents()">
+          今日の予定を更新
+        </button>
+      </div>
     </div>
 
     <!-- Slack送信フォーム -->
@@ -352,6 +357,8 @@
 
       // ボタンを無効化
       document.getElementById('btnGetEvents').disabled = true;
+      var btnRefresh = document.getElementById('btnRefreshEvents');
+      if (btnRefresh) btnRefresh.disabled = true;
 
       // GAS関数を呼び出し
       google.script.run
@@ -363,6 +370,8 @@
     function onLoadEventsSuccess(result) {
       showLoading(false);
       document.getElementById('btnGetEvents').disabled = false;
+      var btnRefresh = document.getElementById('btnRefreshEvents');
+      if (btnRefresh) btnRefresh.disabled = false;
 
       // エラーチェック
       if (result && result.startsWith('エラー：')) {
@@ -384,6 +393,8 @@
     function onLoadEventsFailure(error) {
       showLoading(false);
       document.getElementById('btnGetEvents').disabled = false;
+      var btnRefresh = document.getElementById('btnRefreshEvents');
+      if (btnRefresh) btnRefresh.disabled = false;
       showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
     }
 
@@ -484,6 +495,13 @@
       const messageElement = document.getElementById('message');
       messageElement.classList.remove('show');
     }
+
+    // ============================================
+    // ページ読み込み時に自動取得
+    // ============================================
+    window.addEventListener('load', function() {
+      loadEvents();
+    });
   </script>
 </body>
 </html>
