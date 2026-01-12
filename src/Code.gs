@@ -128,12 +128,12 @@ function formatScheduleText(events) {
     const event = events[i];
     if (event.isAllDay) {
       // 終日イベント
-      lines.push('・' + event.title + '（終日）');
+      lines.push('終日 ' + event.title);
     } else {
       // 通常イベント
       const startTimeStr = Utilities.formatDate(event.startTime, TIMEZONE, TIME_FORMAT);
       const endTimeStr = Utilities.formatDate(event.endTime, TIMEZONE, TIME_FORMAT);
-      lines.push('・' + event.title + ' ' + startTimeStr + '-' + endTimeStr);
+      lines.push(startTimeStr + '-' + endTimeStr + ' ' + event.title);
     }
   }
 
