@@ -325,11 +325,6 @@
     <!-- Slack送信フォーム -->
     <div class="section slack-form">
       <div class="section-title">Slack送信</div>
-      <div class="form-group">
-        <label for="channelInput">チャンネル名</label>
-        <input type="text" id="channelInput" placeholder="#daily-report" value="#daily-report">
-        <p class="form-hint">#から始まる形式で入力してください（例：#daily-report）</p>
-      </div>
       <button id="btnSendSlack" class="btn btn-success" onclick="sendSlack()">
         Slackに投稿
       </button>
@@ -421,7 +416,6 @@
       if (isLoading) return;
 
       const text = document.getElementById('scheduleText').value;
-      const channel = document.getElementById('channelInput').value.trim();
 
       // バリデーション
       if (!text || text.trim() === '') {
@@ -429,15 +423,7 @@
         return;
       }
 
-      if (!channel) {
-        showMessage('エラー：チャンネル名を入力してください。', true);
-        return;
-      }
 
-      if (!channel.startsWith('#')) {
-        showMessage('エラー：チャンネル名が無効です。#から始まる形式で入力してください。', true);
-        return;
-      }
 
       // ローディング表示
       showLoading(true);
@@ -450,7 +436,7 @@
       google.script.run
         .withSuccessHandler(onSendSlackSuccess)
         .withFailureHandler(onSendSlackFailure)
-        .sendToSlack(text, channel);
+        .sendToSlack(text);
     }
 
     function onSendSlackSuccess(result) {

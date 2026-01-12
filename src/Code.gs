@@ -147,18 +147,12 @@ function formatScheduleText(events) {
 /**
  * Slackに投稿
  * @param {string} text - テキストエリアの内容
- * @param {string} channel - チャンネル名（#から始まる）
  * @returns {string} 成功/失敗メッセージ
  */
-function sendToSlack(text, channel) {
+function sendToSlack(text) {
   Logger.log('Slack送信開始');
 
   try {
-    // チャンネル名のバリデーション
-    if (!channel || !channel.startsWith('#')) {
-      Logger.log('チャンネル名エラー：' + channel);
-      return 'エラー：チャンネル名が無効です。#から始まる形式で入力してください。';
-    }
 
     // Webhook URLを取得
     const webhookUrl = getWebhookUrl();
@@ -176,7 +170,6 @@ function sendToSlack(text, channel) {
 
     // リクエストボディを作成
     const payload = {
-      channel: channel,
       text: slackMessage
     };
 
