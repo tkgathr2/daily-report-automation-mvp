@@ -14,6 +14,16 @@
 
 // スクリプトプロパティキー
 const PROPERTY_WEBHOOK_URL = 'SLACK_WEBHOOK_URL';
+const PROPERTY_SLACK_CLIENT_ID = 'SLACK_CLIENT_ID';
+const PROPERTY_SLACK_CLIENT_SECRET = 'SLACK_CLIENT_SECRET';
+const PROPERTY_SLACK_CHANNEL_ID = 'SLACK_CHANNEL_ID';
+
+// ユーザープロパティキー（ユーザーごと）
+const USER_PROPERTY_SLACK_USER_TOKEN = 'SLACK_USER_TOKEN';
+const USER_PROPERTY_SLACK_USER_ID = 'SLACK_USER_ID';
+const USER_PROPERTY_SLACK_TEAM_ID = 'SLACK_TEAM_ID';
+const USER_PROPERTY_SLACK_OAUTH_STATE = 'SLACK_OAUTH_STATE';
+const USER_PROPERTY_SLACK_OAUTH_STATE_TS = 'SLACK_OAUTH_STATE_TS';
 
 // タイムゾーン
 const TIMEZONE = 'Asia/Tokyo';
@@ -31,7 +41,21 @@ const TIME_FORMAT = 'HH:mm';
  * HTMLファイルを返却する
  * @returns {HtmlOutput} HTMLページ
  */
-function doGet() {
+function doGet(e) {
+  // Slack OAuthコールバック
+  if (e && e.parameter) {
+    if (e.parameter.error) {
+      return HtmlService.createHtmlOutput(
+        'Slack連携に失敗しました。エラー：' + String(e.parameter.error)
+        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
+      ).setTitle('Slack連携（失敗）');
+    }
+    if (e.parameter.code) {
+      return handleSlackOAuthCallback_(e);
+    }
+  }
+
+  // 通常表示
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('簡単日報くん')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
@@ -153,12 +177,20 @@ function sendToSlack(text) {
   Logger.log('Slack送信開始');
 
   try {
+    // 本文のバリデーション
+    if (!text || String(text).trim() === '') {
+      return 'エラー：送信するテキストがありません。';
+    }
 
-    // Webhook URLを取得
-    const webhookUrl = getWebhookUrl();
-    if (!webhookUrl) {
-      Logger.log('Webhook URL未設定');
-      return 'エラー：Slack Webhook URLが設定されていません。設定を確認してください。';
+    // OAuth連携済みユーザートークンを取得（ユーザーごと）
+    const userToken = getSlackUserToken_();
+    if (!userToken) {
+      return 'エラー：Slack連携が必要です。「Slack連携（認可）」を実行してください。';
+    }
+
+    const channelId = getSlackChannelId_();
+    if (!channelId) {
+      return 'エラー：Slackチャンネル設定がありません。管理者に連絡してください。';
     }
 
     // 今日の日付を取得
@@ -168,51 +200,227 @@ function sendToSlack(text) {
     const slackMessage = formatSlackMessage(todayString, text);
     Logger.log('Slack投稿本文生成完了');
 
-    // リクエストボディを作成
-    const payload = {
-      text: slackMessage,
-      username: getUserDisplayName()
-    };
-
-    // リクエストオプションを設定
-    const options = {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    };
-
-    // Slackに送信
-    let response;
-    try {
-      response = UrlFetchApp.fetch(webhookUrl, options);
-    } catch (e) {
-      Logger.log('Slack送信エラー：' + e.message);
-      if (e.message.includes('Invalid argument') || e.message.includes('Invalid URL')) {
-        return 'エラー：Slack Webhook URLが無効です。設定を確認してください。';
+    const res = slackApiPost_(
+      'https://slack.com/api/chat.postMessage',
+      userToken,
+      {
+        channel: channelId,
+        text: slackMessage
       }
-      return 'エラー：Slackへの送信に失敗しました。ネットワーク接続を確認してください。';
-    }
+    );
 
-    const responseCode = response.getResponseCode();
-    const responseText = response.getContentText();
-
-    Logger.log('Slack送信レスポンス：' + responseCode + ' - ' + responseText);
-
-    // レスポンスをチェック
-    if (responseCode === 200 && responseText === 'ok') {
+    if (res && res.ok) {
       Logger.log('Slack送信完了');
       return '送信成功：Slackに投稿しました。';
-    } else if (responseCode === 404) {
-      return 'エラー：Slack Webhook URLが無効です。設定を確認してください。';
-    } else {
-      return 'エラー：Slackへの送信に失敗しました。ネットワーク接続を確認してください。';
     }
+
+    const err = res && res.error ? String(res.error) : 'unknown_error';
+    Logger.log('Slack送信失敗：' + err);
+
+    if (err === 'not_in_channel') {
+      return 'エラー：#日報に参加していないため投稿できません。#日報に参加してから再度お試しください。';
+    }
+    if (err === 'missing_scope' || err === 'invalid_auth' || err === 'token_revoked') {
+      return 'エラー：Slack連携が無効になりました。再度「Slack連携（認可）」を実行してください。';
+    }
+    return 'エラー：Slackへの送信に失敗しました。エラー：' + err;
 
   } catch (error) {
     Logger.log('sendToSlackエラー：' + error.message);
     return 'エラー：予期しないエラーが発生しました。詳細：' + error.message;
   }
+}
+
+/**
+ * Slack連携状態を取得
+ * @returns {{linked: boolean, slackUserId: (string|null)}} 連携状態
+ */
+function getSlackLinkStatus() {
+  const props = PropertiesService.getUserProperties();
+  const token = props.getProperty(USER_PROPERTY_SLACK_USER_TOKEN);
+  const slackUserId = props.getProperty(USER_PROPERTY_SLACK_USER_ID) || null;
+  return {
+    linked: !!token,
+    slackUserId: slackUserId
+  };
+}
+
+/**
+ * Slack OAuth認可URLを返す（ユーザーごと）
+ * @returns {string} 認可URL
+ */
+function getSlackAuthorizeUrl() {
+  const cfg = getSlackClientConfig_();
+  if (!cfg.clientId) {
+    return '';
+  }
+
+  const redirectUri = getServiceUrl_();
+  const state = generateAndStoreSlackOAuthState_();
+
+  const params = {
+    client_id: cfg.clientId,
+    redirect_uri: redirectUri,
+    user_scope: 'chat:write',
+    state: state
+  };
+
+  return 'https://slack.com/oauth/v2/authorize?' + toQueryString_(params);
+}
+
+// ============================================
+// Slack OAuth（実ユーザー投稿）内部実装
+// ============================================
+
+function handleSlackOAuthCallback_(e) {
+  try {
+    const cfg = getSlackClientConfig_();
+    if (!cfg.clientId || !cfg.clientSecret) {
+      return HtmlService.createHtmlOutput(
+        'Slack連携に失敗しました。管理者設定（Client ID/Secret）が不足しています。'
+        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
+      ).setTitle('Slack連携（失敗）');
+    }
+
+    const code = String(e.parameter.code || '');
+    const state = String(e.parameter.state || '');
+    if (!verifySlackOAuthState_(state)) {
+      return HtmlService.createHtmlOutput(
+        'Slack連携に失敗しました。state検証に失敗しました。もう一度「Slack連携（認可）」からやり直してください。'
+        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
+      ).setTitle('Slack連携（失敗）');
+    }
+
+    const redirectUri = getServiceUrl_();
+
+    const tokenRes = UrlFetchApp.fetch('https://slack.com/api/oauth.v2.access', {
+      method: 'post',
+      contentType: 'application/x-www-form-urlencoded',
+      payload: {
+        client_id: cfg.clientId,
+        client_secret: cfg.clientSecret,
+        code: code,
+        redirect_uri: redirectUri
+      },
+      muteHttpExceptions: true
+    });
+
+    const body = tokenRes.getContentText();
+    const json = safeJsonParse_(body);
+    if (!json || !json.ok) {
+      const err = json && json.error ? String(json.error) : 'unknown_error';
+      return HtmlService.createHtmlOutput(
+        'Slack連携に失敗しました。エラー：' + err
+        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
+      ).setTitle('Slack連携（失敗）');
+    }
+
+    // OAuth v2のユーザートークン
+    const userToken = json.authed_user && json.authed_user.access_token ? String(json.authed_user.access_token) : '';
+    const slackUserId = json.authed_user && json.authed_user.id ? String(json.authed_user.id) : '';
+    const teamId = json.team && json.team.id ? String(json.team.id) : '';
+
+    if (!userToken) {
+      return HtmlService.createHtmlOutput(
+        'Slack連携に失敗しました。ユーザートークンが取得できませんでした。'
+        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
+      ).setTitle('Slack連携（失敗）');
+    }
+
+    saveSlackUserToken_(userToken, slackUserId, teamId);
+
+    return HtmlService.createHtmlOutput(
+      'Slack連携が完了しました。'
+      + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
+    ).setTitle('Slack連携（完了）');
+  } catch (err) {
+    return HtmlService.createHtmlOutput(
+      'Slack連携に失敗しました。予期しないエラー：' + String(err && err.message ? err.message : err)
+      + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
+    ).setTitle('Slack連携（失敗）');
+  }
+}
+
+function saveSlackUserToken_(token, slackUserId, teamId) {
+  const props = PropertiesService.getUserProperties();
+  props.setProperty(USER_PROPERTY_SLACK_USER_TOKEN, token);
+  if (slackUserId) props.setProperty(USER_PROPERTY_SLACK_USER_ID, slackUserId);
+  if (teamId) props.setProperty(USER_PROPERTY_SLACK_TEAM_ID, teamId);
+
+  // stateは使い終わったら消す
+  props.deleteProperty(USER_PROPERTY_SLACK_OAUTH_STATE);
+  props.deleteProperty(USER_PROPERTY_SLACK_OAUTH_STATE_TS);
+}
+
+function getSlackUserToken_() {
+  const props = PropertiesService.getUserProperties();
+  return props.getProperty(USER_PROPERTY_SLACK_USER_TOKEN);
+}
+
+function getSlackChannelId_() {
+  const properties = PropertiesService.getScriptProperties();
+  const channelId = properties.getProperty(PROPERTY_SLACK_CHANNEL_ID);
+  return channelId || null;
+}
+
+function getSlackClientConfig_() {
+  const properties = PropertiesService.getScriptProperties();
+  return {
+    clientId: properties.getProperty(PROPERTY_SLACK_CLIENT_ID) || '',
+    clientSecret: properties.getProperty(PROPERTY_SLACK_CLIENT_SECRET) || ''
+  };
+}
+
+function generateAndStoreSlackOAuthState_() {
+  const props = PropertiesService.getUserProperties();
+  const state = Utilities.getUuid();
+  props.setProperty(USER_PROPERTY_SLACK_OAUTH_STATE, state);
+  props.setProperty(USER_PROPERTY_SLACK_OAUTH_STATE_TS, String(Date.now()));
+  return state;
+}
+
+function verifySlackOAuthState_(state) {
+  const props = PropertiesService.getUserProperties();
+  const expected = props.getProperty(USER_PROPERTY_SLACK_OAUTH_STATE) || '';
+  const tsStr = props.getProperty(USER_PROPERTY_SLACK_OAUTH_STATE_TS) || '0';
+  const ts = Number(tsStr);
+
+  // 10分以内のみ有効
+  const isFresh = ts > 0 && (Date.now() - ts) <= 10 * 60 * 1000;
+  return !!state && state === expected && isFresh;
+}
+
+function slackApiPost_(url, bearerToken, payloadObj) {
+  const res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json; charset=utf-8',
+    headers: {
+      Authorization: 'Bearer ' + bearerToken
+    },
+    payload: JSON.stringify(payloadObj),
+    muteHttpExceptions: true
+  });
+  return safeJsonParse_(res.getContentText());
+}
+
+function safeJsonParse_(text) {
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return null;
+  }
+}
+
+function toQueryString_(params) {
+  const keys = Object.keys(params);
+  const parts = [];
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    const v = params[k];
+    if (v === undefined || v === null || v === '') continue;
+    parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
+  }
+  return parts.join('&');
 }
 
 /**
@@ -252,6 +460,14 @@ function setWebhookUrl(url) {
 // ============================================
 // ユーティリティ関数
 // ============================================
+
+/**
+ * WebアプリのURL（/exec）を取得
+ * @returns {string} WebアプリURL
+ */
+function getServiceUrl_() {
+  return ScriptApp.getService().getUrl();
+}
 
 /**
  * 今日の日付をYYYY/MM/DD形式で取得
