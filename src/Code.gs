@@ -170,7 +170,8 @@ function sendToSlack(text) {
 
     // リクエストボディを作成
     const payload = {
-      text: slackMessage
+      text: slackMessage,
+      username: getUserDisplayName()
     };
 
     // リクエストオプションを設定
@@ -259,4 +260,21 @@ function setWebhookUrl(url) {
 function getTodayDateString() {
   const today = new Date();
   return Utilities.formatDate(today, TIMEZONE, DATE_FORMAT);
+}
+
+/**
+ * Googleアカウントの表示名を取得
+ * @returns {string} 表示名、取得できない場合は「日報くん」
+ */
+function getUserDisplayName() {
+  try {
+    const user = Session.getEffectiveUser();
+    const email = user.getEmail();
+    if (email) {
+      return email.split('@')[0];
+    }
+  } catch (e) {
+    Logger.log('ユーザー名取得エラー: ' + e.message);
+  }
+  return '日報くん';
 }
