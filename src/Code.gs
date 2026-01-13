@@ -1,5 +1,5 @@
 /**
- * 日報くん（WEBアプリ版）
+ * 簡単日報くん（WEBアプリ版）
  *
  * Googleカレンダーから今日の予定を取得し、
  * WEBブラウザ上で表示・編集・コピー → Slack送信できるWEBアプリ
@@ -33,7 +33,7 @@ const TIME_FORMAT = 'HH:mm';
  */
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('日報くん')
+    .setTitle('簡単日報くん')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -264,7 +264,7 @@ function getTodayDateString() {
 
 /**
  * Googleアカウントの表示名を取得
- * @returns {string} 表示名、取得できない場合は「日報くん」
+ * @returns {string} 表示名、取得できない場合は「簡単日報くん」
  */
 function getUserDisplayName() {
   try {
@@ -276,5 +276,5 @@ function getUserDisplayName() {
   } catch (e) {
     Logger.log('ユーザー名取得エラー: ' + e.message);
   }
-  return '日報くん';
+  return '簡単日報くん';
 }

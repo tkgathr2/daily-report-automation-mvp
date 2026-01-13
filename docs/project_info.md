@@ -2,7 +2,7 @@
 
 ## プロジェクト名
 
-**日報くん**
+**簡単日報くん**
 
 ## GitHubリポジトリ名
 
@@ -30,7 +30,7 @@ https://github.com/tkgathr2/daily-report-automation-mvp
 ## プロジェクト説明
 
 Googleカレンダーから今日の予定を取得し、
-WEBブラウザ上で表示・編集・コピー → Slack送信できる「日報くん」WEBアプリ
+WEBブラウザ上で表示・編集・コピー → Slack送信できる「簡単日報くん」WEBアプリ
 
 ## 技術スタック
 
