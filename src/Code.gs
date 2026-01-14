@@ -42,6 +42,20 @@ const TIME_FORMAT = 'HH:mm';
  * @returns {HtmlOutput} HTMLページ
  */
 function doGet(e) {
+  // #region agent log
+  try {
+    var p = (e && e.parameter) ? e.parameter : {};
+    Logger.log('[oauth] doGet enter hasParam=' + (!!e && !!e.parameter)
+      + ' hasError=' + (!!p.error)
+      + ' hasCode=' + (!!p.code)
+      + ' hasState=' + (!!p.state)
+      + ' codeLen=' + (p.code ? String(p.code).length : 0)
+      + ' stateTail=' + (p.state ? String(p.state).slice(-4) : ''));
+  } catch (logErr) {
+    Logger.log('[oauth] doGet logErr=' + String(logErr && logErr.message ? logErr.message : logErr).slice(0, 80));
+  }
+  // #endregion agent log
+
   // Slack OAuthコールバック
   if (e && e.parameter) {
     if (e.parameter.error) {
@@ -295,6 +309,13 @@ function getSlackAuthorizeUrl() {
 // ============================================
 
 function handleSlackOAuthCallback_(e) {
+  // #region agent log
+  Logger.log('[oauth] callback enter hasCode=' + (!!(e && e.parameter && e.parameter.code))
+    + ' hasState=' + (!!(e && e.parameter && e.parameter.state))
+    + ' codeLen=' + (e && e.parameter && e.parameter.code ? String(e.parameter.code).length : 0)
+    + ' stateTail=' + (e && e.parameter && e.parameter.state ? String(e.parameter.state).slice(-4) : ''));
+  // #endregion agent log
+
   try {
     const cfg = getSlackClientConfig_();
     if (!cfg.clientId || !cfg.clientSecret) {
@@ -312,6 +333,9 @@ function handleSlackOAuthCallback_(e) {
         + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
       ).setTitle('Slack連携（失敗）');
     }
+    // #region agent log
+    Logger.log('[oauth] state verify ok');
+    // #endregion agent log
 
     const redirectUri = getServiceUrl_();
 
@@ -328,9 +352,16 @@ function handleSlackOAuthCallback_(e) {
     });
 
     const body = tokenRes.getContentText();
+    // #region agent log
+    Logger.log('[oauth] oauth.v2.access http=' + tokenRes.getResponseCode()
+      + ' bodyLen=' + (body ? String(body).length : 0));
+    // #endregion agent log
     const json = safeJsonParse_(body);
     if (!json || !json.ok) {
       const err = json && json.error ? String(json.error) : 'unknown_error';
+      // #region agent log
+      Logger.log('[oauth] oauth.v2.access not ok err=' + err);
+      // #endregion agent log
       return HtmlService.createHtmlOutput(
         'Slack連携に失敗しました。エラー：' + err
         + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
@@ -349,7 +380,13 @@ function handleSlackOAuthCallback_(e) {
       ).setTitle('Slack連携（失敗）');
     }
 
+    // #region agent log
+    Logger.log('[oauth] token ok slackUserId=' + (slackUserId ? slackUserId : ''));
+    // #endregion agent log
     saveSlackUserToken_(userToken, slackUserId, teamId);
+    // #region agent log
+    Logger.log('[oauth] saved user token (no-secret)');
+    // #endregion agent log
 
     return HtmlService.createHtmlOutput(
       'Slack連携が完了しました。'
