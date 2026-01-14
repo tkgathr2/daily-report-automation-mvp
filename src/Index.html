@@ -524,6 +524,7 @@
     }
 
     function connectSlack() {
+      console.log('[oauth] connectSlack clicked');
       const btnConnect = document.getElementById('btnSlackConnect');
       if (btnConnect) btnConnect.disabled = true;
 
@@ -532,6 +533,7 @@
 
       google.script.run
         .withSuccessHandler(function(url) {
+          console.log('[oauth] getSlackAuthorizeUrl success, len=' + (url ? url.length : 0));
           showLoading(false);
           if (!url) {
             if (btnConnect) btnConnect.disabled = false;
@@ -542,6 +544,7 @@
           window.top.location.href = url;
         })
         .withFailureHandler(function(error) {
+          console.log('[oauth] getSlackAuthorizeUrl failure', error && error.message);
           showLoading(false);
           if (btnConnect) btnConnect.disabled = false;
           showMessage('エラー：Slack連携の開始に失敗しました。詳細：' + error.message, true);

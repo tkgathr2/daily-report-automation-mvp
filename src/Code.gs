@@ -263,22 +263,31 @@ function getSlackLinkStatus() {
  * @returns {string} 認可URL
  */
 function getSlackAuthorizeUrl() {
-  const cfg = getSlackClientConfig_();
-  if (!cfg.clientId) {
+  Logger.log('[oauth] getSlackAuthorizeUrl:enter');
+  try {
+    const cfg = getSlackClientConfig_();
+    if (!cfg.clientId) {
+      Logger.log('[oauth] getSlackAuthorizeUrl:return len=0 (no clientId)');
+      return '';
+    }
+
+    const redirectUri = getServiceUrl_();
+    const state = generateAndStoreSlackOAuthState_();
+
+    const params = {
+      client_id: cfg.clientId,
+      redirect_uri: redirectUri,
+      user_scope: 'chat:write',
+      state: state
+    };
+
+    const url = 'https://slack.com/oauth/v2/authorize?' + toQueryString_(params);
+    Logger.log('[oauth] getSlackAuthorizeUrl:return len=' + String(url).length);
+    return url;
+  } catch (e) {
+    Logger.log('[oauth] getSlackAuthorizeUrl:error ' + String(e.message).slice(0, 120));
     return '';
   }
-
-  const redirectUri = getServiceUrl_();
-  const state = generateAndStoreSlackOAuthState_();
-
-  const params = {
-    client_id: cfg.clientId,
-    redirect_uri: redirectUri,
-    user_scope: 'chat:write',
-    state: state
-  };
-
-  return 'https://slack.com/oauth/v2/authorize?' + toQueryString_(params);
 }
 
 // ============================================
