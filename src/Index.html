@@ -422,11 +422,20 @@
       var btnRefresh = document.getElementById('btnRefreshEvents');
       if (btnRefresh) btnRefresh.disabled = true;
 
-      // GAS関数を呼び出し
+      // [telemetry] hrefBase取得（クエリ除外、秘密情報なし）
+      var hrefBase = '';
+      try {
+        var loc = window.top.location || window.location;
+        hrefBase = loc.origin + loc.pathname;
+      } catch (e) {
+        hrefBase = 'cross-origin';
+      }
+
+      // GAS関数を呼び出し（telemetry opts同乗）
       google.script.run
         .withSuccessHandler(onLoadEventsSuccess)
         .withFailureHandler(onLoadEventsFailure)
-        .getTodayEvents();
+        .getTodayEvents({ tag: 'loadEvents_click', hrefBase: hrefBase });
     }
 
     function onLoadEventsSuccess(result) {

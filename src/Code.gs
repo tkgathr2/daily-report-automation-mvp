@@ -68,9 +68,22 @@ function doGet(e) {
 /**
  * 今日のカレンダー予定を取得
  * プライマリカレンダーから当日の予定を取得し、フォーマット済みテキストを返却
+ * @param {Object} opts - オプション（telemetry用）
  * @returns {string} フォーマット済み予定テキスト、またはエラーメッセージ
  */
-function getTodayEvents() {
+function getTodayEvents(opts) {
+  // [telemetry] クライアント計測（秘密情報なし）
+  try {
+    opts = opts || {};
+    var tel = {
+      tag: String(opts.tag || 'unknown').slice(0, 50),
+      hrefBase: String(opts.hrefBase || '').slice(0, 120)
+    };
+    Logger.log('[telemetry] ' + JSON.stringify(tel));
+  } catch (telErr) {
+    Logger.log('[telemetry] error: ' + String(telErr.message || telErr).slice(0, 80));
+  }
+
   Logger.log('カレンダー予定取得開始');
 
   try {
