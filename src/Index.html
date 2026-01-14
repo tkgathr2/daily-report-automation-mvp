@@ -349,6 +349,59 @@
 
   <script>
     // ============================================
+    // クライアント計測（デバッグ用）
+    // ============================================
+    (function() {
+      // hrefBaseはクエリを落とす（秘密情報除外）
+      var hrefBase = '';
+      try {
+        var loc = window.top.location || window.location;
+        hrefBase = loc.origin + loc.pathname;
+      } catch(e) {
+        hrefBase = 'cross-origin';
+      }
+
+      // state_init: ページ到達
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run.debugClientTelemetry({
+          tag: 'state_init',
+          hrefBase: hrefBase,
+          hasGoogleScript: true
+        });
+      }
+
+      // window.onerror: JSエラー
+      window.onerror = function(message, source, lineno, colno, error) {
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run.debugClientTelemetry({
+            tag: 'window_error',
+            hrefBase: hrefBase,
+            errorMessage: String(message || '').slice(0, 200),
+            errorFile: String(source || '').slice(0, 100),
+            errorLine: lineno || 0
+          });
+        }
+      };
+
+      // unhandledrejection: Promiseエラー
+      window.addEventListener('unhandledrejection', function(event) {
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          var reason = '';
+          try {
+            reason = event.reason ? String(event.reason).slice(0, 200) : '';
+          } catch(e) {
+            reason = 'stringify_error';
+          }
+          google.script.run.debugClientTelemetry({
+            tag: 'unhandledrejection',
+            hrefBase: hrefBase,
+            errorMessage: reason
+          });
+        }
+      });
+    })();
+
+    // ============================================
     // 状態管理
     // ============================================
     let isLoading = false;
@@ -569,6 +622,24 @@
     // ページ読み込み時に自動取得
     // ============================================
     window.addEventListener('load', function() {
+      // onload計測：DOM要素存在チェック
+      var hrefBase = '';
+      try {
+        var loc = window.top.location || window.location;
+        hrefBase = loc.origin + loc.pathname;
+      } catch(e) {
+        hrefBase = 'cross-origin';
+      }
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run.debugClientTelemetry({
+          tag: 'onload',
+          hrefBase: hrefBase,
+          hasBtnGet: !!document.getElementById('btnGetEvents'),
+          hasBtnSlackConnect: !!document.getElementById('btnSlackConnect'),
+          hasGoogleScript: true
+        });
+      }
+
       refreshSlackLinkStatus();
       loadEvents();
     });

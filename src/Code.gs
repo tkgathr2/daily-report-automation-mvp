@@ -494,3 +494,29 @@ function getUserDisplayName() {
   }
   return '簡単日報くん';
 }
+
+// ============================================
+// クライアント計測（デバッグ用）
+// ============================================
+
+/**
+ * クライアント側の計測データを受け取りログ出力
+ * @param {Object} payload - 計測データ（秘密情報を含まないこと）
+ */
+function debugClientTelemetry(payload) {
+  try {
+    const safe = {
+      tag: String(payload.tag || '').slice(0, 50),
+      hrefBase: String(payload.hrefBase || '').slice(0, 100),
+      hasBtnGet: !!payload.hasBtnGet,
+      hasBtnSlackConnect: !!payload.hasBtnSlackConnect,
+      hasGoogleScript: !!payload.hasGoogleScript,
+      errorMessage: String(payload.errorMessage || '').slice(0, 200),
+      errorFile: String(payload.errorFile || '').slice(0, 100),
+      errorLine: payload.errorLine || 0
+    };
+    Logger.log('[telemetry] ' + JSON.stringify(safe));
+  } catch (e) {
+    Logger.log('[telemetry] error: ' + String(e.message).slice(0, 100));
+  }
+}
