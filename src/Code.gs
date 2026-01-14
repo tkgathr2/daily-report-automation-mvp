@@ -579,3 +579,16 @@ function debugClientTelemetry(payload) {
     Logger.log('[telemetry] error: ' + String(e.message).slice(0, 100));
   }
 }
+
+// ============================================
+// Slack連携解除（デバッグ用）
+// ============================================
+function unlinkSlackForCurrentUser() {
+  const props = PropertiesService.getUserProperties();
+  props.deleteProperty(USER_PROPERTY_SLACK_USER_TOKEN);
+  props.deleteProperty(USER_PROPERTY_SLACK_USER_ID);
+  props.deleteProperty(USER_PROPERTY_SLACK_TEAM_ID);
+  props.deleteProperty(USER_PROPERTY_SLACK_OAUTH_STATE);
+  props.deleteProperty(USER_PROPERTY_SLACK_OAUTH_STATE_TS);
+  return { ok: true };
+}

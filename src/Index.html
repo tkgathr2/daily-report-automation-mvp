@@ -337,6 +337,9 @@
         <button id="btnSlackConnect" class="btn btn-primary" onclick="connectSlack()">
           Slack連携（認可）
         </button>
+        <button id="btnSlackUnlink" class="btn btn-secondary" onclick="unlinkSlack()" style="display: none;">
+          Slack連携を解除
+        </button>
       </div>
       <button id="btnSendSlack" class="btn btn-success" onclick="sendSlack()">
         Slackに投稿
@@ -530,15 +533,18 @@
           // UI更新
           const hint = document.getElementById('slackLinkHint');
           const btnConnect = document.getElementById('btnSlackConnect');
+          const btnUnlink = document.getElementById('btnSlackUnlink');
           const btnSend = document.getElementById('btnSendSlack');
 
           if (isSlackLinked) {
             if (hint) hint.textContent = 'Slack連携済みです。';
             if (btnConnect) btnConnect.style.display = 'none';
+            if (btnUnlink) btnUnlink.style.display = 'inline-block';
             if (btnSend) btnSend.disabled = false;
           } else {
             if (hint) hint.textContent = 'Slack未連携です。「Slack連携（認可）」を実行してください。';
             if (btnConnect) btnConnect.style.display = 'inline-block';
+            if (btnUnlink) btnUnlink.style.display = 'none';
             if (btnSend) btnSend.disabled = true;
           }
         })
@@ -547,8 +553,36 @@
           isSlackLinked = false;
           const btnSend = document.getElementById('btnSendSlack');
           if (btnSend) btnSend.disabled = true;
+          const btnUnlink = document.getElementById('btnSlackUnlink');
+          if (btnUnlink) btnUnlink.style.display = 'none';
         })
         .getSlackLinkStatus();
+    }
+
+    function unlinkSlack() {
+      const btnUnlink = document.getElementById('btnSlackUnlink');
+      if (btnUnlink) btnUnlink.disabled = true;
+
+      showLoading(true);
+      hideMessage();
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          if (btnUnlink) btnUnlink.disabled = false;
+          if (result && result.ok) {
+            showMessage('Slack連携を解除しました。', false);
+            refreshSlackLinkStatus();
+          } else {
+            showMessage('エラー：Slack連携の解除に失敗しました。', true);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          if (btnUnlink) btnUnlink.disabled = false;
+          showMessage('エラー：Slack連携の解除に失敗しました。詳細：' + error.message, true);
+        })
+        .unlinkSlackForCurrentUser();
     }
 
     function connectSlack() {
