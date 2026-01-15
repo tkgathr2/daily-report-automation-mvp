@@ -198,36 +198,46 @@ function formatScheduleText(events) {
 /**
  * Slackに投稿
  * @param {string} text - テキストエリアの内容
- * @returns {string} 成功/失敗メッセージ
+ * @returns {string} 成功/失敗メッセージ（診断情報付き）
  */
 function sendToSlack(text) {
-  Logger.log('Slack送信開始');
-
+  var stage = 'init';
   try {
+    // [slack_send] ログ1: 送信入口
+    var textLen = text ? String(text).length : 0;
+    var userToken = getSlackUserToken_();
+    var hasToken = !!userToken;
+    var channelId = getSlackChannelId_();
+    var channelIdTail = channelId ? String(channelId).slice(-4) : '';
+    var isLinked = hasToken;
+    Logger.log('[slack_send] entry textLen=' + textLen + ' channelIdTail=' + channelIdTail + ' isLinked=' + isLinked + ' hasToken=' + hasToken);
+
+    stage = 'validate';
     // 本文のバリデーション
     if (!text || String(text).trim() === '') {
-      return 'エラー：送信するテキストがありません。';
+      return 'エラー：送信するテキストがありません。 [ok=false]';
     }
 
-    // OAuth連携済みユーザートークンを取得（ユーザーごと）
-    const userToken = getSlackUserToken_();
+    stage = 'token_check';
     if (!userToken) {
-      return 'エラー：Slack連携が必要です。「Slack連携（認可）」を実行してください。';
+      return 'エラー：Slack連携が必要です。「Slack連携（認可）」を実行してください。 [ok=false, hasToken=false]';
     }
 
-    const channelId = getSlackChannelId_();
+    stage = 'channel_check';
     if (!channelId) {
-      return 'エラー：Slackチャンネル設定がありません。管理者に連絡してください。';
+      return 'エラー：Slackチャンネル設定がありません。管理者に連絡してください。 [ok=false, channelId=null]';
     }
 
+    stage = 'prepare';
     // 今日の日付を取得
-    const todayString = getTodayDateString();
+    var todayString = getTodayDateString();
 
     // Slack投稿本文を生成
-    const slackMessage = formatSlackMessage(todayString, text);
+    var slackMessage = formatSlackMessage(todayString, text);
     Logger.log('Slack投稿本文生成完了');
 
-    const res = slackApiPost_(
+    stage = 'api_call';
+    var res = slackApiPost_(
       'https://slack.com/api/chat.postMessage',
       userToken,
       {
@@ -236,25 +246,43 @@ function sendToSlack(text) {
       }
     );
 
+    stage = 'result_check';
+    var httpStatus = res && res.httpStatus ? res.httpStatus : 0;
+    var error = res && res.error ? String(res.error) : '';
+    var needed = res && res.needed ? String(res.needed) : '';
+    var provided = res && res.provided ? String(res.provided) : '';
+
     if (res && res.ok) {
-      Logger.log('Slack送信完了');
-      return '送信成功：Slackに投稿しました。';
+      Logger.log('[slack_send] success http=' + httpStatus);
+      return '送信成功：Slackに投稿しました。 [ok=true, http=' + httpStatus + ']';
     }
 
-    const err = res && res.error ? String(res.error) : 'unknown_error';
-    Logger.log('Slack送信失敗：' + err);
+    // エラー時の診断情報
+    var diagInfo = ' [ok=false, http=' + httpStatus + ', error=' + error;
+    if (needed) diagInfo += ', needed=' + needed;
+    if (provided) diagInfo += ', provided=' + provided;
+    diagInfo += ']';
 
-    if (err === 'not_in_channel') {
-      return 'エラー：#日報に参加していないため投稿できません。#日報に参加してから再度お試しください。';
-    }
-    if (err === 'missing_scope' || err === 'invalid_auth' || err === 'token_revoked') {
-      return 'エラー：Slack連携が無効になりました。再度「Slack連携（認可）」を実行してください。';
-    }
-    return 'エラー：Slackへの送信に失敗しました。エラー：' + err;
+    Logger.log('[slack_send] fail' + diagInfo);
 
-  } catch (error) {
-    Logger.log('sendToSlackエラー：' + error.message);
-    return 'エラー：予期しないエラーが発生しました。詳細：' + error.message;
+    if (error === 'not_in_channel') {
+      return 'エラー：#日報に参加していないため投稿できません。#日報に参加してから再度お試しください。' + diagInfo;
+    }
+    if (error === 'missing_scope' || error === 'invalid_auth' || error === 'token_revoked') {
+      return 'エラー：Slack連携が無効になりました。再度「Slack連携（認可）」を実行してください。' + diagInfo;
+    }
+    if (error === 'channel_not_found') {
+      return 'エラー：指定されたチャンネルが見つかりません。管理者に連絡してください。' + diagInfo;
+    }
+    return 'エラー：Slackへの送信に失敗しました。' + diagInfo;
+
+  } catch (err) {
+    // [slack_send] ログ5: 例外catch（sendToSlack段階）
+    var msgHead = String(err && err.message ? err.message : err).slice(0, 80);
+    var stackHead = '';
+    try { stackHead = String(err && err.stack ? err.stack : '').split('\n')[0].slice(0, 80); } catch (e) {}
+    Logger.log('[slack_send] exception stage=' + stage + ' messageHead=' + msgHead + ' stackHead=' + stackHead);
+    return 'エラー：予期しないエラーが発生しました。 [stage=' + stage + ', msg=' + msgHead + ']';
   }
 }
 
@@ -450,16 +478,58 @@ function verifySlackOAuthState_(state) {
 }
 
 function slackApiPost_(url, bearerToken, payloadObj) {
-  const res = UrlFetchApp.fetch(url, {
-    method: 'post',
-    contentType: 'application/json; charset=utf-8',
-    headers: {
-      Authorization: 'Bearer ' + bearerToken
-    },
-    payload: JSON.stringify(payloadObj),
-    muteHttpExceptions: true
-  });
-  return safeJsonParse_(res.getContentText());
+  // [slack_send] ログ2: 送信直前
+  var apiMethod = '';
+  try { apiMethod = url.split('/').pop(); } catch (e) { apiMethod = 'unknown'; }
+  var payloadSummary = { channel: '', textLen: 0 };
+  try {
+    if (payloadObj && payloadObj.channel) payloadSummary.channel = String(payloadObj.channel).slice(-4);
+    if (payloadObj && payloadObj.text) payloadSummary.textLen = String(payloadObj.text).length;
+  } catch (e) {}
+  Logger.log('[slack_send] pre_fetch api=' + apiMethod + ' channelTail=' + payloadSummary.channel + ' textLen=' + payloadSummary.textLen);
+
+  var httpStatus = 0;
+  var bodyLen = 0;
+  var bodyText = '';
+  try {
+    var res = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json; charset=utf-8',
+      headers: {
+        Authorization: 'Bearer ' + bearerToken
+      },
+      payload: JSON.stringify(payloadObj),
+      muteHttpExceptions: true
+    });
+    httpStatus = res.getResponseCode();
+    bodyText = res.getContentText();
+    bodyLen = bodyText ? bodyText.length : 0;
+  } catch (fetchErr) {
+    // [slack_send] ログ5: 例外catch（fetch段階）
+    Logger.log('[slack_send] fetch_exception stage=UrlFetch messageHead=' + String(fetchErr && fetchErr.message ? fetchErr.message : fetchErr).slice(0, 80));
+    return { ok: false, error: 'fetch_exception', httpStatus: 0, _message: String(fetchErr && fetchErr.message ? fetchErr.message : fetchErr).slice(0, 80) };
+  }
+
+  var json = safeJsonParse_(bodyText);
+  var ok = json && json.ok;
+  var error = json && json.error ? String(json.error) : '';
+  var needed = json && json.needed ? String(json.needed) : '';
+  var provided = json && json.provided ? String(json.provided) : '';
+
+  // [slack_send] ログ3: fetch直後
+  Logger.log('[slack_send] post_fetch http=' + httpStatus + ' bodyLen=' + bodyLen + ' ok=' + ok + ' error=' + error + ' needed=' + needed + ' provided=' + provided);
+
+  // ok=falseの場合は再掲（ログ4）
+  if (!ok) {
+    Logger.log('[slack_send] api_not_ok http=' + httpStatus + ' error=' + error + ' needed=' + needed + ' provided=' + provided);
+  }
+
+  // 追加情報をjsonに付与して返す
+  if (!json) json = {};
+  json.httpStatus = httpStatus;
+  if (needed) json.needed = needed;
+  if (provided) json.provided = provided;
+  return json;
 }
 
 function safeJsonParse_(text) {

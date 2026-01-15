@@ -622,18 +622,21 @@
 
       const text = document.getElementById('scheduleText').value;
 
+      // [slack_send] クライアント計測: send_click
+      debugPing('send_click', { msg: 'textLen=' + (text ? text.length : 0) + ' isLinked=' + isSlackLinked });
+
       if (!isSlackLinked) {
+        debugPing('send_blocked', { msg: 'not_linked' });
         showMessage('Slack未連携です。「Slack連携（認可）」を実行してください。', true);
         return;
       }
 
       // バリデーション
       if (!text || text.trim() === '') {
+        debugPing('send_blocked', { msg: 'empty_text' });
         showMessage('送信するテキストがありません。先に「今日の予定を取得」を実行してください。', true);
         return;
       }
-
-
 
       // ローディング表示
       showLoading(true);
@@ -653,15 +656,28 @@
       showLoading(false);
       document.getElementById('btnSendSlack').disabled = false;
 
-      // 結果を表示
-      const isError = result && result.startsWith('エラー：');
+      // 結果を表示（診断情報を含む文字列をそのまま表示）
+      const isError = result && result.indexOf('エラー：') === 0;
+
+      // [slack_send] クライアント計測: send_ok または send_error
+      if (isError) {
+        debugPing('send_error', { msg: String(result).slice(0, 120) });
+      } else {
+        debugPing('send_ok', { msg: String(result).slice(0, 80) });
+      }
+
       showMessage(result, isError);
     }
 
     function onSendSlackFailure(error) {
       showLoading(false);
       document.getElementById('btnSendSlack').disabled = false;
-      showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
+
+      // [slack_send] クライアント計測: send_fail (GAS例外)
+      var errMsg = error && error.message ? String(error.message).slice(0, 80) : 'unknown';
+      debugPing('send_fail', { msg: errMsg });
+
+      showMessage('エラー：GAS例外が発生しました。 [msg=' + errMsg + ']', true);
     }
 
     // ============================================
