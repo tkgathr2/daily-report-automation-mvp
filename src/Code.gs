@@ -13,7 +13,6 @@
 // ============================================
 
 // スクリプトプロパティキー
-const PROPERTY_WEBHOOK_URL = 'SLACK_WEBHOOK_URL';
 const PROPERTY_SLACK_CLIENT_ID = 'SLACK_CLIENT_ID';
 const PROPERTY_SLACK_CLIENT_SECRET = 'SLACK_CLIENT_SECRET';
 const PROPERTY_SLACK_CHANNEL_ID = 'SLACK_CHANNEL_ID';
@@ -434,30 +433,6 @@ function formatSlackMessage(date, text) {
 }
 
 // ============================================
-// 設定管理関数
-// ============================================
-
-/**
- * スクリプトプロパティからWebhook URLを取得
- * @returns {string|null} Webhook URL、未設定の場合はnull
- */
-function getWebhookUrl() {
-  const properties = PropertiesService.getScriptProperties();
-  const url = properties.getProperty(PROPERTY_WEBHOOK_URL);
-  return url || null;
-}
-
-/**
- * スクリプトプロパティにWebhook URLを設定
- * @param {string} url - Webhook URL
- */
-function setWebhookUrl(url) {
-  const properties = PropertiesService.getScriptProperties();
-  properties.setProperty(PROPERTY_WEBHOOK_URL, url);
-  Logger.log('Webhook URL設定完了');
-}
-
-// ============================================
 // ユーティリティ関数
 // ============================================
 
@@ -476,21 +451,4 @@ function getServiceUrl_() {
 function getTodayDateString() {
   const today = new Date();
   return Utilities.formatDate(today, TIMEZONE, DATE_FORMAT);
-}
-
-/**
- * Googleアカウントの表示名を取得
- * @returns {string} 表示名、取得できない場合は「簡単日報くん」
- */
-function getUserDisplayName() {
-  try {
-    const user = Session.getEffectiveUser();
-    const email = user.getEmail();
-    if (email) {
-      return email.split('@')[0];
-    }
-  } catch (e) {
-    Logger.log('ユーザー名取得エラー: ' + e.message);
-  }
-  return '簡単日報くん';
 }
