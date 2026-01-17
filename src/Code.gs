@@ -70,17 +70,35 @@ function doGet(e) {
  * @returns {string} フォーマット済み予定テキスト、またはエラーメッセージ
  */
 function getTodayEvents() {
+  return getEventsForDate(null);
+}
+
+/**
+ * 指定日のカレンダー予定を取得
+ * プライマリカレンダーから指定日の予定を取得し、フォーマット済みテキストを返却
+ * @param {string} dateString - 日付文字列（YYYY-MM-DD形式）、nullの場合は今日
+ * @returns {string} フォーマット済み予定テキスト、またはエラーメッセージ
+ */
+function getEventsForDate(dateString) {
   Logger.log('カレンダー予定取得開始');
 
   try {
-    // 今日の日付を取得
-    const todayString = getTodayDateString();
-    Logger.log('対象日付：' + todayString);
+    // 対象日を設定
+    let targetDate;
+    if (dateString) {
+      // YYYY-MM-DD形式をパース
+      const parts = dateString.split('-');
+      targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    } else {
+      targetDate = new Date();
+    }
+    
+    const targetDateString = Utilities.formatDate(targetDate, TIMEZONE, DATE_FORMAT);
+    Logger.log('対象日付：' + targetDateString);
 
-    // 今日の開始時刻と終了時刻を設定
-    const today = new Date();
-    const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-    const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    // 対象日の開始時刻と終了時刻を設定
+    const startTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
+    const endTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
 
     // プライマリカレンダーを取得
     let calendar;
