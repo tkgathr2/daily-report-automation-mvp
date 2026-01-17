@@ -296,10 +296,14 @@
       <p>今日の予定を取得してSlackに送信</p>
     </div>
 
-    <!-- 予定取得セクション -->
+    <!-- 日付選択・予定取得セクション -->
     <div class="section">
-      <button id="btnGetEvents" class="btn btn-primary" onclick="loadEvents()">
-        今日の予定を取得
+      <div class="form-group">
+        <label for="dateSelect">日付を選択</label>
+        <input type="date" id="dateSelect" onchange="loadEventsForSelectedDate()">
+      </div>
+      <button id="btnGetEvents" class="btn btn-primary" onclick="loadEventsForSelectedDate()">
+        予定を取得
       </button>
     </div>
 
@@ -321,8 +325,8 @@
         <button id="btnCopy" class="btn btn-secondary" onclick="copyToClipboard()">
           コピー
         </button>
-        <button id="btnRefreshEvents" class="btn btn-primary" onclick="loadEvents()">
-          今日の予定を更新
+        <button id="btnRefreshEvents" class="btn btn-primary" onclick="loadEventsForSelectedDate()">
+          予定を更新
         </button>
       </div>
     </div>
@@ -357,8 +361,12 @@
     // ============================================
     // 予定取得
     // ============================================
-    function loadEvents() {
+    function loadEventsForSelectedDate() {
       if (isLoading) return;
+
+      // 選択された日付を取得
+      var dateInput = document.getElementById('dateSelect');
+      var selectedDate = dateInput.value; // YYYY-MM-DD形式
 
       // ローディング表示
       showLoading(true);
@@ -369,11 +377,16 @@
       var btnRefresh = document.getElementById('btnRefreshEvents');
       if (btnRefresh) btnRefresh.disabled = true;
 
-      // GAS関数を呼び出し
+      // GAS関数を呼び出し（日付を渡す）
       google.script.run
         .withSuccessHandler(onLoadEventsSuccess)
         .withFailureHandler(onLoadEventsFailure)
-        .getTodayEvents();
+        .getEventsForDate(selectedDate || null);
+    }
+
+    // 後方互換性のため残す
+    function loadEvents() {
+      loadEventsForSelectedDate();
     }
 
     function onLoadEventsSuccess(result) {
@@ -566,11 +579,19 @@
     }
 
     // ============================================
-    // ページ読み込み時に自動取得
+    // ページ読み込み時の初期化
     // ============================================
     window.addEventListener('load', function() {
+      // 日付ピッカーを今日の日付で初期化
+      var dateInput = document.getElementById('dateSelect');
+      var today = new Date();
+      var year = today.getFullYear();
+      var month = String(today.getMonth() + 1).padStart(2, '0');
+      var day = String(today.getDate()).padStart(2, '0');
+      dateInput.value = year + '-' + month + '-' + day;
+      
       refreshSlackLinkStatus();
-      loadEvents();
+      loadEventsForSelectedDate();
     });
   </script>
 </body>
