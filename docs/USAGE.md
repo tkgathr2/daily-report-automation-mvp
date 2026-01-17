@@ -88,6 +88,19 @@
 2. 「OAuth & Permissions」→「Redirect URLs」
 3. デプロイしたWEBアプリのURLを追加して保存
 
+**重要：Google Workspaceドメインを使用している場合**
+
+Google Workspaceドメイン（例：takagi.bz）でGASを使用している場合、2種類のURL形式が存在します。**両方のURLをRedirect URLsに登録する必要があります**：
+
+1. `/a/macros/ドメイン/s/デプロイID/exec`（デプロイ管理画面に表示される形式）
+2. `/a/ドメイン/macros/s/デプロイID/exec`（実行時に生成される形式）
+
+例：
+- `https://script.google.com/a/macros/example.com/s/AKfycbw.../exec`
+- `https://script.google.com/a/example.com/macros/s/AKfycbw.../exec`
+
+OAuth認証時にエラーが発生した場合は、エラーメッセージに表示されるURLをそのままRedirect URLsに追加してください。
+
 ### 3. デプロイ後の確認
 
 1. コピーしたURLにブラウザでアクセス
