@@ -182,6 +182,37 @@
     }
 
     /* ============================================
+       日付選択
+       ============================================ */
+    .date-picker-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .date-picker-container input[type="date"] {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .btn-date-nav {
+      padding: 10px 15px;
+      font-size: 14px;
+      font-weight: bold;
+      background-color: #ecf0f1;
+      color: #2c3e50;
+      border: 2px solid #bdc3c7;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .btn-date-nav:hover {
+      background-color: #bdc3c7;
+    }
+
+    /* ============================================
        Slack送信フォーム
        ============================================ */
     .slack-form {
@@ -300,7 +331,11 @@
     <div class="section">
       <div class="form-group">
         <label for="dateSelect">日付を選択</label>
-        <input type="date" id="dateSelect" onchange="loadEventsForSelectedDate()">
+        <div class="date-picker-container">
+          <button type="button" class="btn-date-nav" onclick="changeDate(-1)">&lt; 前日</button>
+          <input type="date" id="dateSelect" onchange="loadEventsForSelectedDate()">
+          <button type="button" class="btn-date-nav" onclick="changeDate(1)">翌日 &gt;</button>
+        </div>
       </div>
       <button id="btnGetEvents" class="btn btn-primary" onclick="loadEventsForSelectedDate()">
         予定を取得
@@ -386,6 +421,20 @@
 
     // 後方互換性のため残す
     function loadEvents() {
+      loadEventsForSelectedDate();
+    }
+
+    // 日付を変更する（前日/翌日ボタン用）
+    function changeDate(days) {
+      var dateInput = document.getElementById('dateSelect');
+      var currentDate = dateInput.value ? new Date(dateInput.value) : new Date();
+      currentDate.setDate(currentDate.getDate() + days);
+      
+      var year = currentDate.getFullYear();
+      var month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      var day = String(currentDate.getDate()).padStart(2, '0');
+      dateInput.value = year + '-' + month + '-' + day;
+      
       loadEventsForSelectedDate();
     }
 
