@@ -353,7 +353,7 @@
     <!-- ヘッダー -->
     <div class="header">
       <h1>簡単日報くん</h1>
-      <p>今日の予定を取得してSlackに送信</p>
+      <p>カレンダーの予定を取得</p>
     </div>
 
     <!-- ローディング表示 -->
@@ -403,22 +403,6 @@
       </button>
     </div>
 
-    <!-- Slack送信フォーム -->
-    <div class="section slack-form">
-      <div class="section-title">Slack送信</div>
-      <div id="slackLinkHint" class="form-hint" style="margin-bottom: 10px;">
-        Slack未連携です。「Slack連携（認可）」を実行してください。
-      </div>
-      <div class="button-group" style="margin-bottom: 10px;">
-        <button id="btnSlackConnect" class="btn btn-primary" onclick="connectSlack()">
-          Slack連携（認可）
-        </button>
-      </div>
-      <button id="btnSendSlack" class="btn btn-success" onclick="sendSlack()">
-        Slackに投稿
-      </button>
-    </div>
-
     <!-- メッセージ表示エリア -->
     <div id="message" class="message"></div>
   </div>
@@ -428,7 +412,6 @@
     // 状態管理
     // ============================================
     let isLoading = false;
-    let isSlackLinked = false;
 
     // ============================================
     // 予定取得
@@ -618,114 +601,6 @@
     }
 
     // ============================================
-    // Slack送信
-    // ============================================
-    function refreshSlackLinkStatus() {
-      google.script.run
-        .withSuccessHandler(function(status) {
-          isSlackLinked = !!(status && status.linked);
-
-          // UI更新
-          const hint = document.getElementById('slackLinkHint');
-          const btnConnect = document.getElementById('btnSlackConnect');
-          const btnSend = document.getElementById('btnSendSlack');
-
-          if (isSlackLinked) {
-            if (hint) hint.style.display = 'none';
-            if (btnConnect) btnConnect.style.display = 'none';
-            if (btnSend) btnSend.disabled = false;
-          } else {
-            if (hint) {
-              hint.textContent = 'Slack未連携です。「Slack連携（認可）」を実行してください。';
-              hint.style.display = 'block';
-            }
-            if (btnConnect) btnConnect.style.display = 'inline-block';
-            if (btnSend) btnSend.disabled = true;
-          }
-        })
-        .withFailureHandler(function(error) {
-          // 連携状態が取れない場合は安全側（未連携扱い）
-          isSlackLinked = false;
-          const btnSend = document.getElementById('btnSendSlack');
-          if (btnSend) btnSend.disabled = true;
-        })
-        .getSlackLinkStatus();
-    }
-
-    function connectSlack() {
-      const btnConnect = document.getElementById('btnSlackConnect');
-      if (btnConnect) btnConnect.disabled = true;
-
-      showLoading(true);
-      hideMessage();
-
-      google.script.run
-        .withSuccessHandler(function(url) {
-          showLoading(false);
-          if (!url) {
-            if (btnConnect) btnConnect.disabled = false;
-            showMessage('エラー：Slack連携URLを生成できません。管理者に連絡してください。', true);
-            return;
-          }
-          // Slackの認可画面へ遷移
-          window.top.location.href = url;
-        })
-        .withFailureHandler(function(error) {
-          showLoading(false);
-          if (btnConnect) btnConnect.disabled = false;
-          showMessage('エラー：Slack連携の開始に失敗しました。詳細：' + error.message, true);
-        })
-        .getSlackAuthorizeUrl();
-    }
-
-    function sendSlack() {
-      if (isLoading) return;
-
-      const text = document.getElementById('scheduleText').value;
-
-      if (!isSlackLinked) {
-        showMessage('Slack未連携です。「Slack連携（認可）」を実行してください。', true);
-        return;
-      }
-
-      // バリデーション
-      if (!text || text.trim() === '') {
-        showMessage('送信するテキストがありません。先に「今日の予定を取得」を実行してください。', true);
-        return;
-      }
-
-
-
-      // ローディング表示
-      showLoading(true);
-      hideMessage();
-
-      // ボタンを無効化
-      document.getElementById('btnSendSlack').disabled = true;
-
-      // GAS関数を呼び出し
-      google.script.run
-        .withSuccessHandler(onSendSlackSuccess)
-        .withFailureHandler(onSendSlackFailure)
-        .sendToSlack(text);
-    }
-
-    function onSendSlackSuccess(result) {
-      showLoading(false);
-      document.getElementById('btnSendSlack').disabled = false;
-
-      // 結果を表示
-      const isError = result && result.startsWith('エラー：');
-      showMessage(result, isError);
-    }
-
-    function onSendSlackFailure(error) {
-      showLoading(false);
-      document.getElementById('btnSendSlack').disabled = false;
-      showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
-    }
-
-    // ============================================
     // ユーティリティ関数
     // ============================================
     function showLoading(show) {
@@ -762,8 +637,6 @@
     window.addEventListener('load', function() {
       // 年月日セレクトボックスを初期化
       initDateSelects();
-      
-      refreshSlackLinkStatus();
       loadEventsForSelectedDate();
     });
   </script>
