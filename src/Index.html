@@ -356,29 +356,6 @@
       <p>今日の予定を取得してSlackに送信</p>
     </div>
 
-    <!-- 日付選択・予定取得セクション -->
-    <div class="section">
-      <div class="form-group">
-        <label>日付を選択</label>
-        <div class="date-input-container">
-          <select id="yearSelect" onchange="onDateSelectChange()"></select>
-          <span class="date-separator">年</span>
-          <select id="monthSelect" onchange="onDateSelectChange()"></select>
-          <span class="date-separator">月</span>
-          <select id="daySelect" onchange="onDateSelectChange()"></select>
-          <span class="date-separator">日</span>
-        </div>
-        <div class="date-nav-container">
-          <button type="button" class="btn-date-nav" onclick="changeDate(-1)">&lt; 前日</button>
-          <button type="button" class="btn-date-nav" onclick="changeDate(1)">翌日 &gt;</button>
-        </div>
-        <input type="hidden" id="dateSelect">
-      </div>
-      <button id="btnGetEvents" class="btn btn-primary" onclick="loadEventsForSelectedDate()">
-        予定を取得
-      </button>
-    </div>
-
     <!-- ローディング表示 -->
     <div id="loading" class="loading">
       <span class="loading-spinner"></span>
@@ -401,6 +378,29 @@
           予定を更新
         </button>
       </div>
+    </div>
+
+    <!-- 日付選択・予定取得セクション -->
+    <div class="section">
+      <div class="form-group">
+        <label>日付を選択</label>
+        <div class="date-input-container">
+          <select id="yearSelect" onchange="onDateSelectChange()"></select>
+          <span class="date-separator">年</span>
+          <select id="monthSelect" onchange="onDateSelectChange()"></select>
+          <span class="date-separator">月</span>
+          <select id="daySelect" onchange="onDateSelectChange()"></select>
+          <span class="date-separator">日</span>
+        </div>
+        <div class="date-nav-container">
+          <button type="button" class="btn-date-nav" onclick="changeDate(-1)">&lt; 前日</button>
+          <button type="button" class="btn-date-nav" onclick="changeDate(1)">翌日 &gt;</button>
+        </div>
+        <input type="hidden" id="dateSelect">
+      </div>
+      <button id="btnGetEvents" class="btn btn-primary" onclick="loadEventsForSelectedDate()">
+        予定を取得
+      </button>
     </div>
 
     <!-- Slack送信フォーム -->
@@ -631,11 +631,14 @@
           const btnSend = document.getElementById('btnSendSlack');
 
           if (isSlackLinked) {
-            if (hint) hint.textContent = 'Slack連携済みです。';
+            if (hint) hint.style.display = 'none';
             if (btnConnect) btnConnect.style.display = 'none';
             if (btnSend) btnSend.disabled = false;
           } else {
-            if (hint) hint.textContent = 'Slack未連携です。「Slack連携（認可）」を実行してください。';
+            if (hint) {
+              hint.textContent = 'Slack未連携です。「Slack連携（認可）」を実行してください。';
+              hint.style.display = 'block';
+            }
             if (btnConnect) btnConnect.style.display = 'inline-block';
             if (btnSend) btnSend.disabled = true;
           }
