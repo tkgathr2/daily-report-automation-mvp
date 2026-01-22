@@ -13,7 +13,6 @@
 // ============================================
 
 // スクリプトプロパティキー
-const PROPERTY_WEBHOOK_URL = 'SLACK_WEBHOOK_URL';
 const PROPERTY_SLACK_CLIENT_ID = 'SLACK_CLIENT_ID';
 const PROPERTY_SLACK_CLIENT_SECRET = 'SLACK_CLIENT_SECRET';
 const PROPERTY_SLACK_CHANNEL_ID = 'SLACK_CHANNEL_ID';
@@ -71,17 +70,35 @@ function doGet(e) {
  * @returns {string} フォーマット済み予定テキスト、またはエラーメッセージ
  */
 function getTodayEvents() {
+  return getEventsForDate(null);
+}
+
+/**
+ * 指定日のカレンダー予定を取得
+ * プライマリカレンダーから指定日の予定を取得し、フォーマット済みテキストを返却
+ * @param {string} dateString - 日付文字列（YYYY-MM-DD形式）、nullの場合は今日
+ * @returns {string} フォーマット済み予定テキスト、またはエラーメッセージ
+ */
+function getEventsForDate(dateString) {
   Logger.log('カレンダー予定取得開始');
 
   try {
-    // 今日の日付を取得
-    const todayString = getTodayDateString();
-    Logger.log('対象日付：' + todayString);
+    // 対象日を設定
+    let targetDate;
+    if (dateString) {
+      // YYYY-MM-DD形式をパース
+      const parts = dateString.split('-');
+      targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    } else {
+      targetDate = new Date();
+    }
+    
+    const targetDateString = Utilities.formatDate(targetDate, TIMEZONE, DATE_FORMAT);
+    Logger.log('対象日付：' + targetDateString);
 
-    // 今日の開始時刻と終了時刻を設定
-    const today = new Date();
-    const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-    const endTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    // 対象日の開始時刻と終了時刻を設定
+    const startTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
+    const endTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
 
     // プライマリカレンダーを取得
     let calendar;
@@ -434,30 +451,6 @@ function formatSlackMessage(date, text) {
 }
 
 // ============================================
-// 設定管理関数
-// ============================================
-
-/**
- * スクリプトプロパティからWebhook URLを取得
- * @returns {string|null} Webhook URL、未設定の場合はnull
- */
-function getWebhookUrl() {
-  const properties = PropertiesService.getScriptProperties();
-  const url = properties.getProperty(PROPERTY_WEBHOOK_URL);
-  return url || null;
-}
-
-/**
- * スクリプトプロパティにWebhook URLを設定
- * @param {string} url - Webhook URL
- */
-function setWebhookUrl(url) {
-  const properties = PropertiesService.getScriptProperties();
-  properties.setProperty(PROPERTY_WEBHOOK_URL, url);
-  Logger.log('Webhook URL設定完了');
-}
-
-// ============================================
 // ユーティリティ関数
 // ============================================
 
@@ -476,21 +469,4 @@ function getServiceUrl_() {
 function getTodayDateString() {
   const today = new Date();
   return Utilities.formatDate(today, TIMEZONE, DATE_FORMAT);
-}
-
-/**
- * Googleアカウントの表示名を取得
- * @returns {string} 表示名、取得できない場合は「簡単日報くん」
- */
-function getUserDisplayName() {
-  try {
-    const user = Session.getEffectiveUser();
-    const email = user.getEmail();
-    if (email) {
-      return email.split('@')[0];
-    }
-  } catch (e) {
-    Logger.log('ユーザー名取得エラー: ' + e.message);
-  }
-  return '簡単日報くん';
 }
