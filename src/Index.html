@@ -537,6 +537,9 @@
       <button class="close-completion-btn" onclick="closeCompletionScreen()">
         閉じる
       </button>
+      <button class="close-completion-btn" onclick="restartReport()" style="margin-top: 10px;">
+        もう一度日報を作成する
+      </button>
     </div>
   </div>
 
@@ -832,6 +835,10 @@
     }
 
     function closeCompletionScreen() {
+      document.getElementById('completionScreen').classList.remove('show');
+    }
+
+    function restartReport() {
       document.getElementById('completionScreen').classList.remove('show');
     }
 
