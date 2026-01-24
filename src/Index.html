@@ -416,6 +416,49 @@
     }
 
     /* ============================================
+       V2追加スタイル
+       ============================================ */
+
+    /* 日報ヘッダー */
+    .report-header {
+      font-size: 18px;
+      font-weight: bold;
+      color: #2c3e50;
+      text-align: center;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+
+    /* セクション別テキストエリア高さ */
+    #todayTasks {
+      height: 150px;
+    }
+
+    #notices, #salesPoints, #nextTasks {
+      height: 100px;
+    }
+
+    /* エラー状態 */
+    textarea.validation-error {
+      border: 2px solid #e74c3c !important;
+      background-color: #fdf2f2 !important;
+    }
+
+    /* エラーメッセージ（セクション別） */
+    .section-error {
+      color: #e74c3c;
+      font-size: 12px;
+      margin-top: 5px;
+      display: none;
+    }
+
+    .section-error.show {
+      display: block;
+    }
+
+    /* ============================================
        レスポンシブ対応
        ============================================ */
     @media (max-width: 600px) {
@@ -460,16 +503,43 @@
       <span>読み込み中...</span>
     </div>
 
-    <!-- テキストエリア -->
+    <!-- 日報ヘッダー -->
+    <div id="reportHeader" class="report-header">
+      【<span id="reportDate"></span>　<span id="reportUserName"></span>　日報】
+    </div>
+    <div id="nameInputContainer" class="form-group" style="display: none;">
+      <label>氏名を入力してください</label>
+      <input type="text" id="manualUserName" placeholder="例：山田太郎">
+    </div>
+
+    <!-- 今日やったこと -->
     <div class="section textarea-container">
-      <div class="section-title">予定データ（編集可能）</div>
-      <textarea id="scheduleText" placeholder="「今日の予定を取得」ボタンをクリックすると、ここにカレンダーの予定が表示されます。"></textarea>
+      <div class="section-title">【今日やったこと】</div>
+      <textarea id="todayTasks" placeholder="カレンダーの予定が表示されます。編集も可能です。"></textarea>
+    </div>
+
+    <!-- わかった事・問題・共有事項 -->
+    <div class="section textarea-container">
+      <div class="section-title">【わかった事・問題・共有事項】</div>
+      <textarea id="notices" placeholder="⚫︎ "></textarea>
+    </div>
+
+    <!-- 売上・利益に関わるポイント -->
+    <div class="section textarea-container">
+      <div class="section-title">【売上・利益に関わるポイント】</div>
+      <textarea id="salesPoints" placeholder="⚫︎ "></textarea>
+    </div>
+
+    <!-- 次すること -->
+    <div class="section textarea-container">
+      <div class="section-title">【次すること】</div>
+      <textarea id="nextTasks" placeholder="⚫︎ "></textarea>
     </div>
 
     <!-- コピー・更新ボタン -->
     <div class="section">
       <div class="button-group">
-        <button id="btnCopy" class="btn btn-secondary" onclick="copyToClipboard()">
+        <button id="btnCopy" class="btn btn-secondary" onclick="copyToClipboardV2()">
           コピー
         </button>
         <button id="btnRefreshEvents" class="btn btn-primary" onclick="loadEventsForSelectedDate()">
@@ -512,7 +582,7 @@
           Slack連携（認可）
         </button>
       </div>
-      <button id="btnSendSlack" class="btn btn-success" onclick="sendSlack()">
+      <button id="btnSendSlack" class="btn btn-success" onclick="sendSlackV2()">
         Slackに投稿
       </button>
     </div>
@@ -681,7 +751,8 @@
         return;
       }
 
-      document.getElementById('scheduleText').value = result;
+      // V2: todayTasksに設定
+      document.getElementById('todayTasks').value = result;
 
       if (!result || result.trim() === '') {
         showMessage('今日の予定はありません。', false);
@@ -699,24 +770,118 @@
     }
 
     // ============================================
-    // コピー機能
+    // V2初期化
     // ============================================
-    function copyToClipboard() {
-      const text = document.getElementById('scheduleText').value;
+    function initV2() {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          // 日付を表示
+          document.getElementById('reportDate').textContent = data.date;
+          
+          // 氏名を表示
+          if (data.needsNameInput) {
+            document.getElementById('reportUserName').textContent = '';
+            document.getElementById('nameInputContainer').style.display = 'block';
+          } else {
+            document.getElementById('reportUserName').textContent = data.userName;
+            document.getElementById('nameInputContainer').style.display = 'none';
+          }
+          
+          // 前日の「次すること」を設定
+          if (data.nextTasks) {
+            document.getElementById('nextTasks').value = data.nextTasks;
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('initV2 error:', error);
+          // フォールバック：今日の日付を手動設定
+          var today = new Date();
+          var dateStr = today.getFullYear() + '年' + 
+                        String(today.getMonth() + 1).padStart(2, '0') + '月' + 
+                        String(today.getDate()).padStart(2, '0') + '日';
+          document.getElementById('reportDate').textContent = dateStr;
+          document.getElementById('nameInputContainer').style.display = 'block';
+        })
+        .getInitialDataV2();
+    }
 
-      if (!text || text.trim() === '') {
-        showMessage('コピーするテキストがありません。', true);
-        return;
+    // ============================================
+    // V2バリデーション
+    // ============================================
+    function validateSectionsV2() {
+      var sections = [
+        { id: 'todayTasks', name: '今日やったこと' },
+        { id: 'notices', name: 'わかった事・問題・共有事項' },
+        { id: 'salesPoints', name: '売上・利益に関わるポイント' },
+        { id: 'nextTasks', name: '次すること' }
+      ];
+      
+      var errors = [];
+      var allValid = true;
+      
+      sections.forEach(function(section) {
+        var element = document.getElementById(section.id);
+        var value = element.value.trim();
+        
+        if (!value) {
+          errors.push(section.name);
+          element.classList.add('validation-error');
+          allValid = false;
+        } else {
+          element.classList.remove('validation-error');
+        }
+      });
+      
+      return {
+        valid: allValid,
+        errors: errors
+      };
+    }
+
+    // エラー表示をクリア
+    function clearValidationErrors() {
+      var textareas = document.querySelectorAll('textarea');
+      textareas.forEach(function(ta) {
+        ta.classList.remove('validation-error');
+      });
+    }
+
+    // ============================================
+    // V2コピー機能
+    // ============================================
+    function copyToClipboardV2() {
+      // 氏名を取得
+      var userName = document.getElementById('reportUserName').textContent;
+      if (!userName) {
+        userName = document.getElementById('manualUserName').value.trim() || '（氏名未入力）';
       }
+
+      var date = document.getElementById('reportDate').textContent;
+      var header = '【' + date + '　' + userName + '　日報】';
+
+      var text = header + '\n\n' +
+        '【今日やったこと】\n' + document.getElementById('todayTasks').value + '\n\n' +
+        '【わかった事・問題・共有事項】\n' + document.getElementById('notices').value + '\n\n' +
+        '【売上・利益に関わるポイント】\n' + document.getElementById('salesPoints').value + '\n\n' +
+        '【次すること】\n' + document.getElementById('nextTasks').value;
 
       navigator.clipboard.writeText(text).then(function() {
         showMessage('コピーしました。', false);
       }).catch(function(error) {
-        const textarea = document.getElementById('scheduleText');
-        textarea.select();
+        // フォールバック
+        var tempTextarea = document.createElement('textarea');
+        tempTextarea.value = text;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
         document.execCommand('copy');
+        document.body.removeChild(tempTextarea);
         showMessage('コピーしました。', false);
       });
+    }
+
+    // 旧コピー機能（互換性のため残す）
+    function copyToClipboard() {
+      copyToClipboardV2();
     }
 
     // ============================================
@@ -777,37 +942,64 @@
         .getSlackAuthorizeUrl();
     }
 
-    function sendSlack() {
+    // ============================================
+    // V2 Slack送信
+    // ============================================
+    function sendSlackV2() {
       if (isLoading) return;
 
-      const text = document.getElementById('scheduleText').value;
+      // バリデーション
+      clearValidationErrors();
+      var validation = validateSectionsV2();
+      
+      if (!validation.valid) {
+        showMessage('未入力の項目があります：' + validation.errors.join('、'), true);
+        return;
+      }
 
       if (!isSlackLinked) {
         showMessage('Slack未連携です。「Slack連携（認可）」を実行してください。', true);
         return;
       }
 
-      if (!text || text.trim() === '') {
-        showMessage('送信するテキストがありません。先に「今日の予定を取得」を実行してください。', true);
-        return;
+      // 氏名を取得（手動入力の場合）
+      var userName = document.getElementById('reportUserName').textContent;
+      if (!userName) {
+        userName = document.getElementById('manualUserName').value.trim();
+        if (!userName) {
+          showMessage('氏名を入力してください。', true);
+          return;
+        }
       }
+
+      // ヘッダーを生成
+      var date = document.getElementById('reportDate').textContent;
+      var header = '【' + date + '　' + userName + '　日報】';
+
+      // 日報データを作成
+      var reportData = {
+        header: header,
+        todayTasks: document.getElementById('todayTasks').value,
+        notices: document.getElementById('notices').value,
+        salesPoints: document.getElementById('salesPoints').value,
+        nextTasks: document.getElementById('nextTasks').value
+      };
 
       showLoading(true);
       hideMessage();
-
       document.getElementById('btnSendSlack').disabled = true;
 
       google.script.run
-        .withSuccessHandler(onSendSlackSuccess)
-        .withFailureHandler(onSendSlackFailure)
-        .sendToSlack(text);
+        .withSuccessHandler(onSendSlackSuccessV2)
+        .withFailureHandler(onSendSlackFailureV2)
+        .sendToSlackV2(reportData);
     }
 
-    function onSendSlackSuccess(result) {
+    function onSendSlackSuccessV2(result) {
       showLoading(false);
       document.getElementById('btnSendSlack').disabled = false;
 
-      const isError = result && result.startsWith('エラー：');
+      var isError = result && result.startsWith('エラー：');
       
       if (isError) {
         showMessage(result, true);
@@ -816,10 +1008,23 @@
       }
     }
 
-    function onSendSlackFailure(error) {
+    function onSendSlackFailureV2(error) {
       showLoading(false);
       document.getElementById('btnSendSlack').disabled = false;
       showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
+    }
+
+    // 旧Slack送信（互換性のため残す）
+    function sendSlack() {
+      sendSlackV2();
+    }
+
+    function onSendSlackSuccess(result) {
+      onSendSlackSuccessV2(result);
+    }
+
+    function onSendSlackFailure(error) {
+      onSendSlackFailureV2(error);
     }
 
     // ============================================
@@ -872,6 +1077,7 @@
     window.addEventListener('load', function() {
       initDateSelects();
       refreshSlackLinkStatus();
+      initV2();  // V2初期化を追加
       loadEventsForSelectedDate();
     });
   </script>

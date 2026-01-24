@@ -31,6 +31,10 @@ const TIMEZONE = 'Asia/Tokyo';
 const DATE_FORMAT = 'yyyy/MM/dd';
 const TIME_FORMAT = 'HH:mm';
 
+// V2追加定数
+const USER_PROPERTY_NEXT_TASKS = 'NEXT_TASKS_DATA';
+const DATE_FORMAT_V2 = 'yyyy年MM月dd日';
+
 // ============================================
 // WEBアプリエントリーポイント
 // ============================================
@@ -469,4 +473,187 @@ function getServiceUrl_() {
 function getTodayDateString() {
   const today = new Date();
   return Utilities.formatDate(today, TIMEZONE, DATE_FORMAT);
+}
+
+// ============================================
+// V2追加関数
+// ============================================
+
+/**
+ * ユーザー名を取得する
+ * @returns {Object} {success: boolean, name: string, needsInput: boolean}
+ */
+function getUserName() {
+  try {
+    const email = Session.getActiveUser().getEmail();
+    if (!email) {
+      return { success: false, name: '', needsInput: true };
+    }
+    
+    // @より前を取得
+    const localPart = email.split('@')[0];
+    
+    // ドットをスペースに置換し、各単語の先頭を大文字化
+    const name = localPart
+      .split('.')
+      .map(function(word) {
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(' ');
+    
+    return { success: true, name: name, needsInput: false };
+  } catch (e) {
+    Logger.log('getUserName error: ' + e.message);
+    return { success: false, name: '', needsInput: true };
+  }
+}
+
+/**
+ * 今日の日付をV2フォーマットで返す
+ * @returns {string} YYYY年MM月DD日形式の日付
+ */
+function getTodayDateFormattedV2() {
+  const today = new Date();
+  return Utilities.formatDate(today, TIMEZONE, DATE_FORMAT_V2);
+}
+
+/**
+ * 「次すること」を保存する
+ * @param {string} tasks - 保存する内容
+ * @returns {boolean} 保存成功/失敗
+ */
+function saveNextTasks(tasks) {
+  try {
+    const data = {
+      date: Utilities.formatDate(new Date(), TIMEZONE, 'yyyy-MM-dd'),
+      nextTasks: tasks
+    };
+    
+    PropertiesService.getUserProperties()
+      .setProperty(USER_PROPERTY_NEXT_TASKS, JSON.stringify(data));
+    
+    Logger.log('saveNextTasks: 保存完了');
+    return true;
+  } catch (e) {
+    Logger.log('saveNextTasks error: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * 前日の「次すること」を取得する
+ * @returns {string} 前日の内容（なければ空文字）
+ */
+function getNextTasks() {
+  try {
+    const dataStr = PropertiesService.getUserProperties()
+      .getProperty(USER_PROPERTY_NEXT_TASKS);
+    
+    if (!dataStr) {
+      return '';
+    }
+    
+    const data = JSON.parse(dataStr);
+    
+    // 今日の日付と比較（今日のデータなら表示しない＝すでに送信済み）
+    const today = Utilities.formatDate(new Date(), TIMEZONE, 'yyyy-MM-dd');
+    if (data.date === today) {
+      return '';
+    }
+    
+    return data.nextTasks || '';
+  } catch (e) {
+    Logger.log('getNextTasks error: ' + e.message);
+    return '';
+  }
+}
+
+/**
+ * V2初期表示に必要なデータを一括取得する
+ * @returns {Object} {date, userName, nextTasks, needsNameInput}
+ */
+function getInitialDataV2() {
+  const userNameResult = getUserName();
+  
+  return {
+    date: getTodayDateFormattedV2(),
+    userName: userNameResult.name,
+    needsNameInput: userNameResult.needsInput,
+    nextTasks: getNextTasks()
+  };
+}
+
+/**
+ * V2用Slack送信
+ * @param {Object} reportData - 日報データ
+ * @param {string} reportData.header - ヘッダー（日付と氏名）
+ * @param {string} reportData.todayTasks - 今日やったこと
+ * @param {string} reportData.notices - わかった事・問題・共有事項
+ * @param {string} reportData.salesPoints - 売上・利益に関わるポイント
+ * @param {string} reportData.nextTasks - 次すること
+ * @returns {string} 成功/失敗メッセージ
+ */
+function sendToSlackV2(reportData) {
+  Logger.log('Slack送信開始（V2）');
+
+  try {
+    // OAuth連携済みユーザートークンを取得
+    const userToken = getSlackUserToken_();
+    if (!userToken) {
+      return 'エラー：Slack連携が必要です。「Slack連携（認可）」を実行してください。';
+    }
+
+    const channelId = getSlackChannelId_();
+    if (!channelId) {
+      return 'エラー：Slackチャンネル設定がありません。管理者に連絡してください。';
+    }
+
+    // Slack投稿本文を生成（V2フォーマット）
+    const slackMessage = formatSlackMessageV2(reportData);
+    Logger.log('Slack投稿本文生成完了（V2）');
+
+    const res = slackApiPost_(
+      'https://slack.com/api/chat.postMessage',
+      userToken,
+      {
+        channel: channelId,
+        text: slackMessage
+      }
+    );
+
+    if (res && res.ok) {
+      // 送信成功時、「次すること」を保存
+      saveNextTasks(reportData.nextTasks);
+      Logger.log('Slack送信完了（V2）');
+      return '送信成功：Slackに投稿しました。';
+    }
+
+    const err = res && res.error ? String(res.error) : 'unknown_error';
+    Logger.log('Slack送信失敗（V2）：' + err);
+
+    if (err === 'not_in_channel') {
+      return 'エラー：#日報に参加していないため投稿できません。';
+    }
+    if (err === 'missing_scope' || err === 'invalid_auth' || err === 'token_revoked') {
+      return 'エラー：Slack連携が無効になりました。再度「Slack連携（認可）」を実行してください。';
+    }
+    return 'エラー：Slackへの送信に失敗しました。エラー：' + err;
+
+  } catch (error) {
+    Logger.log('sendToSlackV2エラー：' + error.message);
+    return 'エラー：予期しないエラーが発生しました。詳細：' + error.message;
+  }
+}
+
+/**
+ * V2用Slack投稿本文を生成
+ * @param {Object} reportData - 日報データ
+ * @returns {string} Slack投稿本文
+ */
+function formatSlackMessageV2(reportData) {
+  return reportData.header + '\n\n' +
+    '【今日やったこと】\n' + reportData.todayTasks + '\n\n' +
+    '【わかった事・問題・共有事項】\n' + reportData.notices + '\n\n' +
+    '【売上・利益に関わるポイント】\n' + reportData.salesPoints + '\n\n' +
+    '【次すること】\n' + reportData.nextTasks;
 }
