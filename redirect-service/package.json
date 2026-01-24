@@ -1,0 +1,12 @@
+{
+  "name": "easy-nippou-redirect",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "description": "Redirect service for Kantan Nippou-kun v2",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
