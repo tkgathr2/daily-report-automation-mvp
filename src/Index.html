@@ -572,6 +572,12 @@
       <p>今日の予定を取得してSlackに送信</p>
     </div>
     
+    <!-- デバッグパネル（問題解決後に削除） -->
+    <div id="debugPanel" style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 12px; font-family: monospace; max-height: 150px; overflow-y: auto;">
+      <strong style="color: #856404;">DEBUG LOG:</strong>
+      <div id="debugLog">ページ読み込み中...</div>
+    </div>
+    
     <!-- 更新のお知らせ -->
     <div id="updateNotice" style="background: #e8f4fd; border: 1px solid #3498db; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;">
       <strong style="color: #2980b9;">v2.1.0 更新内容:</strong>
@@ -713,6 +719,19 @@
   </div>
 
   <script>
+    // ============================================
+    // デバッグログ関数（問題解決後に削除）
+    // ============================================
+    function debugLog(message) {
+      var debugLogDiv = document.getElementById('debugLog');
+      if (debugLogDiv) {
+        var time = new Date().toLocaleTimeString();
+        debugLogDiv.innerHTML += '<div>[' + time + '] ' + message + '</div>';
+        debugLogDiv.scrollTop = debugLogDiv.scrollHeight;
+      }
+      console.log('[DEBUG]', message);
+    }
+    
     // ============================================
     // 設定
     // ============================================
@@ -869,16 +888,16 @@
     };
 
     function handleFormatShortcut(e) {
-      console.log('[DEBUG] handleFormatShortcut called:', e.key, 'ctrlKey:', e.ctrlKey, 'metaKey:', e.metaKey);
+      debugLog('handleFormatShortcut: key=' + e.key + ', ctrl=' + e.ctrlKey + ', meta=' + e.metaKey);
       
       // Ctrl/Cmd + キーの組み合わせをチェック
       if (!(e.ctrlKey || e.metaKey)) return;
       
-      console.log('[DEBUG] Ctrl/Cmd detected, key:', e.key);
+      debugLog('Ctrl/Cmd detected, key=' + e.key);
       
       // Ctrl+Enter で送信
       if (e.key === 'Enter') {
-        console.log('[DEBUG] Ctrl+Enter detected! Calling sendSlackV2...');
+        debugLog('Ctrl+Enter detected! Calling sendSlackV2...');
         e.preventDefault();
         sendSlackV2();
         return;
@@ -919,10 +938,10 @@
     // 書式ショートカットの初期化
     function initFormatShortcuts() {
       var textareas = document.querySelectorAll('textarea');
-      console.log('[DEBUG] initFormatShortcuts: Found', textareas.length, 'textareas');
+      debugLog('initFormatShortcuts: Found ' + textareas.length + ' textareas');
       textareas.forEach(function(textarea) {
         textarea.addEventListener('keydown', handleFormatShortcut);
-        console.log('[DEBUG] Added keydown listener to:', textarea.id);
+        debugLog('Added keydown listener to: ' + textarea.id);
       });
     }
 
@@ -1498,7 +1517,7 @@
     // ページ読み込み時の初期化
     // ============================================
     window.addEventListener('load', function() {
-      console.log('[DEBUG] Page load event fired - starting initialization');
+      debugLog('Page load event fired - starting initialization');
       initDateSelects();
       refreshSlackLinkStatus();
       initV2();  // V2初期化を追加
@@ -1507,7 +1526,7 @@
       initDraftAutoSave();  // 下書き自動保存を初期化
       restoreDraft();  // 下書きがあれば復元を提案
       loadEventsForSelectedDate();
-      console.log('[DEBUG] Initialization complete');
+      debugLog('Initialization complete');
     });
   </script>
 </body>
