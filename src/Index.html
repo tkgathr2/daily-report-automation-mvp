@@ -568,8 +568,19 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header">
-      <h1>簡単日報くん</h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.1.0</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
+    </div>
+    
+    <!-- 更新のお知らせ -->
+    <div id="updateNotice" style="background: #e8f4fd; border: 1px solid #3498db; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;">
+      <strong style="color: #2980b9;">v2.1.0 更新内容:</strong>
+      <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e;">
+        <li>Ctrl+Enter でSlack投稿</li>
+        <li>下書き自動保存（ページ再読み込みで復元）</li>
+        <li>書式ショートカット（Ctrl+B: 太字, Ctrl+I: 斜体, Ctrl+S: 取消線）</li>
+      </ul>
+      <button onclick="this.parentElement.style.display='none'" style="margin-top: 8px; background: none; border: none; color: #3498db; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
 
     <!-- ローディング表示 -->
@@ -835,7 +846,7 @@
         textarea.addEventListener('keydown', function(e) {
           if (e.key === 'Tab') {
             handleIndentKeydown(e);
-          } else if (e.key === 'Enter') {
+          } else if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
             handleEnterKey(e);
           }
         });
