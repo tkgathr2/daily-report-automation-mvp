@@ -532,13 +532,11 @@
       <div class="completion-title">投稿が完了しました！</div>
       <div class="completion-message">日報がSlackに送信されました。</div>
       <a id="slackChannelLink" href="#" target="_blank" class="slack-link-btn">
-        👉 投稿した文言をSlackアプリで起動して確認する
+        Slackで確認する
       </a>
+      <div style="font-size: 12px; color: #666; margin-top: 8px;">※投稿した文言をSlackアプリで起動して確認</div>
       <button class="close-completion-btn" onclick="closeCompletionScreen()">
         閉じる
-      </button>
-      <button class="close-completion-btn" onclick="restartReport()" style="margin-top: 10px;">
-        もう一度日報を作成する
       </button>
     </div>
   </div>
@@ -835,10 +833,6 @@
     }
 
     function closeCompletionScreen() {
-      document.getElementById('completionScreen').classList.remove('show');
-    }
-
-    function restartReport() {
       document.getElementById('completionScreen').classList.remove('show');
     }
 
