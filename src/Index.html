@@ -597,21 +597,21 @@
     <div class="section textarea-container">
       <div class="section-title">【わかった事・問題・共有事項】</div>
       <textarea id="notices" placeholder="⚫︎ " class="indent-textarea"></textarea>
-      <div class="indent-hint">Tab: インデント追加 / Shift+Tab: インデント削除（最大2段階）</div>
+      <div class="indent-hint">Tab: インデント / Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+S: 取消線</div>
     </div>
 
     <!-- 売上・利益に関わるポイント -->
     <div class="section textarea-container">
       <div class="section-title">【売上・利益に関わるポイント】</div>
       <textarea id="salesPoints" placeholder="⚫︎ " class="indent-textarea"></textarea>
-      <div class="indent-hint">Tab: インデント追加 / Shift+Tab: インデント削除（最大2段階）</div>
+      <div class="indent-hint">Tab: インデント / Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+S: 取消線</div>
     </div>
 
     <!-- 次すること -->
     <div class="section textarea-container">
       <div class="section-title">【次すること】</div>
       <textarea id="nextTasks" placeholder="⚫︎ " class="indent-textarea"></textarea>
-      <div class="indent-hint">Tab: インデント追加 / Shift+Tab: インデント削除（最大2段階）</div>
+      <div class="indent-hint">Tab: インデント / Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+S: 取消線</div>
     </div>
 
     <!-- コピー・更新・プレビューボタン -->
@@ -839,7 +839,156 @@
             handleEnterKey(e);
           }
         });
+        
+        // デフォルト値を設定（空の場合のみ）
+        if (!textarea.value) {
+          textarea.value = INDENT_MARKERS[0];
+        }
       });
+    }
+
+    // ============================================
+    // テキスト書式ショートカット
+    // ============================================
+    const FORMAT_SHORTCUTS = {
+      'b': { prefix: '*', suffix: '*' },      // Ctrl+B: 太字
+      'i': { prefix: '_', suffix: '_' },      // Ctrl+I: 斜体
+      's': { prefix: '~', suffix: '~' },      // Ctrl+S: 取り消し線
+      '`': { prefix: '`', suffix: '`' }       // Ctrl+`: コード
+    };
+
+    function handleFormatShortcut(e) {
+      // Ctrl/Cmd + キーの組み合わせをチェック
+      if (!(e.ctrlKey || e.metaKey)) return;
+      
+      var key = e.key.toLowerCase();
+      var format = FORMAT_SHORTCUTS[key];
+      if (!format) return;
+      
+      e.preventDefault();
+      
+      var textarea = e.target;
+      var start = textarea.selectionStart;
+      var end = textarea.selectionEnd;
+      var value = textarea.value;
+      
+      // 選択されたテキストを取得
+      var selectedText = value.substring(start, end);
+      
+      if (selectedText) {
+        // テキストが選択されている場合、書式マーカーで囲む
+        var newText = format.prefix + selectedText + format.suffix;
+        textarea.value = value.substring(0, start) + newText + value.substring(end);
+        
+        // カーソル位置を調整（選択状態を維持）
+        textarea.setSelectionRange(start + format.prefix.length, end + format.prefix.length);
+      } else {
+        // テキストが選択されていない場合、マーカーを挿入してカーソルを中央に
+        var newText = format.prefix + format.suffix;
+        textarea.value = value.substring(0, start) + newText + value.substring(end);
+        textarea.setSelectionRange(start + format.prefix.length, start + format.prefix.length);
+      }
+      
+      // 下書き保存をトリガー
+      saveDraft();
+    }
+
+    // 書式ショートカットの初期化
+    function initFormatShortcuts() {
+      var textareas = document.querySelectorAll('textarea');
+      textareas.forEach(function(textarea) {
+        textarea.addEventListener('keydown', handleFormatShortcut);
+      });
+    }
+
+    // ============================================
+    // 下書き保存機能
+    // ============================================
+    const DRAFT_STORAGE_KEY = 'kantan_nippou_draft';
+    const DRAFT_AUTO_SAVE_INTERVAL = 30000; // 30秒ごとに自動保存
+
+    function saveDraft() {
+      try {
+        var draft = {
+          todayTasks: document.getElementById('todayTasks').value,
+          notices: document.getElementById('notices').value,
+          salesPoints: document.getElementById('salesPoints').value,
+          nextTasks: document.getElementById('nextTasks').value,
+          manualUserName: document.getElementById('manualUserName').value,
+          savedAt: new Date().toISOString()
+        };
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        console.log('下書き保存完了:', new Date().toLocaleTimeString());
+      } catch (e) {
+        console.error('下書き保存エラー:', e);
+      }
+    }
+
+    function loadDraft() {
+      try {
+        var draftStr = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!draftStr) return null;
+        
+        var draft = JSON.parse(draftStr);
+        
+        // 24時間以上前の下書きは無視
+        var savedAt = new Date(draft.savedAt);
+        var now = new Date();
+        var hoursDiff = (now - savedAt) / (1000 * 60 * 60);
+        if (hoursDiff > 24) {
+          clearDraft();
+          return null;
+        }
+        
+        return draft;
+      } catch (e) {
+        console.error('下書き読み込みエラー:', e);
+        return null;
+      }
+    }
+
+    function restoreDraft() {
+      var draft = loadDraft();
+      if (!draft) return false;
+      
+      // 下書きがある場合、復元するか確認
+      var savedAt = new Date(draft.savedAt);
+      var timeStr = savedAt.toLocaleString('ja-JP');
+      
+      if (confirm('下書きがあります（' + timeStr + '）\n復元しますか？')) {
+        if (draft.todayTasks) document.getElementById('todayTasks').value = draft.todayTasks;
+        if (draft.notices) document.getElementById('notices').value = draft.notices;
+        if (draft.salesPoints) document.getElementById('salesPoints').value = draft.salesPoints;
+        if (draft.nextTasks) document.getElementById('nextTasks').value = draft.nextTasks;
+        if (draft.manualUserName) document.getElementById('manualUserName').value = draft.manualUserName;
+        showMessage('下書きを復元しました。', false);
+        return true;
+      }
+      return false;
+    }
+
+    function clearDraft() {
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        console.log('下書きをクリアしました');
+      } catch (e) {
+        console.error('下書きクリアエラー:', e);
+      }
+    }
+
+    function initDraftAutoSave() {
+      // テキストエリアの変更を監視して自動保存
+      var textareas = document.querySelectorAll('textarea');
+      textareas.forEach(function(textarea) {
+        textarea.addEventListener('input', function() {
+          // デバウンス: 入力が止まってから1秒後に保存
+          clearTimeout(textarea.saveTimeout);
+          textarea.saveTimeout = setTimeout(saveDraft, 1000);
+        });
+      });
+      
+      // 定期的な自動保存
+      setInterval(saveDraft, DRAFT_AUTO_SAVE_INTERVAL);
     }
 
     // ============================================
@@ -1280,6 +1429,9 @@
       var slackUrl = 'https://slack.com/app_redirect?channel=' + SLACK_CHANNEL_ID;
       document.getElementById('slackChannelLink').href = slackUrl;
       
+      // 投稿成功したので下書きをクリア
+      clearDraft();
+      
       document.getElementById('completionScreen').classList.add('show');
     }
 
@@ -1324,7 +1476,10 @@
       initDateSelects();
       refreshSlackLinkStatus();
       initV2();  // V2初期化を追加
-      initIndentTextareas();  // インデント機能を初期化
+      initIndentTextareas();  // インデント機能を初期化（デフォルト値も設定）
+      initFormatShortcuts();  // 書式ショートカットを初期化
+      initDraftAutoSave();  // 下書き自動保存を初期化
+      restoreDraft();  // 下書きがあれば復元を提案
       loadEventsForSelectedDate();
     });
   </script>
