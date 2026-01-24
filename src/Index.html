@@ -416,6 +416,81 @@
     }
 
     /* ============================================
+       プレビューモーダル
+       ============================================ */
+    .preview-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .preview-modal.show {
+      display: flex;
+    }
+
+    .preview-content {
+      background-color: #fff;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 700px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .preview-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .preview-text {
+      background-color: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 20px;
+      font-family: monospace;
+      font-size: 14px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .preview-close-btn {
+      display: block;
+      padding: 12px 24px;
+      font-size: 14px;
+      background-color: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 20px auto 0;
+      transition: background-color 0.3s ease;
+    }
+
+    .preview-close-btn:hover {
+      background-color: #2980b9;
+    }
+
+    /* インデントヒント */
+    .indent-hint {
+      font-size: 11px;
+      color: #7f8c8d;
+      margin-top: 5px;
+    }
+
+    /* ============================================
        V2追加スタイル
        ============================================ */
 
@@ -521,26 +596,32 @@
     <!-- わかった事・問題・共有事項 -->
     <div class="section textarea-container">
       <div class="section-title">【わかった事・問題・共有事項】</div>
-      <textarea id="notices" placeholder="⚫︎ "></textarea>
+      <textarea id="notices" placeholder="⚫︎ " class="indent-textarea"></textarea>
+      <div class="indent-hint">Tab: インデント追加 / Shift+Tab: インデント削除（最大2段階）</div>
     </div>
 
     <!-- 売上・利益に関わるポイント -->
     <div class="section textarea-container">
       <div class="section-title">【売上・利益に関わるポイント】</div>
-      <textarea id="salesPoints" placeholder="⚫︎ "></textarea>
+      <textarea id="salesPoints" placeholder="⚫︎ " class="indent-textarea"></textarea>
+      <div class="indent-hint">Tab: インデント追加 / Shift+Tab: インデント削除（最大2段階）</div>
     </div>
 
     <!-- 次すること -->
     <div class="section textarea-container">
       <div class="section-title">【次すること】</div>
-      <textarea id="nextTasks" placeholder="⚫︎ "></textarea>
+      <textarea id="nextTasks" placeholder="⚫︎ " class="indent-textarea"></textarea>
+      <div class="indent-hint">Tab: インデント追加 / Shift+Tab: インデント削除（最大2段階）</div>
     </div>
 
-    <!-- コピー・更新ボタン -->
+    <!-- コピー・更新・プレビューボタン -->
     <div class="section">
       <div class="button-group">
         <button id="btnCopy" class="btn btn-secondary" onclick="copyToClipboardV2()">
           コピー
+        </button>
+        <button id="btnPreview" class="btn btn-secondary" onclick="showPreview()">
+          プレビュー
         </button>
         <button id="btnRefreshEvents" class="btn btn-primary" onclick="loadEventsForSelectedDate()">
           予定を更新
@@ -611,6 +692,15 @@
     </div>
   </div>
 
+  <!-- プレビューモーダル -->
+  <div id="previewModal" class="preview-modal">
+    <div class="preview-content">
+      <div class="preview-title">Slack投稿プレビュー</div>
+      <div id="previewText" class="preview-text"></div>
+      <button class="preview-close-btn" onclick="closePreview()">閉じる</button>
+    </div>
+  </div>
+
   <script>
     // ============================================
     // 設定
@@ -622,6 +712,162 @@
     // ============================================
     let isLoading = false;
     let isSlackLinked = false;
+
+    // ============================================
+    // インデント設定
+    // ============================================
+    const INDENT_MARKERS = {
+      0: '⚫︎ ',           // レベル0: 黒丸
+      1: '　・',          // レベル1: 全角スペース + 中点
+      2: '　　・'         // レベル2: 全角スペース2つ + 中点
+    };
+    const MAX_INDENT_LEVEL = 2;
+
+    // ============================================
+    // インデント機能
+    // ============================================
+    
+    // 現在の行のインデントレベルを取得
+    function getIndentLevel(line) {
+      if (line.startsWith('　　・')) return 2;
+      if (line.startsWith('　・')) return 1;
+      if (line.startsWith('⚫︎ ')) return 0;
+      return -1; // インデントマーカーなし
+    }
+
+    // 行のインデントマーカーを変更
+    function changeLineIndent(line, newLevel) {
+      // 既存のインデントマーカーを削除
+      var cleanLine = line
+        .replace(/^　　・/, '')
+        .replace(/^　・/, '')
+        .replace(/^⚫︎ /, '');
+      
+      // 新しいインデントマーカーを追加
+      if (newLevel >= 0 && newLevel <= MAX_INDENT_LEVEL) {
+        return INDENT_MARKERS[newLevel] + cleanLine;
+      }
+      return cleanLine;
+    }
+
+    // テキストエリアでのキー入力を処理
+    function handleIndentKeydown(e) {
+      if (e.key !== 'Tab') return;
+      
+      e.preventDefault();
+      
+      var textarea = e.target;
+      var start = textarea.selectionStart;
+      var end = textarea.selectionEnd;
+      var value = textarea.value;
+      
+      // カーソル位置の行を特定
+      var beforeCursor = value.substring(0, start);
+      var afterCursor = value.substring(end);
+      
+      var lineStart = beforeCursor.lastIndexOf('\n') + 1;
+      var lineEnd = value.indexOf('\n', start);
+      if (lineEnd === -1) lineEnd = value.length;
+      
+      var currentLine = value.substring(lineStart, lineEnd);
+      var currentLevel = getIndentLevel(currentLine);
+      
+      // インデントレベルを変更
+      var newLevel;
+      if (e.shiftKey) {
+        // Shift+Tab: インデントを下げる
+        newLevel = Math.max(0, currentLevel - 1);
+      } else {
+        // Tab: インデントを上げる
+        if (currentLevel === -1) {
+          // マーカーがない場合はレベル1から開始
+          newLevel = 1;
+        } else {
+          newLevel = Math.min(MAX_INDENT_LEVEL, currentLevel + 1);
+        }
+      }
+      
+      var newLine = changeLineIndent(currentLine, newLevel);
+      
+      // テキストを更新
+      var newValue = value.substring(0, lineStart) + newLine + value.substring(lineEnd);
+      textarea.value = newValue;
+      
+      // カーソル位置を調整
+      var lengthDiff = newLine.length - currentLine.length;
+      var newCursorPos = start + lengthDiff;
+      if (newCursorPos < lineStart) newCursorPos = lineStart + INDENT_MARKERS[newLevel].length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }
+
+    // Enterキーで新しい行に自動でインデントマーカーを追加
+    function handleEnterKey(e) {
+      if (e.key !== 'Enter') return;
+      
+      var textarea = e.target;
+      var start = textarea.selectionStart;
+      var value = textarea.value;
+      
+      // 現在の行のインデントレベルを取得
+      var beforeCursor = value.substring(0, start);
+      var lineStart = beforeCursor.lastIndexOf('\n') + 1;
+      var currentLine = value.substring(lineStart, start);
+      var currentLevel = getIndentLevel(currentLine);
+      
+      // インデントマーカーがある場合、次の行にも同じマーカーを追加
+      if (currentLevel >= 0) {
+        e.preventDefault();
+        
+        var afterCursor = value.substring(start);
+        var marker = INDENT_MARKERS[currentLevel];
+        var newValue = beforeCursor + '\n' + marker + afterCursor;
+        
+        textarea.value = newValue;
+        var newCursorPos = start + 1 + marker.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }
+    }
+
+    // インデント対応テキストエリアの初期化
+    function initIndentTextareas() {
+      var textareas = document.querySelectorAll('.indent-textarea');
+      textareas.forEach(function(textarea) {
+        textarea.addEventListener('keydown', function(e) {
+          if (e.key === 'Tab') {
+            handleIndentKeydown(e);
+          } else if (e.key === 'Enter') {
+            handleEnterKey(e);
+          }
+        });
+      });
+    }
+
+    // ============================================
+    // プレビュー機能
+    // ============================================
+    function showPreview() {
+      // 氏名を取得
+      var userName = document.getElementById('reportUserName').textContent;
+      if (!userName) {
+        userName = document.getElementById('manualUserName').value.trim() || '（氏名未入力）';
+      }
+
+      var date = document.getElementById('reportDate').textContent;
+      var header = '【' + date + '　' + userName + '　日報】';
+
+      var previewText = header + '\n\n' +
+        '【今日やったこと】\n' + document.getElementById('todayTasks').value + '\n\n' +
+        '【わかった事・問題・共有事項】\n' + document.getElementById('notices').value + '\n\n' +
+        '【売上・利益に関わるポイント】\n' + document.getElementById('salesPoints').value + '\n\n' +
+        '【次すること】\n' + document.getElementById('nextTasks').value;
+
+      document.getElementById('previewText').textContent = previewText;
+      document.getElementById('previewModal').classList.add('show');
+    }
+
+    function closePreview() {
+      document.getElementById('previewModal').classList.remove('show');
+    }
 
     // ============================================
     // 予定取得
@@ -1078,6 +1324,7 @@
       initDateSelects();
       refreshSlackLinkStatus();
       initV2();  // V2初期化を追加
+      initIndentTextareas();  // インデント機能を初期化
       loadEventsForSelectedDate();
     });
   </script>
