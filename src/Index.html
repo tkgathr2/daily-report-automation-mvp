@@ -869,11 +869,16 @@
     };
 
     function handleFormatShortcut(e) {
+      console.log('[DEBUG] handleFormatShortcut called:', e.key, 'ctrlKey:', e.ctrlKey, 'metaKey:', e.metaKey);
+      
       // Ctrl/Cmd + キーの組み合わせをチェック
       if (!(e.ctrlKey || e.metaKey)) return;
       
+      console.log('[DEBUG] Ctrl/Cmd detected, key:', e.key);
+      
       // Ctrl+Enter で送信
       if (e.key === 'Enter') {
+        console.log('[DEBUG] Ctrl+Enter detected! Calling sendSlackV2...');
         e.preventDefault();
         sendSlackV2();
         return;
@@ -914,8 +919,10 @@
     // 書式ショートカットの初期化
     function initFormatShortcuts() {
       var textareas = document.querySelectorAll('textarea');
+      console.log('[DEBUG] initFormatShortcuts: Found', textareas.length, 'textareas');
       textareas.forEach(function(textarea) {
         textarea.addEventListener('keydown', handleFormatShortcut);
+        console.log('[DEBUG] Added keydown listener to:', textarea.id);
       });
     }
 
@@ -1491,6 +1498,7 @@
     // ページ読み込み時の初期化
     // ============================================
     window.addEventListener('load', function() {
+      console.log('[DEBUG] Page load event fired - starting initialization');
       initDateSelects();
       refreshSlackLinkStatus();
       initV2();  // V2初期化を追加
@@ -1499,6 +1507,7 @@
       initDraftAutoSave();  // 下書き自動保存を初期化
       restoreDraft();  // 下書きがあれば復元を提案
       loadEventsForSelectedDate();
+      console.log('[DEBUG] Initialization complete');
     });
   </script>
 </body>
