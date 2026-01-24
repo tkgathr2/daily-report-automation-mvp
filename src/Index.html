@@ -861,6 +861,13 @@
       // Ctrl/Cmd + キーの組み合わせをチェック
       if (!(e.ctrlKey || e.metaKey)) return;
       
+      // Ctrl+Enter で送信
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendSlackV2();
+        return;
+      }
+      
       var key = e.key.toLowerCase();
       var format = FORMAT_SHORTCUTS[key];
       if (!format) return;
