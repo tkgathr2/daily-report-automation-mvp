@@ -759,17 +759,18 @@
 <body>
   <div class="container">
     <!-- ヘッダー -->
-    <div class="header">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.6</small></h1>
+    <div class="header" style="position: relative;">
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.7</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
+      <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
     
     <!-- 更新のお知らせ -->
     <div id="updateNotice" style="background: #e8f4fd; border: 1px solid #3498db; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;">
-                        <strong style="color: #2980b9;">v2.3.6 更新内容:</strong>
-                        <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e;">
-                          <li>Ctrl+Enter送信機能を改善（グローバルハンドラー追加）</li>
-                        </ul>
+                                                <strong style="color: #2980b9;">v2.3.7 更新内容:</strong>
+                                                <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e;">
+                                                  <li>「使い方ガイド」機能を追加</li>
+                                                </ul>
       <button onclick="this.parentElement.style.display='none'" style="margin-top: 8px; background: none; border: none; color: #3498db; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
 
@@ -964,6 +965,47 @@
       <div class="preview-title">Slack投稿プレビュー</div>
       <div id="previewText" class="preview-text"></div>
       <button class="preview-close-btn" onclick="closePreview()">閉じる</button>
+    </div>
+  </div>
+
+  <!-- 使い方ガイドモーダル -->
+  <div id="tutorial-modal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 12px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+      <div style="padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h2 style="font-size: 20px; font-weight: 700; margin: 0;">使い方ガイド</h2>
+          <button id="tutorial-close-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+        </div>
+        
+        <div style="font-size: 14px; line-height: 1.8; color: #333;">
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">1. Googleカレンダー連携</h3>
+            <p style="margin: 0;">日付を選択して「予定を取得」ボタンを押すと、Googleカレンダーの予定が自動で取得されます。</p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">2. 日報の編集</h3>
+            <p style="margin: 0;">各セクションで日報の内容を編集できます。ツールバーで太字・斜体・リストなどの書式を適用できます。</p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">3. Slack連携</h3>
+            <p style="margin: 0;">初回は「Slack連携（認可）」ボタンでSlackと連携してください。連携後は「Slackに投稿」ボタンで日報を送信できます。</p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">4. ショートカットキー</h3>
+            <p style="margin: 0;"><b>Ctrl+B</b>: 太字 / <b>Ctrl+I</b>: 斜体 / <b>Ctrl+U</b>: 下線 / <b>Ctrl+Enter</b>: Slackに送信</p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">5. 下書き保存</h3>
+            <p style="margin: 0;">入力内容は自動的に下書き保存されます。ページを閉じても、次回アクセス時に復元できます。</p>
+          </div>
+        </div>
+        
+        <button id="tutorial-ok-btn" style="margin-top: 24px; width: 100%; padding: 12px; background: #3498db; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">OK</button>
+      </div>
     </div>
   </div>
 
@@ -2127,6 +2169,45 @@
     }
 
     // ============================================
+    // 使い方ガイド機能
+    // ============================================
+    function showTutorial() {
+      var tutorialModal = document.getElementById('tutorial-modal');
+      tutorialModal.classList.remove('hidden');
+      tutorialModal.style.display = 'flex';
+    }
+
+    function hideTutorial() {
+      var tutorialModal = document.getElementById('tutorial-modal');
+      tutorialModal.classList.add('hidden');
+      tutorialModal.style.display = 'none';
+    }
+
+    function initTutorial() {
+      var tutorialModal = document.getElementById('tutorial-modal');
+      var helpBtn = document.getElementById('help-btn');
+      var tutorialCloseBtn = document.getElementById('tutorial-close-btn');
+      var tutorialOkBtn = document.getElementById('tutorial-ok-btn');
+
+      // 初期状態は非表示
+      tutorialModal.style.display = 'none';
+
+      // イベントリスナー
+      helpBtn.addEventListener('click', showTutorial);
+      tutorialCloseBtn.addEventListener('click', hideTutorial);
+      tutorialOkBtn.addEventListener('click', hideTutorial);
+      tutorialModal.addEventListener('click', function(e) {
+        if (e.target === tutorialModal) hideTutorial();
+      });
+
+      // 初回表示チェック
+      if (!localStorage.getItem('tutorial_shown')) {
+        showTutorial();
+        localStorage.setItem('tutorial_shown', 'true');
+      }
+    }
+
+    // ============================================
     // ページ読み込み時の初期化
     // ============================================
     window.addEventListener('load', function() {
@@ -2137,6 +2218,7 @@
       initFormatShortcuts();  // 書式ショートカットを初期化
       initWysiwygEditors();  // WYSIWYGエディタを初期化
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
+      initTutorial();  // 使い方ガイドを初期化
       initDraftAutoSave();  // 下書き自動保存を初期化
       restoreDraft();  // 下書きがあれば復元を提案
       loadEventsForSelectedDate();
