@@ -760,16 +760,15 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.4</small></h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.5</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
     </div>
     
     <!-- 更新のお知らせ -->
     <div id="updateNotice" style="background: #e8f4fd; border: 1px solid #3498db; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;">
-            <strong style="color: #2980b9;">v2.3.4 更新内容:</strong>
+            <strong style="color: #2980b9;">v2.3.5 更新内容:</strong>
             <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e;">
-              <li>エディタフォーカス時の青枠表示を改善</li>
-              <li>Ctrl+Enter送信機能の修正</li>
+              <li>Ctrl+Enter送信機能のデバッグログ追加</li>
             </ul>
       <button onclick="this.parentElement.style.display='none'" style="margin-top: 8px; background: none; border: none; color: #3498db; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
@@ -1499,6 +1498,7 @@
               applyWysiwygFormat(editor.id, 'underline');
             } else if (e.key === 'Enter') {
               e.preventDefault();
+              console.log('Ctrl+Enter pressed, calling sendSlackV2()');
               sendSlackV2();
             }
           }
