@@ -760,18 +760,22 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header" style="position: relative;">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.7</small></h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.8</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
     
-    <!-- 更新のお知らせ -->
-    <div id="updateNotice" style="background: #e8f4fd; border: 1px solid #3498db; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;">
-                                                <strong style="color: #2980b9;">v2.3.7 更新内容:</strong>
-                                                <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e;">
-                                                  <li>「使い方ガイド」機能を追加</li>
-                                                </ul>
-      <button onclick="this.parentElement.style.display='none'" style="margin-top: 8px; background: none; border: none; color: #3498db; cursor: pointer; font-size: 12px;">閉じる</button>
+    <!-- 更新のお知らせ（新バージョン時に目立つ表示） -->
+    <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+      <div style="display: flex; align-items: center; margin-bottom: 8px;">
+        <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">NEW</span>
+        <strong style="font-size: 15px;">v2.3.8 がリリースされました！</strong>
+      </div>
+      <ul style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.95;">
+        <li>使い方ガイドにバージョン履歴を追加</li>
+        <li>新バージョン時のお知らせ表示を改善</li>
+      </ul>
+      <button onclick="dismissUpdateNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
 
     <!-- ローディング表示 -->
@@ -1001,6 +1005,45 @@
           <div style="margin-bottom: 20px;">
             <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">5. 下書き保存</h3>
             <p style="margin: 0;">入力内容は自動的に下書き保存されます。ページを閉じても、次回アクセス時に復元できます。</p>
+          </div>
+          
+          <!-- バージョン履歴 -->
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #2c3e50;">バージョン履歴</h3>
+            
+            <div style="margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px;">NEW</span>
+                <strong style="color: #667eea;">v2.3.8</strong>
+              </div>
+              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
+                <li>使い方ガイドにバージョン履歴を追加</li>
+                <li>新バージョン時のお知らせ表示を改善</li>
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong style="color: #2c3e50;">v2.3.7</strong>
+              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
+                <li>「使い方ガイド」機能を追加</li>
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong style="color: #2c3e50;">v2.3.6</strong>
+              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
+                <li>Ctrl+Enter送信機能を改善</li>
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong style="color: #2c3e50;">v2.3.0 - v2.3.5</strong>
+              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
+                <li>WYSIWYGエディタ機能追加</li>
+                <li>Slack風フォーマットツールバー</li>
+                <li>下書き自動保存機能</li>
+              </ul>
+            </div>
           </div>
         </div>
         
@@ -2169,6 +2212,27 @@
     }
 
     // ============================================
+    // バージョン管理・更新お知らせ機能
+    // ============================================
+    var CURRENT_VERSION = '2.3.8';
+
+    function dismissUpdateNotice() {
+      var updateNotice = document.getElementById('updateNotice');
+      updateNotice.style.display = 'none';
+      localStorage.setItem('dismissed_version', CURRENT_VERSION);
+    }
+
+    function initUpdateNotice() {
+      var updateNotice = document.getElementById('updateNotice');
+      var lastDismissedVersion = localStorage.getItem('dismissed_version');
+      
+      // 既に現在のバージョンを閉じていたら非表示
+      if (lastDismissedVersion === CURRENT_VERSION) {
+        updateNotice.style.display = 'none';
+      }
+    }
+
+    // ============================================
     // 使い方ガイド機能
     // ============================================
     function showTutorial() {
@@ -2219,6 +2283,7 @@
       initWysiwygEditors();  // WYSIWYGエディタを初期化
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
       initTutorial();  // 使い方ガイドを初期化
+      initUpdateNotice();  // 更新お知らせを初期化
       initDraftAutoSave();  // 下書き自動保存を初期化
       restoreDraft();  // 下書きがあれば復元を提案
       loadEventsForSelectedDate();
