@@ -585,6 +585,19 @@
       font-style: italic;
     }
 
+    .wysiwyg-editor u {
+      text-decoration: underline;
+    }
+
+    .wysiwyg-editor s, .wysiwyg-editor strike {
+      text-decoration: line-through;
+    }
+
+    .wysiwyg-editor a {
+      color: #1264a3;
+      text-decoration: underline;
+    }
+
     .wysiwyg-editor code {
       background: #f0f0f0;
       padding: 2px 4px;
@@ -693,16 +706,16 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.0</small></h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.1</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
     </div>
     
     <!-- 更新のお知らせ -->
     <div id="updateNotice" style="background: #e8f4fd; border: 1px solid #3498db; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;">
-      <strong style="color: #2980b9;">v2.3.0 更新内容:</strong>
+      <strong style="color: #2980b9;">v2.3.1 更新内容:</strong>
       <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e;">
-        <li>WYSIWYG編集機能（Slack風リッチテキストエディタ）</li>
-        <li>太字・斜体などの書式が入力中にリアルタイムで表示されます</li>
+        <li>Slack風ツールバー改善（下線U、取り消し線S、リンク追加）</li>
+        <li>Ctrl+U: 下線ショートカット追加</li>
       </ul>
       <button onclick="this.parentElement.style.display='none'" style="margin-top: 8px; background: none; border: none; color: #3498db; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
@@ -733,18 +746,22 @@
       <div class="section-title">【わかった事・問題・共有事項】</div>
       <div class="textarea-with-toolbar">
         <div class="format-toolbar">
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'bold')" title="太字"><b>B</b></button>
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'italic')" title="斜体"><i>I</i></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'bold')" title="太字 (Ctrl+B)"><b>B</b></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'italic')" title="斜体 (Ctrl+I)"><i>I</i></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'underline')" title="下線 (Ctrl+U)"><u>U</u></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'strikethrough')" title="取り消し線"><s>S</s></button>
           <span class="separator"></span>
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'bulletList')" title="箇条書き">•</button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'link')" title="リンク">🔗</button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'bulletList')" title="箇条書き">•≡</button>
           <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'numberedList')" title="番号付きリスト">1.</button>
           <span class="separator"></span>
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'quote')" title="引用">&gt;</button>
           <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'code')" title="コード">&lt;/&gt;</button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('notices', 'quote')" title="引用">❝</button>
         </div>
         <div id="notices" contenteditable="true" class="wysiwyg-editor" data-placeholder="入力してください..."></div>
       </div>
-      <div class="indent-hint">Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+Enter: 送信</div>
+      <div class="indent-hint">Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+U: 下線 / Ctrl+Enter: 送信</div>
     </div>
 
     <!-- 売上・利益に関わるポイント -->
@@ -752,18 +769,22 @@
       <div class="section-title">【売上・利益に関わるポイント】</div>
       <div class="textarea-with-toolbar">
         <div class="format-toolbar">
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'bold')" title="太字"><b>B</b></button>
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'italic')" title="斜体"><i>I</i></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'bold')" title="太字 (Ctrl+B)"><b>B</b></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'italic')" title="斜体 (Ctrl+I)"><i>I</i></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'underline')" title="下線 (Ctrl+U)"><u>U</u></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'strikethrough')" title="取り消し線"><s>S</s></button>
           <span class="separator"></span>
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'bulletList')" title="箇条書き">•</button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'link')" title="リンク">🔗</button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'bulletList')" title="箇条書き">•≡</button>
           <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'numberedList')" title="番号付きリスト">1.</button>
           <span class="separator"></span>
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'quote')" title="引用">&gt;</button>
           <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'code')" title="コード">&lt;/&gt;</button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'quote')" title="引用">❝</button>
         </div>
         <div id="salesPoints" contenteditable="true" class="wysiwyg-editor" data-placeholder="入力してください..."></div>
       </div>
-      <div class="indent-hint">Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+Enter: 送信</div>
+      <div class="indent-hint">Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+U: 下線 / Ctrl+Enter: 送信</div>
     </div>
 
     <!-- 次すること -->
@@ -771,18 +792,22 @@
       <div class="section-title">【次すること】</div>
       <div class="textarea-with-toolbar">
         <div class="format-toolbar">
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'bold')" title="太字"><b>B</b></button>
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'italic')" title="斜体"><i>I</i></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'bold')" title="太字 (Ctrl+B)"><b>B</b></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'italic')" title="斜体 (Ctrl+I)"><i>I</i></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'underline')" title="下線 (Ctrl+U)"><u>U</u></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'strikethrough')" title="取り消し線"><s>S</s></button>
           <span class="separator"></span>
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'bulletList')" title="箇条書き">•</button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'link')" title="リンク">🔗</button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'bulletList')" title="箇条書き">•≡</button>
           <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'numberedList')" title="番号付きリスト">1.</button>
           <span class="separator"></span>
-          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'quote')" title="引用">&gt;</button>
           <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'code')" title="コード">&lt;/&gt;</button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('nextTasks', 'quote')" title="引用">❝</button>
         </div>
         <div id="nextTasks" contenteditable="true" class="wysiwyg-editor" data-placeholder="入力してください..."></div>
       </div>
-      <div class="indent-hint">Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+Enter: 送信</div>
+      <div class="indent-hint">Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+U: 下線 / Ctrl+Enter: 送信</div>
     </div>
 
     <!-- コピー・更新・プレビューボタン -->
@@ -1236,6 +1261,18 @@
         case 'italic':
           document.execCommand('italic', false, null);
           break;
+        case 'underline':
+          document.execCommand('underline', false, null);
+          break;
+        case 'strikethrough':
+          document.execCommand('strikeThrough', false, null);
+          break;
+        case 'link':
+          var url = prompt('URLを入力してください:', 'https://');
+          if (url) {
+            document.execCommand('createLink', false, url);
+          }
+          break;
         case 'code':
           var selection = window.getSelection();
           if (selection.rangeCount > 0) {
@@ -1314,10 +1351,18 @@
           case 'i':
           case 'em':
             return '_' + content + '_';
+          case 'u':
+            return content; // Slackは下線をサポートしていないのでそのまま
           case 's':
           case 'strike':
           case 'del':
             return '~' + content + '~';
+          case 'a':
+            var href = node.getAttribute('href');
+            if (href) {
+              return '<' + href + '|' + content + '>';
+            }
+            return content;
           case 'code':
             return '`' + content + '`';
           case 'blockquote':
@@ -1378,6 +1423,9 @@
             } else if (e.key === 'i') {
               e.preventDefault();
               applyWysiwygFormat(editor.id, 'italic');
+            } else if (e.key === 'u') {
+              e.preventDefault();
+              applyWysiwygFormat(editor.id, 'underline');
             } else if (e.key === 'Enter') {
               e.preventDefault();
               sendSlackV2();
