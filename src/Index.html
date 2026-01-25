@@ -491,6 +491,65 @@
     }
 
     /* ============================================
+       フォーマットツールバー（Slack風）
+       ============================================ */
+    .format-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 6px 8px;
+      background-color: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-bottom: none;
+      border-radius: 6px 6px 0 0;
+    }
+
+    .format-toolbar .separator {
+      width: 1px;
+      height: 20px;
+      background-color: #ddd;
+      margin: 0 6px;
+    }
+
+    .format-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: none;
+      border-radius: 4px;
+      background-color: transparent;
+      color: #555;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .format-btn:hover {
+      background-color: #e0e0e0;
+      color: #333;
+    }
+
+    .format-btn:active {
+      background-color: #d0d0d0;
+    }
+
+    .format-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* ツールバー付きテキストエリア */
+    .textarea-with-toolbar textarea {
+      border-radius: 0 0 6px 6px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    /* ============================================
        V2追加スタイル
        ============================================ */
 
@@ -568,17 +627,16 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.1.0</small></h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.2.0</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
     </div>
     
     <!-- 更新のお知らせ -->
     <div id="updateNotice" style="background: #e8f4fd; border: 1px solid #3498db; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;">
-      <strong style="color: #2980b9;">v2.1.0 更新内容:</strong>
+      <strong style="color: #2980b9;">v2.2.0 更新内容:</strong>
       <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e;">
-        <li>Ctrl+Enter でSlack投稿</li>
+        <li>フォーマットツールバー追加（太字、斜体、箇条書き、番号付き、引用、コード）</li>
         <li>下書き自動保存（ページ再読み込みで復元）</li>
-        <li>書式ショートカット（Ctrl+B: 太字, Ctrl+I: 斜体, Ctrl+S: 取消線）</li>
       </ul>
       <button onclick="this.parentElement.style.display='none'" style="margin-top: 8px; background: none; border: none; color: #3498db; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
@@ -607,22 +665,58 @@
     <!-- わかった事・問題・共有事項 -->
     <div class="section textarea-container">
       <div class="section-title">【わかった事・問題・共有事項】</div>
-      <textarea id="notices" placeholder="⚫︎ " class="indent-textarea"></textarea>
-      <div class="indent-hint">Tab: インデント / Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+S: 取消線</div>
+      <div class="textarea-with-toolbar">
+        <div class="format-toolbar">
+          <button type="button" class="format-btn" onclick="formatText('notices', 'bold')" title="太字 (*テキスト*)"><b>B</b></button>
+          <button type="button" class="format-btn" onclick="formatText('notices', 'italic')" title="斜体 (_テキスト_)"><i>I</i></button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="formatText('notices', 'bullet')" title="箇条書き">•</button>
+          <button type="button" class="format-btn" onclick="formatText('notices', 'number')" title="番号付きリスト">1.</button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="formatText('notices', 'quote')" title="引用 (>)">&gt;</button>
+          <button type="button" class="format-btn" onclick="formatText('notices', 'code')" title="コード (`テキスト`)">&lt;/&gt;</button>
+        </div>
+        <textarea id="notices" placeholder="⚫︎ " class="indent-textarea"></textarea>
+      </div>
+      <div class="indent-hint">Tab: インデント / Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+Enter: 送信</div>
     </div>
 
     <!-- 売上・利益に関わるポイント -->
     <div class="section textarea-container">
       <div class="section-title">【売上・利益に関わるポイント】</div>
-      <textarea id="salesPoints" placeholder="⚫︎ " class="indent-textarea"></textarea>
-      <div class="indent-hint">Tab: インデント / Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+S: 取消線</div>
+      <div class="textarea-with-toolbar">
+        <div class="format-toolbar">
+          <button type="button" class="format-btn" onclick="formatText('salesPoints', 'bold')" title="太字 (*テキスト*)"><b>B</b></button>
+          <button type="button" class="format-btn" onclick="formatText('salesPoints', 'italic')" title="斜体 (_テキスト_)"><i>I</i></button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="formatText('salesPoints', 'bullet')" title="箇条書き">•</button>
+          <button type="button" class="format-btn" onclick="formatText('salesPoints', 'number')" title="番号付きリスト">1.</button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="formatText('salesPoints', 'quote')" title="引用 (>)">&gt;</button>
+          <button type="button" class="format-btn" onclick="formatText('salesPoints', 'code')" title="コード (`テキスト`)">&lt;/&gt;</button>
+        </div>
+        <textarea id="salesPoints" placeholder="⚫︎ " class="indent-textarea"></textarea>
+      </div>
+      <div class="indent-hint">Tab: インデント / Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+Enter: 送信</div>
     </div>
 
     <!-- 次すること -->
     <div class="section textarea-container">
       <div class="section-title">【次すること】</div>
-      <textarea id="nextTasks" placeholder="⚫︎ " class="indent-textarea"></textarea>
-      <div class="indent-hint">Tab: インデント / Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+S: 取消線</div>
+      <div class="textarea-with-toolbar">
+        <div class="format-toolbar">
+          <button type="button" class="format-btn" onclick="formatText('nextTasks', 'bold')" title="太字 (*テキスト*)"><b>B</b></button>
+          <button type="button" class="format-btn" onclick="formatText('nextTasks', 'italic')" title="斜体 (_テキスト_)"><i>I</i></button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="formatText('nextTasks', 'bullet')" title="箇条書き">•</button>
+          <button type="button" class="format-btn" onclick="formatText('nextTasks', 'number')" title="番号付きリスト">1.</button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="formatText('nextTasks', 'quote')" title="引用 (>)">&gt;</button>
+          <button type="button" class="format-btn" onclick="formatText('nextTasks', 'code')" title="コード (`テキスト`)">&lt;/&gt;</button>
+        </div>
+        <textarea id="nextTasks" placeholder="⚫︎ " class="indent-textarea"></textarea>
+      </div>
+      <div class="indent-hint">Tab: インデント / Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+Enter: 送信</div>
     </div>
 
     <!-- コピー・更新・プレビューボタン -->
@@ -917,6 +1011,145 @@
       textareas.forEach(function(textarea) {
         textarea.addEventListener('keydown', handleFormatShortcut);
       });
+    }
+
+    // ============================================
+    // ツールバーボタン用フォーマット関数
+    // ============================================
+    function formatText(textareaId, formatType) {
+      var textarea = document.getElementById(textareaId);
+      if (!textarea) return;
+      
+      var start = textarea.selectionStart;
+      var end = textarea.selectionEnd;
+      var value = textarea.value;
+      var selectedText = value.substring(start, end);
+      
+      var newText = '';
+      var cursorOffset = 0;
+      
+      switch (formatType) {
+        case 'bold':
+          // 太字: *テキスト*
+          if (selectedText) {
+            newText = '*' + selectedText + '*';
+            cursorOffset = 1;
+          } else {
+            newText = '**';
+            cursorOffset = 1;
+          }
+          break;
+          
+        case 'italic':
+          // 斜体: _テキスト_
+          if (selectedText) {
+            newText = '_' + selectedText + '_';
+            cursorOffset = 1;
+          } else {
+            newText = '__';
+            cursorOffset = 1;
+          }
+          break;
+          
+        case 'code':
+          // コード: `テキスト`
+          if (selectedText) {
+            newText = '`' + selectedText + '`';
+            cursorOffset = 1;
+          } else {
+            newText = '``';
+            cursorOffset = 1;
+          }
+          break;
+          
+        case 'bullet':
+          // 箇条書き: 行頭に⚫︎を追加
+          insertLinePrefix(textarea, '⚫︎ ');
+          return;
+          
+        case 'number':
+          // 番号付きリスト: 行頭に1. 2. 3.を追加
+          insertNumberedList(textarea);
+          return;
+          
+        case 'quote':
+          // 引用: 行頭に>を追加
+          insertLinePrefix(textarea, '> ');
+          return;
+      }
+      
+      // テキストを置換
+      textarea.value = value.substring(0, start) + newText + value.substring(end);
+      
+      // カーソル位置を調整
+      if (selectedText) {
+        textarea.setSelectionRange(start + cursorOffset, start + newText.length - cursorOffset);
+      } else {
+        textarea.setSelectionRange(start + cursorOffset, start + cursorOffset);
+      }
+      
+      textarea.focus();
+      saveDraft();
+    }
+    
+    // 行頭にプレフィックスを追加
+    function insertLinePrefix(textarea, prefix) {
+      var start = textarea.selectionStart;
+      var end = textarea.selectionEnd;
+      var value = textarea.value;
+      
+      // 選択範囲を含む行を取得
+      var lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      var lineEnd = value.indexOf('\n', end);
+      if (lineEnd === -1) lineEnd = value.length;
+      
+      var selectedLines = value.substring(lineStart, lineEnd);
+      var lines = selectedLines.split('\n');
+      
+      // 各行にプレフィックスを追加
+      var newLines = lines.map(function(line) {
+        // 既存のインデントマーカーを削除
+        var trimmedLine = line.replace(/^[⚫︎・　\s>]+/, '').trim();
+        return prefix + trimmedLine;
+      });
+      
+      var newText = newLines.join('\n');
+      textarea.value = value.substring(0, lineStart) + newText + value.substring(lineEnd);
+      
+      // カーソル位置を調整
+      textarea.setSelectionRange(lineStart, lineStart + newText.length);
+      textarea.focus();
+      saveDraft();
+    }
+    
+    // 番号付きリストを挿入
+    function insertNumberedList(textarea) {
+      var start = textarea.selectionStart;
+      var end = textarea.selectionEnd;
+      var value = textarea.value;
+      
+      // 選択範囲を含む行を取得
+      var lineStart = value.lastIndexOf('\n', start - 1) + 1;
+      var lineEnd = value.indexOf('\n', end);
+      if (lineEnd === -1) lineEnd = value.length;
+      
+      var selectedLines = value.substring(lineStart, lineEnd);
+      var lines = selectedLines.split('\n');
+      
+      // 各行に番号を追加
+      var newLines = lines.map(function(line, index) {
+        // 既存のインデントマーカーを削除
+        var trimmedLine = line.replace(/^[⚫︎・　\s>0-9.]+/, '').trim();
+        return (index + 1) + '. ' + trimmedLine;
+      });
+      
+      var newText = newLines.join('\n');
+      textarea.value = value.substring(0, lineStart) + newText + value.substring(lineEnd);
+      
+      // カーソル位置を調整
+      textarea.setSelectionRange(lineStart, lineStart + newText.length);
+      textarea.focus();
+      saveDraft();
     }
 
     // ============================================
