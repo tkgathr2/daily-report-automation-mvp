@@ -1518,15 +1518,27 @@
     // ============================================
     window.addEventListener('load', function() {
       debugLog('Page load event fired - starting initialization');
-      initDateSelects();
-      refreshSlackLinkStatus();
-      initV2();  // V2初期化を追加
-      initIndentTextareas();  // インデント機能を初期化（デフォルト値も設定）
-      initFormatShortcuts();  // 書式ショートカットを初期化
-      initDraftAutoSave();  // 下書き自動保存を初期化
-      restoreDraft();  // 下書きがあれば復元を提案
-      loadEventsForSelectedDate();
-      debugLog('Initialization complete');
+      try {
+        debugLog('1. initDateSelects...');
+        initDateSelects();
+        debugLog('2. refreshSlackLinkStatus...');
+        refreshSlackLinkStatus();
+        debugLog('3. initV2...');
+        initV2();
+        debugLog('4. initIndentTextareas...');
+        initIndentTextareas();
+        debugLog('5. initFormatShortcuts...');
+        initFormatShortcuts();
+        debugLog('6. initDraftAutoSave...');
+        initDraftAutoSave();
+        debugLog('7. restoreDraft...');
+        restoreDraft();
+        debugLog('8. loadEventsForSelectedDate...');
+        loadEventsForSelectedDate();
+        debugLog('Initialization complete!');
+      } catch (e) {
+        debugLog('ERROR: ' + e.message);
+      }
     });
   </script>
 </body>
