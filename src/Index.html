@@ -459,11 +459,56 @@
       border: 1px solid #e0e0e0;
       border-radius: 6px;
       padding: 20px;
-      font-family: monospace;
+      font-family: inherit;
       font-size: 14px;
       line-height: 1.8;
-      white-space: pre-wrap;
       word-wrap: break-word;
+    }
+    
+    /* プレビュー内のリッチテキストスタイル */
+    .preview-text b, .preview-text strong {
+      font-weight: bold;
+    }
+    
+    .preview-text i, .preview-text em {
+      font-style: italic;
+    }
+    
+    .preview-text u {
+      text-decoration: underline;
+    }
+    
+    .preview-text s, .preview-text strike {
+      text-decoration: line-through;
+    }
+    
+    .preview-text a {
+      color: #1264a3;
+      text-decoration: underline;
+    }
+    
+    .preview-text code {
+      background: #e0e0e0;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    
+    .preview-text blockquote {
+      border-left: 3px solid #ccc;
+      padding-left: 10px;
+      margin: 5px 0;
+      color: #666;
+    }
+    
+    .preview-text ul, .preview-text ol {
+      padding-left: 24px;
+      margin: 4px 0;
+    }
+    
+    .preview-text li {
+      margin: 2px 0;
     }
 
     .preview-close-btn {
@@ -706,16 +751,17 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.1</small></h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.3.2</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
     </div>
     
     <!-- 更新のお知らせ -->
     <div id="updateNotice" style="background: #e8f4fd; border: 1px solid #3498db; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;">
-      <strong style="color: #2980b9;">v2.3.1 更新内容:</strong>
+      <strong style="color: #2980b9;">v2.3.2 更新内容:</strong>
       <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e;">
-        <li>Slack風ツールバー改善（下線U、取り消し線S、リンク追加）</li>
-        <li>Ctrl+U: 下線ショートカット追加</li>
+        <li>「今日やったこと」にもWYSIWYGエディタを追加</li>
+        <li>プレビューがリッチテキスト表示に対応</li>
+        <li>全エディタでCtrl+Enter送信が動作</li>
       </ul>
       <button onclick="this.parentElement.style.display='none'" style="margin-top: 8px; background: none; border: none; color: #3498db; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
@@ -738,7 +784,24 @@
     <!-- 今日やったこと -->
     <div class="section textarea-container">
       <div class="section-title">【今日やったこと】</div>
-      <textarea id="todayTasks" placeholder="カレンダーの予定が表示されます。編集も可能です。"></textarea>
+      <div class="textarea-with-toolbar">
+        <div class="format-toolbar">
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'bold')" title="太字 (Ctrl+B)"><b>B</b></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'italic')" title="斜体 (Ctrl+I)"><i>I</i></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'underline')" title="下線 (Ctrl+U)"><u>U</u></button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'strikethrough')" title="取り消し線"><s>S</s></button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'link')" title="リンク">🔗</button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'bulletList')" title="箇条書き">•≡</button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'numberedList')" title="番号付きリスト">1.</button>
+          <span class="separator"></span>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'code')" title="コード">&lt;/&gt;</button>
+          <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'quote')" title="引用">❝</button>
+        </div>
+        <div id="todayTasks" contenteditable="true" class="wysiwyg-editor" data-placeholder="カレンダーの予定が表示されます。編集も可能です。" style="min-height: 150px;"></div>
+      </div>
+      <div class="indent-hint">Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+U: 下線 / Ctrl+Enter: 送信</div>
     </div>
 
     <!-- わかった事・問題・共有事項 -->
@@ -1444,7 +1507,7 @@
     function saveDraftWysiwyg() {
       try {
         var draft = {
-          todayTasks: document.getElementById('todayTasks').value,
+          todayTasks: document.getElementById('todayTasks').innerHTML,
           notices: document.getElementById('notices').innerHTML,
           salesPoints: document.getElementById('salesPoints').innerHTML,
           nextTasks: document.getElementById('nextTasks').innerHTML,
@@ -1514,14 +1577,15 @@
       var timeStr = savedAt.toLocaleString('ja-JP');
       
       if (confirm('下書きがあります（' + timeStr + '）\n復元しますか？')) {
-        if (draft.todayTasks) document.getElementById('todayTasks').value = draft.todayTasks;
         // WYSIWYGエディタはinnerHTMLで復元
         if (draft.isWysiwyg) {
+          if (draft.todayTasks) document.getElementById('todayTasks').innerHTML = draft.todayTasks;
           if (draft.notices) document.getElementById('notices').innerHTML = draft.notices;
           if (draft.salesPoints) document.getElementById('salesPoints').innerHTML = draft.salesPoints;
           if (draft.nextTasks) document.getElementById('nextTasks').innerHTML = draft.nextTasks;
         } else {
           // 旧形式の下書き（テキスト）をHTMLに変換
+          if (draft.todayTasks) document.getElementById('todayTasks').innerHTML = draft.todayTasks.replace(/\n/g, '<br>');
           if (draft.notices) document.getElementById('notices').innerHTML = draft.notices.replace(/\n/g, '<br>');
           if (draft.salesPoints) document.getElementById('salesPoints').innerHTML = draft.salesPoints.replace(/\n/g, '<br>');
           if (draft.nextTasks) document.getElementById('nextTasks').innerHTML = draft.nextTasks.replace(/\n/g, '<br>');
@@ -1570,15 +1634,22 @@
       var date = document.getElementById('reportDate').textContent;
       var header = '【' + date + '　' + userName + '　日報】';
 
-      // WYSIWYGエディタからSlackフォーマットで値を取得
-      var previewText = header + '\n\n' +
-        '【今日やったこと】\n' + document.getElementById('todayTasks').value + '\n\n' +
-        '【わかった事・問題・共有事項】\n' + getWysiwygValue('notices') + '\n\n' +
-        '【売上・利益に関わるポイント】\n' + getWysiwygValue('salesPoints') + '\n\n' +
-        '【次すること】\n' + getWysiwygValue('nextTasks');
+      // WYSIWYGエディタからリッチテキスト（HTML）で値を取得してプレビュー表示
+      var previewHtml = '<div style="font-weight: bold; font-size: 16px; margin-bottom: 16px;">' + header + '</div>' +
+        '<div style="margin-bottom: 12px;"><strong>【今日やったこと】</strong><br>' + getWysiwygHtml('todayTasks') + '</div>' +
+        '<div style="margin-bottom: 12px;"><strong>【わかった事・問題・共有事項】</strong><br>' + getWysiwygHtml('notices') + '</div>' +
+        '<div style="margin-bottom: 12px;"><strong>【売上・利益に関わるポイント】</strong><br>' + getWysiwygHtml('salesPoints') + '</div>' +
+        '<div style="margin-bottom: 12px;"><strong>【次すること】</strong><br>' + getWysiwygHtml('nextTasks') + '</div>';
 
-      document.getElementById('previewText').textContent = previewText;
+      document.getElementById('previewText').innerHTML = previewHtml;
       document.getElementById('previewModal').classList.add('show');
+    }
+    
+    // WYSIWYGエディタのHTMLを取得（プレビュー用）
+    function getWysiwygHtml(editorId) {
+      var editor = document.getElementById(editorId);
+      if (!editor) return '';
+      return editor.innerHTML || '';
     }
 
     function closePreview() {
@@ -1713,8 +1784,8 @@
         return;
       }
 
-      // V2: todayTasksに設定
-      document.getElementById('todayTasks').value = result;
+      // V2: todayTasksに設定（WYSIWYGエディタなのでinnerHTMLを使用、改行をbrに変換）
+      document.getElementById('todayTasks').innerHTML = result.replace(/\n/g, '<br>');
 
       if (!result || result.trim() === '') {
         showMessage('今日の予定はありません。', false);
@@ -1829,7 +1900,7 @@
 
       // WYSIWYGエディタからSlackフォーマットで値を取得
       var text = header + '\n\n' +
-        '【今日やったこと】\n' + document.getElementById('todayTasks').value + '\n\n' +
+        '【今日やったこと】\n' + getWysiwygValue('todayTasks') + '\n\n' +
         '【わかった事・問題・共有事項】\n' + getWysiwygValue('notices') + '\n\n' +
         '【売上・利益に関わるポイント】\n' + getWysiwygValue('salesPoints') + '\n\n' +
         '【次すること】\n' + getWysiwygValue('nextTasks');
@@ -1948,7 +2019,7 @@
       // 日報データを作成（WYSIWYGエディタからSlackフォーマットで取得）
       var reportData = {
         header: header,
-        todayTasks: document.getElementById('todayTasks').value,
+        todayTasks: getWysiwygValue('todayTasks'),
         notices: getWysiwygValue('notices'),
         salesPoints: getWysiwygValue('salesPoints'),
         nextTasks: getWysiwygValue('nextTasks')
