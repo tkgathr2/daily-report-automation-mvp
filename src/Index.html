@@ -1938,6 +1938,13 @@
       }
     }
 
+    // HTMLエスケープ関数（XSS対策）
+    function escapeHtml(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     // V3: 全履歴取得成功時のハンドラー
     function onLoadAllHistorySuccessV3(result) {
       showLoading(false);
@@ -1952,7 +1959,7 @@
         var calendarLines = result.calendar.split('\n');
         for (var i = 0; i < calendarLines.length; i++) {
           if (calendarLines[i].trim()) {
-            lines.push('<span style="color: #4285F4; font-weight: bold;">[予定]</span> ' + calendarLines[i]);
+            lines.push('<span style="color: #4285F4; font-weight: bold;">[予定]</span> ' + escapeHtml(calendarLines[i]));
           }
         }
       }
@@ -1961,7 +1968,7 @@
       if (result.gmail && result.gmail.items) {
         for (var k = 0; k < result.gmail.items.length; k++) {
           var gItem = result.gmail.items[k];
-          lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + gItem.content);
+          lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(gItem.content));
         }
       }
       
@@ -1969,7 +1976,7 @@
       if (result.slack && result.slack.items) {
         for (var m = 0; m < result.slack.items.length; m++) {
           var sItem = result.slack.items[m];
-          lines.push('<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + sItem.content);
+          lines.push('<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(sItem.content));
         }
       }
       
