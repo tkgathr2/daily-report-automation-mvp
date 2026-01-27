@@ -727,8 +727,206 @@
     }
 
     /* ============================================
+       Gmail ピッカーサイドバー
+       ============================================ */
+    .app-wrapper {
+      display: flex;
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .main-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .gmail-sidebar {
+      width: 280px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 20px;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
+    .gmail-sidebar-inner {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .gmail-sidebar-header {
+      background: linear-gradient(135deg, #EA4335 0%, #FBBC05 100%);
+      color: white;
+      padding: 12px 15px;
+      font-weight: bold;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .gmail-sidebar-header .refresh-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .gmail-sidebar-header .refresh-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .gmail-sidebar-content {
+      padding: 10px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .gmail-item {
+      background: #f8f9fa;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+
+    .gmail-item:hover {
+      background: #e9ecef;
+      border-left-color: #EA4335;
+    }
+
+    .gmail-item.added {
+      opacity: 0.5;
+      border-left-color: #28a745;
+    }
+
+    .gmail-item-time {
+      font-size: 11px;
+      color: #6c757d;
+      margin-bottom: 4px;
+    }
+
+    .gmail-item-type {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-left: 5px;
+    }
+
+    .gmail-item-type.sent {
+      background: #EA4335;
+      color: white;
+    }
+
+    .gmail-item-type.received {
+      background: #4285F4;
+      color: white;
+    }
+
+    .gmail-item-content {
+      font-size: 13px;
+      color: #333;
+      line-height: 1.4;
+    }
+
+    .gmail-item-add {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 6px;
+    }
+
+    .gmail-item-add button {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .gmail-item-add button:hover {
+      background: #218838;
+    }
+
+    .gmail-item.added .gmail-item-add button {
+      background: #6c757d;
+      cursor: default;
+    }
+
+    .gmail-sidebar-empty {
+      text-align: center;
+      padding: 30px 15px;
+      color: #6c757d;
+      font-size: 13px;
+    }
+
+    .gmail-sidebar-loading {
+      text-align: center;
+      padding: 30px 15px;
+      color: #6c757d;
+    }
+
+    .gmail-sidebar-toggle {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #EA4335 0%, #FBBC05 100%);
+      color: white;
+      border: none;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(234, 67, 53, 0.4);
+      z-index: 100;
+    }
+
+    /* ============================================
        レスポンシブ対応
        ============================================ */
+    @media (max-width: 900px) {
+      .app-wrapper {
+        flex-direction: column;
+      }
+
+      .gmail-sidebar {
+        width: 100%;
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        max-height: 50vh;
+        z-index: 99;
+        transform: translateY(100%);
+        transition: transform 0.3s;
+      }
+
+      .gmail-sidebar.open {
+        transform: translateY(0);
+      }
+
+      .gmail-sidebar-toggle {
+        display: block;
+      }
+
+      .main-content {
+        padding-bottom: 80px;
+      }
+    }
+
     @media (max-width: 600px) {
       body {
         padding: 10px;
@@ -758,10 +956,12 @@
   </style>
 </head>
 <body>
+  <div class="app-wrapper">
+  <div class="main-content">
   <div class="container">
     <!-- ヘッダー -->
     <div class="header" style="position: relative;">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v2.4.0</small></h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v3.1.0</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
@@ -770,10 +970,10 @@
     <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
       <div style="display: flex; align-items: center; margin-bottom: 8px;">
         <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">NEW</span>
-        <strong style="font-size: 15px;">v3.0.0 がリリースされました！</strong>
+        <strong style="font-size: 15px;">v3.1.0 がリリースされました！</strong>
       </div>
       <ul style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.95;">
-        <li>Gmail履歴の自動取得機能を追加</li>
+        <li>Gmailピッカーサイドバーを追加（右側から選んで追加）</li>
       </ul>
       <button onclick="dismissUpdateNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
@@ -956,6 +1156,26 @@
     <!-- メッセージ表示エリア -->
     <div id="message" class="message"></div>
   </div>
+  </div><!-- /.main-content -->
+
+  <!-- Gmail ピッカーサイドバー -->
+  <div id="gmailSidebar" class="gmail-sidebar">
+    <div class="gmail-sidebar-inner">
+      <div class="gmail-sidebar-header">
+        <span>Gmail履歴</span>
+        <button class="refresh-btn" onclick="refreshGmailSidebar()">更新</button>
+      </div>
+      <div id="gmailSidebarContent" class="gmail-sidebar-content">
+        <div class="gmail-sidebar-empty">
+          「予定を取得」をクリックすると<br>Gmail履歴が表示されます
+        </div>
+      </div>
+    </div>
+  </div>
+  </div><!-- /.app-wrapper -->
+
+  <!-- モバイル用サイドバートグルボタン -->
+  <button id="gmailSidebarToggle" class="gmail-sidebar-toggle" onclick="toggleGmailSidebar()">📧</button>
 
   <!-- 投稿完了画面 -->
   <div id="completionScreen" class="completion-screen">
@@ -1939,13 +2159,15 @@
     }
 
     // V3: 全履歴取得成功時のハンドラー
+    var gmailItemsCache = [];
+    
     function onLoadAllHistorySuccessV3(result) {
       showLoading(false);
       document.getElementById('btnGetEvents').disabled = false;
       var btnRefresh = document.getElementById('btnRefreshEvents');
       if (btnRefresh) btnRefresh.disabled = false;
 
-      // カレンダー予定を整形
+      // カレンダー予定を整形（今日やったことに自動挿入）
       var lines = [];
       
       if (result.calendar && !result.calendar.startsWith('エラー：')) {
@@ -1957,25 +2179,98 @@
         }
       }
       
-      // Gmail履歴を追加
-      if (result.gmail && result.gmail.items) {
-        for (var k = 0; k < result.gmail.items.length; k++) {
-          var gItem = result.gmail.items[k];
-          lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + gItem.content);
-        }
-      }
-      
-      // WYSIWYGエディタに設定
+      // WYSIWYGエディタにカレンダー予定のみ設定
       document.getElementById('todayTasks').innerHTML = lines.join('<br>');
+      
+      // Gmail履歴をサイドバーに表示（ピッカー方式）
+      if (result.gmail && result.gmail.items) {
+        gmailItemsCache = result.gmail.items;
+        renderGmailSidebar(result.gmail.items);
+      } else {
+        gmailItemsCache = [];
+        renderGmailSidebar([]);
+      }
       
       // エラーがあれば表示
       if (result.errors && result.errors.length > 0) {
         showMessage('一部のツールで取得に失敗しました: ' + result.errors.join(', '), true);
-      } else if (lines.length === 0) {
+      } else if (lines.length === 0 && (!result.gmail || result.gmail.items.length === 0)) {
         showMessage('今日の履歴はありません。', false);
       } else {
-        showMessage('履歴を取得しました（' + lines.length + '件）', false);
+        var gmailCount = result.gmail && result.gmail.items ? result.gmail.items.length : 0;
+        showMessage('予定を取得しました（カレンダー: ' + lines.length + '件、Gmail: ' + gmailCount + '件）', false);
       }
+    }
+    
+    // ============================================
+    // Gmail ピッカーサイドバー
+    // ============================================
+    function renderGmailSidebar(items) {
+      var container = document.getElementById('gmailSidebarContent');
+      
+      if (!items || items.length === 0) {
+        container.innerHTML = '<div class="gmail-sidebar-empty">Gmail履歴がありません</div>';
+        return;
+      }
+      
+      var html = '';
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i];
+        var isSent = item.content.indexOf('送信:') === 0;
+        var typeClass = isSent ? 'sent' : 'received';
+        var typeLabel = isSent ? '送信' : '受信';
+        
+        html += '<div class="gmail-item" data-index="' + i + '">';
+        html += '  <div class="gmail-item-time">' + item.time + ' <span class="gmail-item-type ' + typeClass + '">' + typeLabel + '</span></div>';
+        html += '  <div class="gmail-item-content">' + escapeHtml(item.content) + '</div>';
+        html += '  <div class="gmail-item-add"><button onclick="addGmailItemToTasks(' + i + ')">+ 追加</button></div>';
+        html += '</div>';
+      }
+      
+      container.innerHTML = html;
+    }
+    
+    function escapeHtml(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function addGmailItemToTasks(index) {
+      var item = gmailItemsCache[index];
+      if (!item) return;
+      
+      var itemElement = document.querySelector('.gmail-item[data-index="' + index + '"]');
+      if (itemElement && itemElement.classList.contains('added')) {
+        return;
+      }
+      
+      var todayTasks = document.getElementById('todayTasks');
+      var currentContent = todayTasks.innerHTML;
+      var newLine = '<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(item.content);
+      
+      if (currentContent.trim()) {
+        todayTasks.innerHTML = currentContent + '<br>' + newLine;
+      } else {
+        todayTasks.innerHTML = newLine;
+      }
+      
+      if (itemElement) {
+        itemElement.classList.add('added');
+        var btn = itemElement.querySelector('button');
+        if (btn) btn.textContent = '追加済み';
+      }
+      
+      showMessage('Gmail履歴を追加しました', false);
+    }
+    
+    function refreshGmailSidebar() {
+      loadEventsForSelectedDate();
+    }
+    
+    function toggleGmailSidebar() {
+      var sidebar = document.getElementById('gmailSidebar');
+      sidebar.classList.toggle('open');
     }
 
     function onLoadEventsFailure(error) {
@@ -2317,7 +2612,7 @@
     // ============================================
     // バージョン管理・更新お知らせ機能
     // ============================================
-    var CURRENT_VERSION = '3.0.0';
+    var CURRENT_VERSION = '3.1.0';
 
     function dismissUpdateNotice() {
       var updateNotice = document.getElementById('updateNotice');
