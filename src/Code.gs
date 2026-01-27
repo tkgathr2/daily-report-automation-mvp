@@ -35,6 +35,10 @@ const TIME_FORMAT = 'HH:mm';
 const USER_PROPERTY_NEXT_TASKS = 'NEXT_TASKS_DATA';
 const DATE_FORMAT_V2 = 'yyyy年MM月dd日';
 
+// V3追加定数
+const USER_PROPERTY_TOOL_SETTINGS = 'TOOL_SETTINGS';
+const MAX_ITEMS_PER_TOOL = 20;
+
 // ============================================
 // WEBアプリエントリーポイント
 // ============================================
@@ -656,4 +660,160 @@ function formatSlackMessageV2(reportData) {
     '【わかった事・問題・共有事項】\n' + reportData.notices + '\n\n' +
     '【売上・利益に関わるポイント】\n' + reportData.salesPoints + '\n\n' +
     '【次すること】\n' + reportData.nextTasks;
+}
+
+// ============================================
+// V3追加関数
+// ============================================
+
+/**
+ * ツール設定を取得
+ * @returns {Object} {gmail: boolean}
+ */
+function getToolSettings() {
+  try {
+    const dataStr = PropertiesService.getUserProperties()
+      .getProperty(USER_PROPERTY_TOOL_SETTINGS);
+    
+    if (!dataStr) {
+      // デフォルト設定（Gmail ON）
+      return { gmail: true };
+    }
+    
+    return JSON.parse(dataStr);
+  } catch (e) {
+    Logger.log('getToolSettings error: ' + e.message);
+    return { gmail: true };
+  }
+}
+
+/**
+ * ツール設定を保存
+ * @param {Object} settings - {gmail: boolean}
+ * @returns {boolean} 保存成功/失敗
+ */
+function saveToolSettings(settings) {
+  try {
+    PropertiesService.getUserProperties()
+      .setProperty(USER_PROPERTY_TOOL_SETTINGS, JSON.stringify(settings));
+    return true;
+  } catch (e) {
+    Logger.log('saveToolSettings error: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * Gmail履歴を取得
+ * @returns {Object} {success: boolean, items: Array, error: string}
+ */
+function getGmailHistory() {
+  Logger.log('Gmail履歴取得開始');
+  
+  try {
+    // 今日の日付でクエリを作成
+    var today = new Date();
+    var dateStr = Utilities.formatDate(today, TIMEZONE, 'yyyy/MM/dd');
+    
+    // 送信メール
+    var sentQuery = 'in:sent after:' + dateStr;
+    var sentThreads = GmailApp.search(sentQuery, 0, MAX_ITEMS_PER_TOOL);
+    
+    // 受信メール
+    var receivedQuery = 'in:inbox after:' + dateStr;
+    var receivedThreads = GmailApp.search(receivedQuery, 0, MAX_ITEMS_PER_TOOL);
+    
+    var items = [];
+    
+    // 送信メールを処理
+    for (var i = 0; i < sentThreads.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
+      var thread = sentThreads[i];
+      var messages = thread.getMessages();
+      var lastMessage = messages[messages.length - 1];
+      var date = lastMessage.getDate();
+      var subject = lastMessage.getSubject() || '(件名なし)';
+      
+      // 件名を短縮
+      if (subject.length > 30) {
+        subject = subject.substring(0, 30) + '...';
+      }
+      
+      items.push({
+        type: 'gmail',
+        time: Utilities.formatDate(date, TIMEZONE, TIME_FORMAT),
+        content: '送信: 「' + subject + '」'
+      });
+    }
+    
+    // 受信メールを処理
+    for (var j = 0; j < receivedThreads.length && items.length < MAX_ITEMS_PER_TOOL; j++) {
+      var rThread = receivedThreads[j];
+      var rMessages = rThread.getMessages();
+      var rLastMessage = rMessages[rMessages.length - 1];
+      var rDate = rLastMessage.getDate();
+      var rSubject = rLastMessage.getSubject() || '(件名なし)';
+      var rFrom = rLastMessage.getFrom() || '';
+      
+      // 送信者名を短縮
+      if (rFrom.length > 15) {
+        rFrom = rFrom.substring(0, 15) + '...';
+      }
+      
+      // 件名を短縮
+      if (rSubject.length > 25) {
+        rSubject = rSubject.substring(0, 25) + '...';
+      }
+      
+      items.push({
+        type: 'gmail',
+        time: Utilities.formatDate(rDate, TIMEZONE, TIME_FORMAT),
+        content: '受信(' + rFrom + '): 「' + rSubject + '」'
+      });
+    }
+    
+    // 時間順にソート
+    items.sort(function(a, b) {
+      return a.time.localeCompare(b.time);
+    });
+    
+    Logger.log('Gmail履歴取得完了: ' + items.length + '件');
+    return { success: true, items: items, error: '' };
+    
+  } catch (e) {
+    Logger.log('getGmailHistory error: ' + e.message);
+    return { success: false, items: [], error: e.message };
+  }
+}
+
+/**
+ * カレンダー予定とGmail履歴を一括取得（V3）
+ * @param {string} dateString - 日付文字列
+ * @returns {Object} {calendar: string, gmail: Object, errors: Array}
+ */
+function getAllHistoryV3(dateString) {
+  Logger.log('全履歴取得開始（V3）');
+  
+  var result = {
+    calendar: '',
+    gmail: { items: [], error: '' },
+    errors: []
+  };
+  
+  // ツール設定を取得
+  var settings = getToolSettings();
+  
+  // カレンダー予定取得（既存）
+  result.calendar = getEventsForDate(dateString);
+  
+  // Gmail履歴
+  if (settings.gmail) {
+    var gmailResult = getGmailHistory();
+    result.gmail = { items: gmailResult.items, error: gmailResult.error };
+    if (!gmailResult.success && gmailResult.error) {
+      result.errors.push('[Gmail] ' + gmailResult.error);
+    }
+  }
+  
+  Logger.log('全履歴取得完了（V3）');
+  return result;
 }
