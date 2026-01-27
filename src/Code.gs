@@ -668,7 +668,7 @@ function formatSlackMessageV2(reportData) {
 
 /**
  * ツール設定を取得
- * @returns {Object} {gmail: boolean}
+ * @returns {Object} {slack: boolean, gmail: boolean}
  */
 function getToolSettings() {
   try {
@@ -676,20 +676,19 @@ function getToolSettings() {
       .getProperty(USER_PROPERTY_TOOL_SETTINGS);
     
     if (!dataStr) {
-      // デフォルト設定（Gmail ON）
-      return { gmail: true };
+      return { slack: true, gmail: true };
     }
     
     return JSON.parse(dataStr);
   } catch (e) {
     Logger.log('getToolSettings error: ' + e.message);
-    return { gmail: true };
+    return { slack: true, gmail: true };
   }
 }
 
 /**
  * ツール設定を保存
- * @param {Object} settings - {gmail: boolean}
+ * @param {Object} settings - {slack: boolean, gmail: boolean}
  * @returns {boolean} 保存成功/失敗
  */
 function saveToolSettings(settings) {
@@ -786,9 +785,94 @@ function getGmailHistory() {
 }
 
 /**
- * カレンダー予定とGmail履歴を一括取得（V3）
+ * Slack履歴を取得
+ * @returns {Object} {success: boolean, items: Array, error: string}
+ */
+function getSlackHistory() {
+  Logger.log('Slack履歴取得開始');
+  
+  try {
+    const userToken = getSlackUserToken_();
+    if (!userToken) {
+      return { success: false, items: [], error: 'Slack未連携' };
+    }
+    
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    
+    const props = PropertiesService.getUserProperties();
+    const slackUserId = props.getProperty(USER_PROPERTY_SLACK_USER_ID);
+    
+    if (!slackUserId) {
+      return { success: false, items: [], error: 'SlackユーザーID不明' };
+    }
+    
+    const query = 'from:me';
+    const params = {
+      query: query,
+      sort: 'timestamp',
+      sort_dir: 'desc',
+      count: MAX_ITEMS_PER_TOOL
+    };
+    
+    const url = 'https://slack.com/api/search.messages?' + toQueryString_(params);
+    const res = UrlFetchApp.fetch(url, {
+      method: 'get',
+      headers: {
+        'Authorization': 'Bearer ' + userToken
+      },
+      muteHttpExceptions: true
+    });
+    
+    const json = safeJsonParse_(res.getContentText());
+    
+    if (!json || !json.ok) {
+      const err = json && json.error ? String(json.error) : 'unknown_error';
+      Logger.log('Slack履歴取得失敗: ' + err);
+      
+      if (err === 'missing_scope') {
+        return { success: false, items: [], error: 'search:read権限が必要です' };
+      }
+      return { success: false, items: [], error: err };
+    }
+    
+    const items = [];
+    const messages = json.messages && json.messages.matches ? json.messages.matches : [];
+    
+    for (var i = 0; i < messages.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
+      var msg = messages[i];
+      var ts = parseFloat(msg.ts) * 1000;
+      var msgDate = new Date(ts);
+      
+      if (msgDate >= todayStart && msgDate <= todayEnd) {
+        var channelName = msg.channel && msg.channel.name ? msg.channel.name : 'DM';
+        var text = msg.text || '';
+        if (text.length > 30) {
+          text = text.substring(0, 30) + '...';
+        }
+        
+        items.push({
+          type: 'slack',
+          time: Utilities.formatDate(msgDate, TIMEZONE, TIME_FORMAT),
+          content: '#' + channelName + ': 「' + text + '」'
+        });
+      }
+    }
+    
+    Logger.log('Slack履歴取得完了: ' + items.length + '件');
+    return { success: true, items: items, error: '' };
+    
+  } catch (e) {
+    Logger.log('getSlackHistory error: ' + e.message);
+    return { success: false, items: [], error: e.message };
+  }
+}
+
+/**
+ * カレンダー予定とGmail/Slack履歴を一括取得（V3）
  * @param {string} dateString - 日付文字列
- * @returns {Object} {calendar: string, gmail: Object, errors: Array}
+ * @returns {Object} {calendar: string, gmail: Object, slack: Object, errors: Array}
  */
 function getAllHistoryV3(dateString) {
   Logger.log('全履歴取得開始（V3）');
@@ -796,6 +880,7 @@ function getAllHistoryV3(dateString) {
   var result = {
     calendar: '',
     gmail: { items: [], error: '' },
+    slack: { items: [], error: '' },
     errors: []
   };
   
@@ -811,6 +896,15 @@ function getAllHistoryV3(dateString) {
     result.gmail = { items: gmailResult.items, error: gmailResult.error };
     if (!gmailResult.success && gmailResult.error) {
       result.errors.push('[Gmail] ' + gmailResult.error);
+    }
+  }
+  
+  // Slack履歴
+  if (settings.slack) {
+    var slackResult = getSlackHistory();
+    result.slack = { items: slackResult.items, error: slackResult.error };
+    if (!slackResult.success && slackResult.error) {
+      result.errors.push('[Slack] ' + slackResult.error);
     }
   }
   
