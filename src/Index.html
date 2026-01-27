@@ -770,10 +770,10 @@
     <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
       <div style="display: flex; align-items: center; margin-bottom: 8px;">
         <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">NEW</span>
-        <strong style="font-size: 15px;">v2.4.0 がリリースされました！</strong>
+        <strong style="font-size: 15px;">v3.0.0 がリリースされました！</strong>
       </div>
       <ul style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.95;">
-        <li>ファビコンを追加</li>
+        <li>Gmail履歴の自動取得機能を追加</li>
       </ul>
       <button onclick="dismissUpdateNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
@@ -782,6 +782,20 @@
     <div id="loading" class="loading">
       <span class="loading-spinner"></span>
       <span>読み込み中...</span>
+    </div>
+
+    <!-- V3: ツール設定 -->
+    <div class="section tool-settings" style="background-color: #f8f9fa; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div style="font-weight: bold; font-size: 13px; color: #495057;">取得ツール設定</div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
+            <input type="checkbox" id="settingGmail" checked style="width: 16px; height: 16px;">
+            <span style="color: #EA4335; font-weight: bold;">Gmail</span>
+          </label>
+          <button class="btn btn-secondary" onclick="saveToolSettingsUI()" style="padding: 5px 12px; font-size: 11px;">設定を保存</button>
+        </div>
+      </div>
     </div>
 
     <!-- 日報ヘッダー -->
@@ -1754,7 +1768,40 @@
     }
 
     // ============================================
-    // 予定取得
+    // V3: ツール設定
+    // ============================================
+    function loadToolSettings() {
+      google.script.run
+        .withSuccessHandler(function(settings) {
+          document.getElementById('settingGmail').checked = settings.gmail !== false;
+        })
+        .withFailureHandler(function(error) {
+          console.error('loadToolSettings error:', error);
+        })
+        .getToolSettings();
+    }
+
+    function saveToolSettingsUI() {
+      var settings = {
+        gmail: document.getElementById('settingGmail').checked
+      };
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result) {
+            showMessage('設定を保存しました。', false);
+          } else {
+            showMessage('設定の保存に失敗しました。', true);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('エラー: ' + error.message, true);
+        })
+        .saveToolSettings(settings);
+    }
+
+    // ============================================
+    // 予定取得（V3: Gmail履歴も取得）
     // ============================================
     function loadEventsForSelectedDate() {
       if (isLoading) return;
@@ -1770,9 +1817,9 @@
       if (btnRefresh) btnRefresh.disabled = true;
 
       google.script.run
-        .withSuccessHandler(onLoadEventsSuccess)
+        .withSuccessHandler(onLoadAllHistorySuccessV3)
         .withFailureHandler(onLoadEventsFailure)
-        .getEventsForDate(selectedDate || null);
+        .getAllHistoryV3(selectedDate || null);
     }
 
     function loadEvents() {
@@ -1888,6 +1935,46 @@
         showMessage('今日の予定はありません。', false);
       } else {
         showMessage('予定を取得しました。', false);
+      }
+    }
+
+    // V3: 全履歴取得成功時のハンドラー
+    function onLoadAllHistorySuccessV3(result) {
+      showLoading(false);
+      document.getElementById('btnGetEvents').disabled = false;
+      var btnRefresh = document.getElementById('btnRefreshEvents');
+      if (btnRefresh) btnRefresh.disabled = false;
+
+      // カレンダー予定を整形
+      var lines = [];
+      
+      if (result.calendar && !result.calendar.startsWith('エラー：')) {
+        var calendarLines = result.calendar.split('\n');
+        for (var i = 0; i < calendarLines.length; i++) {
+          if (calendarLines[i].trim()) {
+            lines.push('<span style="color: #4285F4; font-weight: bold;">[予定]</span> ' + calendarLines[i]);
+          }
+        }
+      }
+      
+      // Gmail履歴を追加
+      if (result.gmail && result.gmail.items) {
+        for (var k = 0; k < result.gmail.items.length; k++) {
+          var gItem = result.gmail.items[k];
+          lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + gItem.content);
+        }
+      }
+      
+      // WYSIWYGエディタに設定
+      document.getElementById('todayTasks').innerHTML = lines.join('<br>');
+      
+      // エラーがあれば表示
+      if (result.errors && result.errors.length > 0) {
+        showMessage('一部のツールで取得に失敗しました: ' + result.errors.join(', '), true);
+      } else if (lines.length === 0) {
+        showMessage('今日の履歴はありません。', false);
+      } else {
+        showMessage('履歴を取得しました（' + lines.length + '件）', false);
       }
     }
 
@@ -2230,7 +2317,7 @@
     // ============================================
     // バージョン管理・更新お知らせ機能
     // ============================================
-    var CURRENT_VERSION = '2.4.0';
+    var CURRENT_VERSION = '3.0.0';
 
     function dismissUpdateNotice() {
       var updateNotice = document.getElementById('updateNotice');
@@ -2302,7 +2389,8 @@
       initUpdateNotice();  // 更新お知らせを初期化
       initDraftAutoSave();  // 下書き自動保存を初期化
       restoreDraft();  // 下書きがあれば復元を提案
-      loadEventsForSelectedDate();
+      loadToolSettings();  // V3: ツール設定を読み込み
+      loadEventsForSelectedDate();  // V3: カレンダー+Gmail履歴を取得
     });
   </script>
 </body>
