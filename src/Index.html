@@ -961,7 +961,7 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header" style="position: relative;">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v3.1.0</small></h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v3.2.0</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
@@ -970,9 +970,10 @@
     <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
       <div style="display: flex; align-items: center; margin-bottom: 8px;">
         <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">NEW</span>
-        <strong style="font-size: 15px;">v3.1.0 がリリースされました！</strong>
+        <strong style="font-size: 15px;">v3.2.0 がリリースされました！</strong>
       </div>
       <ul style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.95;">
+        <li>Slack履歴の自動取得機能を追加</li>
         <li>Gmailピッカーサイドバーを追加（右側から選んで追加）</li>
       </ul>
       <button onclick="dismissUpdateNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
@@ -2158,6 +2159,13 @@
       }
     }
 
+    // HTMLエスケープ関数（XSS対策）
+    function escapeHtml(text) {
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     // V3: 全履歴取得成功時のハンドラー
     var gmailItemsCache = [];
     
@@ -2174,12 +2182,20 @@
         var calendarLines = result.calendar.split('\n');
         for (var i = 0; i < calendarLines.length; i++) {
           if (calendarLines[i].trim()) {
-            lines.push('<span style="color: #4285F4; font-weight: bold;">[予定]</span> ' + calendarLines[i]);
+            lines.push('<span style="color: #4285F4; font-weight: bold;">[予定]</span> ' + escapeHtml(calendarLines[i]));
           }
         }
       }
       
-      // WYSIWYGエディタにカレンダー予定のみ設定
+      // Slack履歴を追加（自動挿入）
+      if (result.slack && result.slack.items) {
+        for (var m = 0; m < result.slack.items.length; m++) {
+          var sItem = result.slack.items[m];
+          lines.push('<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(sItem.content));
+        }
+      }
+      
+      // WYSIWYGエディタにカレンダー予定とSlack履歴を設定（Gmailはサイドバーから選択）
       document.getElementById('todayTasks').innerHTML = lines.join('<br>');
       
       // Gmail履歴をサイドバーに表示（ピッカー方式）
@@ -2198,7 +2214,8 @@
         showMessage('今日の履歴はありません。', false);
       } else {
         var gmailCount = result.gmail && result.gmail.items ? result.gmail.items.length : 0;
-        showMessage('予定を取得しました（カレンダー: ' + lines.length + '件、Gmail: ' + gmailCount + '件）', false);
+        var slackCount = result.slack && result.slack.items ? result.slack.items.length : 0;
+        showMessage('履歴を取得しました（カレンダー+Slack: ' + lines.length + '件、Gmail: ' + gmailCount + '件）', false);
       }
     }
     
@@ -2612,7 +2629,7 @@
     // ============================================
     // バージョン管理・更新お知らせ機能
     // ============================================
-    var CURRENT_VERSION = '3.1.0';
+    var CURRENT_VERSION = '3.2.0';
 
     function dismissUpdateNotice() {
       var updateNotice = document.getElementById('updateNotice');
