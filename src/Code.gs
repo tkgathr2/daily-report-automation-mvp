@@ -668,7 +668,7 @@ function formatSlackMessageV2(reportData) {
 
 /**
  * ツール設定を取得
- * @returns {Object} {slack: boolean, gmail: boolean}
+ * @returns {Object} {slack: boolean, gmail: boolean, notion: boolean}
  */
 function getToolSettings() {
   try {
@@ -676,19 +676,19 @@ function getToolSettings() {
       .getProperty(USER_PROPERTY_TOOL_SETTINGS);
     
     if (!dataStr) {
-      return { slack: true, gmail: true };
+      return { slack: true, gmail: true, notion: true };
     }
     
     return JSON.parse(dataStr);
   } catch (e) {
     Logger.log('getToolSettings error: ' + e.message);
-    return { slack: true, gmail: true };
+    return { slack: true, gmail: true, notion: true };
   }
 }
 
 /**
  * ツール設定を保存
- * @param {Object} settings - {slack: boolean, gmail: boolean}
+ * @param {Object} settings - {slack: boolean, gmail: boolean, notion: boolean}
  * @returns {boolean} 保存成功/失敗
  */
 function saveToolSettings(settings) {
@@ -870,9 +870,143 @@ function getSlackHistory() {
 }
 
 /**
- * カレンダー予定とGmail/Slack履歴を一括取得（V3）
+ * Notion履歴を取得
+ * @returns {Object} {success: boolean, items: Array, error: string}
+ */
+function getNotionHistory() {
+  Logger.log('Notion履歴取得開始');
+  
+  try {
+    var props = PropertiesService.getUserProperties();
+    var notionToken = props.getProperty(USER_PROPERTY_NOTION_TOKEN);
+    
+    if (!notionToken) {
+      return { success: false, items: [], error: 'Notion未連携' };
+    }
+    
+    var today = new Date();
+    var todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+    var todayIso = todayStart.toISOString();
+    
+    var payload = {
+      filter: {
+        timestamp: 'last_edited_time',
+        last_edited_time: {
+          on_or_after: todayIso
+        }
+      },
+      sort: {
+        direction: 'descending',
+        timestamp: 'last_edited_time'
+      },
+      page_size: MAX_ITEMS_PER_TOOL
+    };
+    
+    var res = UrlFetchApp.fetch('https://api.notion.com/v1/search', {
+      method: 'post',
+      headers: {
+        'Authorization': 'Bearer ' + notionToken,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    
+    var json = safeJsonParse_(res.getContentText());
+    
+    if (!json || json.object === 'error') {
+      var err = json && json.message ? String(json.message) : 'unknown_error';
+      Logger.log('Notion履歴取得失敗: ' + err);
+      
+      if (err.indexOf('unauthorized') >= 0 || err.indexOf('invalid_token') >= 0) {
+        return { success: false, items: [], error: 'Notionトークンが無効です' };
+      }
+      return { success: false, items: [], error: err };
+    }
+    
+    var items = [];
+    var results = json.results || [];
+    
+    for (var i = 0; i < results.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
+      var page = results[i];
+      var lastEdited = page.last_edited_time ? new Date(page.last_edited_time) : null;
+      
+      if (!lastEdited || lastEdited < todayStart) {
+        continue;
+      }
+      
+      var title = '(無題)';
+      if (page.properties) {
+        if (page.properties.title && page.properties.title.title && page.properties.title.title[0]) {
+          title = page.properties.title.title[0].plain_text || '(無題)';
+        } else if (page.properties.Name && page.properties.Name.title && page.properties.Name.title[0]) {
+          title = page.properties.Name.title[0].plain_text || '(無題)';
+        }
+      }
+      
+      if (title.length > 30) {
+        title = title.substring(0, 30) + '...';
+      }
+      
+      var pageType = page.object === 'database' ? 'DB' : 'ページ';
+      
+      items.push({
+        type: 'notion',
+        time: Utilities.formatDate(lastEdited, TIMEZONE, TIME_FORMAT),
+        content: pageType + ': 「' + title + '」'
+      });
+    }
+    
+    items.sort(function(a, b) {
+      return a.time.localeCompare(b.time);
+    });
+    
+    Logger.log('Notion履歴取得完了: ' + items.length + '件');
+    return { success: true, items: items, error: '' };
+    
+  } catch (e) {
+    Logger.log('getNotionHistory error: ' + e.message);
+    return { success: false, items: [], error: e.message };
+  }
+}
+
+/**
+ * Notionトークンを保存
+ * @param {string} token - Notion Integration Token
+ * @returns {boolean} 保存成功/失敗
+ */
+function saveNotionToken(token) {
+  try {
+    if (!token || token.trim() === '') {
+      PropertiesService.getUserProperties().deleteProperty(USER_PROPERTY_NOTION_TOKEN);
+      return true;
+    }
+    PropertiesService.getUserProperties().setProperty(USER_PROPERTY_NOTION_TOKEN, token.trim());
+    return true;
+  } catch (e) {
+    Logger.log('saveNotionToken error: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * Notion連携状態を取得
+ * @returns {boolean} 連携済みかどうか
+ */
+function isNotionLinked() {
+  try {
+    var token = PropertiesService.getUserProperties().getProperty(USER_PROPERTY_NOTION_TOKEN);
+    return !!token;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * カレンダー予定とGmail/Slack/Notion履歴を一括取得（V3）
  * @param {string} dateString - 日付文字列
- * @returns {Object} {calendar: string, gmail: Object, slack: Object, errors: Array}
+ * @returns {Object} {calendar: string, gmail: Object, slack: Object, notion: Object, errors: Array}
  */
 function getAllHistoryV3(dateString) {
   Logger.log('全履歴取得開始（V3）');
@@ -881,6 +1015,7 @@ function getAllHistoryV3(dateString) {
     calendar: '',
     gmail: { items: [], error: '' },
     slack: { items: [], error: '' },
+    notion: { items: [], error: '' },
     errors: []
   };
   
@@ -905,6 +1040,15 @@ function getAllHistoryV3(dateString) {
     result.slack = { items: slackResult.items, error: slackResult.error };
     if (!slackResult.success && slackResult.error) {
       result.errors.push('[Slack] ' + slackResult.error);
+    }
+  }
+  
+  // Notion履歴
+  if (settings.notion) {
+    var notionResult = getNotionHistory();
+    result.notion = { items: notionResult.items, error: notionResult.error };
+    if (!notionResult.success && notionResult.error) {
+      result.errors.push('[Notion] ' + notionResult.error);
     }
   }
   

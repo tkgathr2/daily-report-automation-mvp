@@ -961,7 +961,7 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header" style="position: relative;">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v3.2.0</small></h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v3.3.0</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
@@ -970,12 +970,11 @@
     <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
       <div style="display: flex; align-items: center; margin-bottom: 8px;">
         <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">NEW</span>
-        <strong style="font-size: 15px;">v3.2.0 がリリースされました！</strong>
-      </div>
-      <ul style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.95;">
-        <li>Slack履歴の自動取得機能を追加</li>
-        <li>Gmailピッカーサイドバーを追加（右側から選んで追加）</li>
-      </ul>
+              <strong style="font-size: 15px;">v3.3.0 がリリースされました！</strong>
+            </div>
+            <ul style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.95;">
+              <li>Notion履歴の自動取得機能を追加（今日編集したページを表示）</li>
+            </ul>
       <button onclick="dismissUpdateNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
 
@@ -990,14 +989,22 @@
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
         <div style="font-weight: bold; font-size: 13px; color: #495057;">取得ツール設定</div>
         <div style="display: flex; align-items: center; gap: 15px;">
-          <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
-            <input type="checkbox" id="settingGmail" checked style="width: 16px; height: 16px;">
-            <span style="color: #EA4335; font-weight: bold;">Gmail</span>
-          </label>
-          <button class="btn btn-secondary" onclick="saveToolSettingsUI()" style="padding: 5px 12px; font-size: 11px;">設定を保存</button>
+              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
+                <input type="checkbox" id="settingGmail" checked style="width: 16px; height: 16px;">
+                <span style="color: #EA4335; font-weight: bold;">Gmail</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
+                <input type="checkbox" id="settingNotion" checked style="width: 16px; height: 16px;">
+                <span style="color: #000; font-weight: bold;">Notion</span>
+              </label>
+              <button class="btn btn-secondary" onclick="saveToolSettingsUI()" style="padding: 5px 12px; font-size: 11px;">設定を保存</button>
+            </div>
+          </div>
+          <div id="notionSetupHint" style="margin-top: 10px; padding: 8px 12px; background: #fff3cd; border-radius: 4px; font-size: 12px; display: none;">
+            <strong>Notion連携:</strong> <a href="https://www.notion.so/my-integrations" target="_blank" style="color: #0066cc;">Notion Integrations</a>でトークンを作成し、下のボタンから設定してください。
+            <button onclick="showNotionTokenDialog()" style="margin-left: 10px; padding: 3px 8px; font-size: 11px; cursor: pointer;">トークン設定</button>
+          </div>
         </div>
-      </div>
-    </div>
 
     <!-- 日報ヘッダー -->
     <div id="reportHeader" class="report-header">
@@ -1995,6 +2002,9 @@
       google.script.run
         .withSuccessHandler(function(settings) {
           document.getElementById('settingGmail').checked = settings.gmail !== false;
+          document.getElementById('settingNotion').checked = settings.notion !== false;
+          // Notion連携状態を確認
+          checkNotionLinkStatus();
         })
         .withFailureHandler(function(error) {
           console.error('loadToolSettings error:', error);
@@ -2004,7 +2014,8 @@
 
     function saveToolSettingsUI() {
       var settings = {
-        gmail: document.getElementById('settingGmail').checked
+        gmail: document.getElementById('settingGmail').checked,
+        notion: document.getElementById('settingNotion').checked
       };
       
       google.script.run
@@ -2019,6 +2030,45 @@
           showMessage('エラー: ' + error.message, true);
         })
         .saveToolSettings(settings);
+    }
+    
+    // ============================================
+    // Notion連携
+    // ============================================
+    function checkNotionLinkStatus() {
+      google.script.run
+        .withSuccessHandler(function(linked) {
+          var hint = document.getElementById('notionSetupHint');
+          var checkbox = document.getElementById('settingNotion');
+          if (checkbox.checked && !linked) {
+            hint.style.display = 'block';
+          } else {
+            hint.style.display = 'none';
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('checkNotionLinkStatus error:', error);
+        })
+        .isNotionLinked();
+    }
+    
+    function showNotionTokenDialog() {
+      var token = prompt('Notion Integration Tokenを入力してください:\n\nhttps://www.notion.so/my-integrations で作成したトークンを貼り付けてください。');
+      if (token === null) return;
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result) {
+            showMessage('Notionトークンを保存しました。', false);
+            checkNotionLinkStatus();
+          } else {
+            showMessage('Notionトークンの保存に失敗しました。', true);
+          }
+        })
+        .withFailureHandler(function(error) {
+          showMessage('エラー: ' + error.message, true);
+        })
+        .saveNotionToken(token);
     }
 
     // ============================================
@@ -2195,7 +2245,15 @@
         }
       }
       
-      // WYSIWYGエディタにカレンダー予定とSlack履歴を設定（Gmailはサイドバーから選択）
+      // Notion履歴を追加（自動挿入）
+      if (result.notion && result.notion.items) {
+        for (var n = 0; n < result.notion.items.length; n++) {
+          var nItem = result.notion.items[n];
+          lines.push('<span style="color: #000; font-weight: bold;">[Notion]</span> ' + escapeHtml(nItem.content));
+        }
+      }
+      
+      // WYSIWYGエディタにカレンダー予定とSlack/Notion履歴を設定（Gmailはサイドバーから選択）
       document.getElementById('todayTasks').innerHTML = lines.join('<br>');
       
       // Gmail履歴をサイドバーに表示（ピッカー方式）
@@ -2215,7 +2273,8 @@
       } else {
         var gmailCount = result.gmail && result.gmail.items ? result.gmail.items.length : 0;
         var slackCount = result.slack && result.slack.items ? result.slack.items.length : 0;
-        showMessage('履歴を取得しました（カレンダー+Slack: ' + lines.length + '件、Gmail: ' + gmailCount + '件）', false);
+        var notionCount = result.notion && result.notion.items ? result.notion.items.length : 0;
+        showMessage('履歴を取得しました（カレンダー+Slack+Notion: ' + lines.length + '件、Gmail: ' + gmailCount + '件）', false);
       }
     }
     
@@ -2629,7 +2688,7 @@
     // ============================================
     // バージョン管理・更新お知らせ機能
     // ============================================
-    var CURRENT_VERSION = '3.2.0';
+    var CURRENT_VERSION = '3.3.0';
 
     function dismissUpdateNotice() {
       var updateNotice = document.getElementById('updateNotice');
