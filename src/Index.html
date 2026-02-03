@@ -2680,6 +2680,7 @@
     }
     
     // 名前編集モーダルを表示
+    var nameEditInputInitialized = false;
     function showNameEditModal() {
       var currentName = localStorage.getItem(NAME_STORAGE_KEY) || '';
       var input = document.getElementById('nameEditInput');
@@ -2689,11 +2690,15 @@
       modal.style.display = 'flex';
       input.focus();
       
-      input.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          saveEditedName();
-        }
-      });
+      // イベントリスナーは一度だけ追加
+      if (!nameEditInputInitialized) {
+        input.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            saveEditedName();
+          }
+        });
+        nameEditInputInitialized = true;
+      }
     }
     
     // 名前編集モーダルを閉じる
