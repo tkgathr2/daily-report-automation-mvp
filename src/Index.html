@@ -933,16 +933,28 @@
       }
 
       .container {
-        padding: 20px;
+        padding: 15px;
       }
 
       .header h1 {
-        font-size: 20px;
+        font-size: 18px;
+      }
+
+      .header p {
+        font-size: 12px;
+      }
+
+      /* 使い方ボタンのモバイル対応 */
+      #help-btn {
+        padding: 6px 12px !important;
+        font-size: 12px !important;
       }
 
       .btn {
         width: 100%;
         margin-bottom: 10px;
+        min-height: 44px;
+        font-size: 14px;
       }
 
       .button-group {
@@ -951,6 +963,240 @@
 
       .completion-content {
         padding: 30px 20px;
+      }
+
+      /* フォーマットツールバーのモバイル対応 */
+      .format-toolbar {
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 8px;
+      }
+
+      .format-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+      }
+
+      .format-toolbar .separator {
+        display: none;
+      }
+
+      /* WYSIWYGエディタのモバイル対応 */
+      .wysiwyg-editor {
+        font-size: 16px;
+        min-height: 120px;
+        padding: 15px;
+      }
+
+      /* セクションタイトルのモバイル対応 */
+      .section-title {
+        font-size: 14px;
+      }
+
+      /* 日付選択のモバイル対応 */
+      .date-input-container {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .date-input-container select {
+        font-size: 16px;
+        padding: 10px;
+        min-width: 70px;
+      }
+
+      .date-separator {
+        font-size: 14px;
+      }
+
+      .date-nav-container {
+        margin-top: 10px;
+      }
+
+      .btn-date-nav {
+        padding: 10px 15px;
+        font-size: 14px;
+        min-height: 44px;
+      }
+
+      /* ツール設定のモバイル対応 */
+      .tool-settings {
+        padding: 12px !important;
+      }
+
+      .tool-settings > div {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+      }
+
+      .tool-settings label {
+        font-size: 14px !important;
+      }
+
+      .tool-settings input[type="checkbox"] {
+        width: 20px !important;
+        height: 20px !important;
+      }
+
+      /* 更新のお知らせのモバイル対応 */
+      #updateNotice {
+        padding: 12px 15px !important;
+        font-size: 12px !important;
+      }
+
+      #updateNotice strong {
+        font-size: 14px !important;
+      }
+
+      #updateNotice ul {
+        padding-left: 15px !important;
+        font-size: 12px !important;
+      }
+
+      /* 日報ヘッダーのモバイル対応 */
+      .report-header {
+        font-size: 14px;
+        padding: 12px;
+      }
+
+      /* Slack送信フォームのモバイル対応 */
+      .slack-form .section-title {
+        font-size: 14px;
+      }
+
+      .form-hint {
+        font-size: 12px;
+      }
+
+      /* インデントヒントのモバイル対応 */
+      .indent-hint {
+        font-size: 10px;
+      }
+
+      /* プレビューモーダルのモバイル対応 */
+      .preview-content {
+        padding: 20px;
+        width: 95%;
+        max-height: 85vh;
+      }
+
+      .preview-title {
+        font-size: 16px;
+      }
+
+      .preview-text {
+        font-size: 13px;
+        padding: 15px;
+      }
+
+      /* 投稿完了画面のモバイル対応 */
+      .completion-icon svg {
+        width: 50px;
+        height: 50px;
+      }
+
+      .completion-title {
+        font-size: 18px;
+      }
+
+      .completion-message {
+        font-size: 13px;
+      }
+
+      .slack-link-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+      }
+
+      /* Gmailサイドバーのモバイル対応 */
+      .gmail-sidebar-inner {
+        border-radius: 12px 12px 0 0;
+      }
+
+      .gmail-item {
+        padding: 12px;
+      }
+
+      .gmail-item-content {
+        font-size: 14px;
+      }
+
+      .gmail-item-add button {
+        padding: 8px 16px;
+        font-size: 13px;
+        min-height: 36px;
+      }
+
+      /* ローディング表示のモバイル対応 */
+      .loading {
+        font-size: 14px;
+      }
+
+      /* メッセージ表示のモバイル対応 */
+      .message {
+        font-size: 13px;
+        padding: 12px;
+      }
+    }
+
+    /* 超小型画面（320px以下）向け追加調整 */
+    @media (max-width: 360px) {
+      .container {
+        padding: 10px;
+      }
+
+      .header h1 {
+        font-size: 16px;
+      }
+
+      .format-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+      }
+
+      .date-input-container select {
+        min-width: 60px;
+        padding: 8px;
+      }
+
+      .report-header {
+        font-size: 12px;
+      }
+    }
+
+    /* 使い方ガイドモーダルのモバイル対応 */
+    @media (max-width: 600px) {
+      #tutorial-modal > div {
+        width: 95% !important;
+        max-height: 90vh !important;
+        margin: 10px !important;
+      }
+
+      #tutorial-modal > div > div {
+        padding: 16px !important;
+      }
+
+      #tutorial-modal h2 {
+        font-size: 18px !important;
+      }
+
+      #tutorial-modal h3 {
+        font-size: 14px !important;
+      }
+
+      #tutorial-modal p {
+        font-size: 13px !important;
+      }
+
+      #tutorial-modal ul {
+        font-size: 12px !important;
+      }
+
+      #tutorial-modal button {
+        min-height: 44px;
       }
     }
   </style>
@@ -961,7 +1207,7 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header" style="position: relative;">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v3.3.0</small></h1>
+      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v3.4.0</small></h1>
       <p>今日の予定を取得してSlackに送信</p>
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
@@ -970,10 +1216,10 @@
     <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
       <div style="display: flex; align-items: center; margin-bottom: 8px;">
         <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">NEW</span>
-              <strong style="font-size: 15px;">v3.3.0 がリリースされました！</strong>
+              <strong style="font-size: 15px;">v3.4.0 がリリースされました！</strong>
             </div>
             <ul style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.95;">
-              <li>Notion履歴の自動取得機能を追加（今日編集したページを表示）</li>
+              <li>モバイル対応を強化（スマートフォンでの操作性を改善）</li>
             </ul>
       <button onclick="dismissUpdateNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
@@ -1256,10 +1502,38 @@
             <div style="margin-bottom: 12px;">
               <div style="display: flex; align-items: center; margin-bottom: 4px;">
                 <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px;">NEW</span>
-                <strong style="color: #667eea;">v2.4.0</strong>
+                <strong style="color: #667eea;">v3.4.0</strong>
               </div>
               <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>ファビコンを追加</li>
+                <li>モバイル対応を強化（スマートフォンでの操作性を改善）</li>
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong style="color: #2c3e50;">v3.3.0</strong>
+              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
+                <li>Notion履歴の自動取得機能を追加</li>
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong style="color: #2c3e50;">v3.2.0</strong>
+              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
+                <li>Slack履歴の自動取得機能を追加</li>
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong style="color: #2c3e50;">v3.1.0</strong>
+              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
+                <li>Gmailピッカーサイドバーを追加</li>
+              </ul>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+              <strong style="color: #2c3e50;">v3.0.0</strong>
+              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
+                <li>Gmail履歴の自動取得機能を追加</li>
               </ul>
             </div>
             
