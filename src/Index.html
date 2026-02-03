@@ -1207,12 +1207,12 @@
   <div class="container">
     <!-- ヘッダー -->
     <div class="header" style="position: relative;">
-      <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">v3.4.0</small></h1>
-      <p>今日の予定を取得してSlackに送信</p>
+            <h1>簡単日報くん <small style="font-size: 14px; color: #7f8c8d;">MVP</small></h1>
+            <p>日報を作成してSlackに送信</p>
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
     
-    <!-- 更新のお知らせ（新バージョン時に目立つ表示） -->
+    <!-- 更新のお知らせ（MVP版では非表示）
     <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
       <div style="display: flex; align-items: center; margin-bottom: 8px;">
         <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">NEW</span>
@@ -1223,6 +1223,7 @@
             </ul>
       <button onclick="dismissUpdateNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
+    -->
 
     <!-- ローディング表示 -->
     <div id="loading" class="loading">
@@ -1230,7 +1231,7 @@
       <span>読み込み中...</span>
     </div>
 
-    <!-- V3: ツール設定 -->
+    <!-- V3: ツール設定（MVP版では非表示）
     <div class="section tool-settings" style="background-color: #f8f9fa; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
         <div style="font-weight: bold; font-size: 13px; color: #495057;">取得ツール設定</div>
@@ -1251,6 +1252,7 @@
             <button onclick="showNotionTokenDialog()" style="margin-left: 10px; padding: 3px 8px; font-size: 11px; cursor: pointer;">トークン設定</button>
           </div>
         </div>
+    -->
 
     <!-- 日報ヘッダー -->
     <div id="reportHeader" class="report-header">
@@ -1353,7 +1355,7 @@
       <div class="indent-hint">Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+U: 下線 / Ctrl+Enter: 送信</div>
     </div>
 
-    <!-- コピー・更新・プレビューボタン -->
+    <!-- コピー・プレビューボタン（MVP版では「予定を更新」を非表示） -->
     <div class="section">
       <div class="button-group">
         <button id="btnCopy" class="btn btn-secondary" onclick="copyToClipboardV2()">
@@ -1362,13 +1364,15 @@
         <button id="btnPreview" class="btn btn-secondary" onclick="showPreview()">
           プレビュー
         </button>
+        <!-- MVP版では非表示
         <button id="btnRefreshEvents" class="btn btn-primary" onclick="loadEventsForSelectedDate()">
           予定を更新
         </button>
+        -->
       </div>
     </div>
 
-    <!-- 日付選択・予定取得セクション -->
+    <!-- 日付選択・予定取得セクション（MVP版では非表示）
     <div class="section">
       <div class="form-group">
         <label>日付を選択</label>
@@ -1390,6 +1394,7 @@
         予定を取得
       </button>
     </div>
+    -->
 
     <!-- Slack送信フォーム -->
     <div class="section slack-form">
@@ -1412,7 +1417,7 @@
   </div>
   </div><!-- /.main-content -->
 
-  <!-- Gmail ピッカーサイドバー -->
+  <!-- Gmail ピッカーサイドバー（MVP版では非表示）
   <div id="gmailSidebar" class="gmail-sidebar">
     <div class="gmail-sidebar-inner">
       <div class="gmail-sidebar-header">
@@ -1426,10 +1431,12 @@
       </div>
     </div>
   </div>
+  -->
   </div><!-- /.app-wrapper -->
 
-  <!-- モバイル用サイドバートグルボタン -->
+  <!-- モバイル用サイドバートグルボタン（MVP版では非表示）
   <button id="gmailSidebarToggle" class="gmail-sidebar-toggle" onclick="toggleGmailSidebar()">📧</button>
+  -->
 
   <!-- 投稿完了画面 -->
   <div id="completionScreen" class="completion-screen">
@@ -1471,100 +1478,39 @@
         
         <div style="font-size: 14px; line-height: 1.8; color: #333;">
           <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">1. Googleカレンダー連携</h3>
-            <p style="margin: 0;">日付を選択して「予定を取得」ボタンを押すと、Googleカレンダーの予定が自動で取得されます。</p>
-          </div>
-          
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">2. 日報の編集</h3>
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">1. 日報の編集</h3>
             <p style="margin: 0;">各セクションで日報の内容を編集できます。ツールバーで太字・斜体・リストなどの書式を適用できます。</p>
           </div>
           
           <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">3. Slack連携</h3>
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">2. Slack連携</h3>
             <p style="margin: 0;">初回は「Slack連携（認可）」ボタンでSlackと連携してください。連携後は「Slackに投稿」ボタンで日報を送信できます。</p>
           </div>
           
           <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">4. ショートカットキー</h3>
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">3. ショートカットキー</h3>
             <p style="margin: 0;"><b>Ctrl+B</b>: 太字 / <b>Ctrl+I</b>: 斜体 / <b>Ctrl+U</b>: 下線 / <b>Ctrl+Enter</b>: Slackに送信</p>
           </div>
           
           <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">5. 下書き保存</h3>
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">4. 下書き保存</h3>
             <p style="margin: 0;">入力内容は自動的に下書き保存されます。ページを閉じても、次回アクセス時に復元できます。</p>
           </div>
           
           <!-- バージョン履歴 -->
           <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #2c3e50;">バージョン履歴</h3>
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #2c3e50;">バージョン情報</h3>
             
             <div style="margin-bottom: 12px;">
               <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px;">NEW</span>
-                <strong style="color: #667eea;">v3.4.0</strong>
+                <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 8px;">MVP</span>
+                <strong style="color: #667eea;">初期公開版</strong>
               </div>
               <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>モバイル対応を強化（スマートフォンでの操作性を改善）</li>
-              </ul>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong style="color: #2c3e50;">v3.3.0</strong>
-              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>Notion履歴の自動取得機能を追加</li>
-              </ul>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong style="color: #2c3e50;">v3.2.0</strong>
-              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>Slack履歴の自動取得機能を追加</li>
-              </ul>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong style="color: #2c3e50;">v3.1.0</strong>
-              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>Gmailピッカーサイドバーを追加</li>
-              </ul>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong style="color: #2c3e50;">v3.0.0</strong>
-              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>Gmail履歴の自動取得機能を追加</li>
-              </ul>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong style="color: #2c3e50;">v2.3.8</strong>
-              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>使い方ガイドにバージョン履歴を追加</li>
-                <li>新バージョン時のお知らせ表示を改善</li>
-              </ul>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong style="color: #2c3e50;">v2.3.7</strong>
-              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>「使い方ガイド」機能を追加</li>
-              </ul>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong style="color: #2c3e50;">v2.3.6</strong>
-              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>Ctrl+Enter送信機能を改善</li>
-              </ul>
-            </div>
-            
-            <div style="margin-bottom: 12px;">
-              <strong style="color: #2c3e50;">v2.3.0 - v2.3.5</strong>
-              <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 13px; color: #555;">
-                <li>WYSIWYGエディタ機能追加</li>
-                <li>Slack風フォーマットツールバー</li>
-                <li>下書き自動保存機能</li>
+                <li>WYSIWYGエディタ（太字・斜体・リストなど）</li>
+                <li>Slack投稿機能</li>
+                <li>下書き自動保存</li>
+                <li>モバイル対応</li>
               </ul>
             </div>
           </div>
