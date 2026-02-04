@@ -35,9 +35,338 @@ const TIME_FORMAT = 'HH:mm';
 const USER_PROPERTY_NEXT_TASKS = 'NEXT_TASKS_DATA';
 const DATE_FORMAT_V2 = 'yyyy年MM月dd日';
 
-// V3追加定数
-const USER_PROPERTY_TOOL_SETTINGS = 'TOOL_SETTINGS';
-const MAX_ITEMS_PER_TOOL = 20;
+
+// ============================================
+// アクセス制御
+// ============================================
+
+// 許可されたドメイン（このドメインのユーザーは全員アクセス可能）
+const ALLOWED_DOMAINS = [
+  'takagi.bz',
+  'stepupnext.com',
+  'kotsuyudo.com'
+];
+
+// 管理者ドメイン（管理画面にアクセス可能）
+const ADMIN_DOMAINS = [
+  'takagi.bz'
+];
+
+/**
+ * ユーザーのアクセス権限をチェック
+ * @returns {boolean} アクセス許可されている場合はtrue
+ */
+function checkUserAccess() {
+  try {
+    const email = Session.getActiveUser().getEmail();
+    if (!email) {
+      return false;
+    }
+    
+    const domain = email.split('@')[1];
+    if (!domain) {
+      return false;
+    }
+    
+    // 許可されたドメインかチェック
+    return ALLOWED_DOMAINS.includes(domain.toLowerCase());
+  } catch (e) {
+    Logger.log('アクセスチェックエラー: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * 管理者権限をチェック
+ * @returns {boolean} 管理者の場合はtrue
+ */
+function checkAdminAccess() {
+  try {
+    const email = Session.getActiveUser().getEmail();
+    if (!email) {
+      return false;
+    }
+    
+    const domain = email.split('@')[1];
+    if (!domain) {
+      return false;
+    }
+    
+    return ADMIN_DOMAINS.includes(domain.toLowerCase());
+  } catch (e) {
+    Logger.log('管理者チェックエラー: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * 現在のユーザー情報を取得
+ * @returns {Object} ユーザー情報
+ */
+function getCurrentUserInfo() {
+  const email = Session.getActiveUser().getEmail() || '';
+  const domain = email ? email.split('@')[1] : '';
+  return {
+    email: email,
+    domain: domain,
+    isAdmin: ADMIN_DOMAINS.includes(domain.toLowerCase()),
+    isAllowed: ALLOWED_DOMAINS.includes(domain.toLowerCase())
+  };
+}
+
+/**
+ * アクセス拒否ページを生成
+ * @returns {HtmlOutput} アクセス拒否ページ
+ */
+function createAccessDeniedPage() {
+  const email = Session.getActiveUser().getEmail() || '不明';
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>アクセス権限がありません</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          margin: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+          background: white;
+          padding: 40px;
+          border-radius: 16px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+          text-align: center;
+          max-width: 400px;
+        }
+        h1 {
+          color: #e74c3c;
+          margin-bottom: 20px;
+        }
+        p {
+          color: #666;
+          line-height: 1.6;
+        }
+        .email {
+          background: #f5f5f5;
+          padding: 10px;
+          border-radius: 8px;
+          font-family: monospace;
+          margin: 20px 0;
+        }
+        .btn {
+          display: inline-block;
+          background: #667eea;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 8px;
+          text-decoration: none;
+          margin-top: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>アクセス権限がありません</h1>
+        <p>このアプリケーションにアクセスする権限がありません。</p>
+        <div class="email">${email}</div>
+        <p>アクセスが必要な場合は、管理者にお問い合わせください。</p>
+      </div>
+    </body>
+    </html>
+  `;
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('アクセス権限がありません')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/**
+ * 管理画面を生成
+ * @returns {HtmlOutput} 管理画面ページ
+ */
+function createAdminPage() {
+  const userInfo = getCurrentUserInfo();
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>管理画面 - 簡単日報くん</title>
+      <style>
+        * { box-sizing: border-box; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background: #f5f5f5;
+        }
+        .container {
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 30px;
+        }
+        h1 {
+          color: #333;
+          margin: 0;
+        }
+        .back-link {
+          color: #667eea;
+          text-decoration: none;
+        }
+        .card {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+          margin-top: 0;
+          color: #333;
+          font-size: 18px;
+          border-bottom: 2px solid #667eea;
+          padding-bottom: 10px;
+        }
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 12px 0;
+          border-bottom: 1px solid #eee;
+        }
+        .info-row:last-child {
+          border-bottom: none;
+        }
+        .info-label {
+          color: #666;
+          font-weight: 500;
+        }
+        .info-value {
+          color: #333;
+        }
+        .domain-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        .domain-list li {
+          padding: 10px 15px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          margin-bottom: 8px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .domain-list li.admin {
+          background: #e8f4fd;
+          border-left: 3px solid #667eea;
+        }
+        .badge {
+          font-size: 12px;
+          padding: 4px 8px;
+          border-radius: 4px;
+          background: #667eea;
+          color: white;
+        }
+        .stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 15px;
+        }
+        .stat-box {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 20px;
+          border-radius: 12px;
+          text-align: center;
+        }
+        .stat-number {
+          font-size: 32px;
+          font-weight: bold;
+        }
+        .stat-label {
+          font-size: 14px;
+          opacity: 0.9;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>管理画面</h1>
+          <a href="${getServiceUrl_()}" class="back-link">← アプリに戻る</a>
+        </div>
+        
+        <div class="card">
+          <h2>現在のユーザー</h2>
+          <div class="info-row">
+            <span class="info-label">メールアドレス</span>
+            <span class="info-value">${userInfo.email}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ドメイン</span>
+            <span class="info-value">${userInfo.domain}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">権限</span>
+            <span class="info-value">${userInfo.isAdmin ? '管理者' : '一般ユーザー'}</span>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2>許可されたドメイン</h2>
+          <ul class="domain-list">
+            ${ALLOWED_DOMAINS.map(domain => {
+              const isAdmin = ADMIN_DOMAINS.includes(domain);
+              return '<li class="' + (isAdmin ? 'admin' : '') + '">' +
+                '<span>@' + domain + '</span>' +
+                (isAdmin ? '<span class="badge">管理者</span>' : '') +
+                '</li>';
+            }).join('')}
+          </ul>
+        </div>
+        
+        <div class="card">
+          <h2>システム情報</h2>
+          <div class="stats">
+            <div class="stat-box">
+              <div class="stat-number">${ALLOWED_DOMAINS.length}</div>
+              <div class="stat-label">許可ドメイン数</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number">${ADMIN_DOMAINS.length}</div>
+              <div class="stat-label">管理者ドメイン数</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2>管理画面URL</h2>
+          <div class="info-row">
+            <span class="info-label">管理画面</span>
+            <span class="info-value" style="word-break: break-all;">${getServiceUrl_()}?page=admin</span>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('管理画面 - 簡単日報くん')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
 
 // ============================================
 // WEBアプリエントリーポイント
@@ -60,6 +389,19 @@ function doGet(e) {
     if (e.parameter.code) {
       return handleSlackOAuthCallback_(e);
     }
+    
+    // 管理画面へのアクセス
+    if (e.parameter.page === 'admin') {
+      if (!checkAdminAccess()) {
+        return createAccessDeniedPage();
+      }
+      return createAdminPage();
+    }
+  }
+
+  // アクセス権限チェック
+  if (!checkUserAccess()) {
+    return createAccessDeniedPage();
   }
 
   // 通常表示
@@ -660,398 +1002,4 @@ function formatSlackMessageV2(reportData) {
     '【わかった事・問題・共有事項】\n' + reportData.notices + '\n\n' +
     '【売上・利益に関わるポイント】\n' + reportData.salesPoints + '\n\n' +
     '【次すること】\n' + reportData.nextTasks;
-}
-
-// ============================================
-// V3追加関数
-// ============================================
-
-/**
- * ツール設定を取得
- * @returns {Object} {slack: boolean, gmail: boolean, notion: boolean}
- */
-function getToolSettings() {
-  try {
-    const dataStr = PropertiesService.getUserProperties()
-      .getProperty(USER_PROPERTY_TOOL_SETTINGS);
-    
-    if (!dataStr) {
-      return { slack: true, gmail: true, notion: true };
-    }
-    
-    return JSON.parse(dataStr);
-  } catch (e) {
-    Logger.log('getToolSettings error: ' + e.message);
-    return { slack: true, gmail: true, notion: true };
-  }
-}
-
-/**
- * ツール設定を保存
- * @param {Object} settings - {slack: boolean, gmail: boolean, notion: boolean}
- * @returns {boolean} 保存成功/失敗
- */
-function saveToolSettings(settings) {
-  try {
-    PropertiesService.getUserProperties()
-      .setProperty(USER_PROPERTY_TOOL_SETTINGS, JSON.stringify(settings));
-    return true;
-  } catch (e) {
-    Logger.log('saveToolSettings error: ' + e.message);
-    return false;
-  }
-}
-
-/**
- * Gmail履歴を取得
- * @returns {Object} {success: boolean, items: Array, error: string}
- */
-function getGmailHistory() {
-  Logger.log('Gmail履歴取得開始');
-  
-  try {
-    // 今日の日付でクエリを作成
-    var today = new Date();
-    var dateStr = Utilities.formatDate(today, TIMEZONE, 'yyyy/MM/dd');
-    
-    // 送信メール
-    var sentQuery = 'in:sent after:' + dateStr;
-    var sentThreads = GmailApp.search(sentQuery, 0, MAX_ITEMS_PER_TOOL);
-    
-    // 受信メール
-    var receivedQuery = 'in:inbox after:' + dateStr;
-    var receivedThreads = GmailApp.search(receivedQuery, 0, MAX_ITEMS_PER_TOOL);
-    
-    var items = [];
-    
-    // 送信メールを処理
-    for (var i = 0; i < sentThreads.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
-      var thread = sentThreads[i];
-      var messages = thread.getMessages();
-      var lastMessage = messages[messages.length - 1];
-      var date = lastMessage.getDate();
-      var subject = lastMessage.getSubject() || '(件名なし)';
-      
-      // 件名を短縮
-      if (subject.length > 30) {
-        subject = subject.substring(0, 30) + '...';
-      }
-      
-      items.push({
-        type: 'gmail',
-        time: Utilities.formatDate(date, TIMEZONE, TIME_FORMAT),
-        content: '送信: 「' + subject + '」'
-      });
-    }
-    
-    // 受信メールを処理
-    for (var j = 0; j < receivedThreads.length && items.length < MAX_ITEMS_PER_TOOL; j++) {
-      var rThread = receivedThreads[j];
-      var rMessages = rThread.getMessages();
-      var rLastMessage = rMessages[rMessages.length - 1];
-      var rDate = rLastMessage.getDate();
-      var rSubject = rLastMessage.getSubject() || '(件名なし)';
-      var rFrom = rLastMessage.getFrom() || '';
-      
-      // 送信者名を短縮
-      if (rFrom.length > 15) {
-        rFrom = rFrom.substring(0, 15) + '...';
-      }
-      
-      // 件名を短縮
-      if (rSubject.length > 25) {
-        rSubject = rSubject.substring(0, 25) + '...';
-      }
-      
-      items.push({
-        type: 'gmail',
-        time: Utilities.formatDate(rDate, TIMEZONE, TIME_FORMAT),
-        content: '受信(' + rFrom + '): 「' + rSubject + '」'
-      });
-    }
-    
-    // 時間順にソート
-    items.sort(function(a, b) {
-      return a.time.localeCompare(b.time);
-    });
-    
-    Logger.log('Gmail履歴取得完了: ' + items.length + '件');
-    return { success: true, items: items, error: '' };
-    
-  } catch (e) {
-    Logger.log('getGmailHistory error: ' + e.message);
-    return { success: false, items: [], error: e.message };
-  }
-}
-
-/**
- * Slack履歴を取得
- * @returns {Object} {success: boolean, items: Array, error: string}
- */
-function getSlackHistory() {
-  Logger.log('Slack履歴取得開始');
-  
-  try {
-    const userToken = getSlackUserToken_();
-    if (!userToken) {
-      return { success: false, items: [], error: 'Slack未連携' };
-    }
-    
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-    
-    const props = PropertiesService.getUserProperties();
-    const slackUserId = props.getProperty(USER_PROPERTY_SLACK_USER_ID);
-    
-    if (!slackUserId) {
-      return { success: false, items: [], error: 'SlackユーザーID不明' };
-    }
-    
-    const query = 'from:me';
-    const params = {
-      query: query,
-      sort: 'timestamp',
-      sort_dir: 'desc',
-      count: MAX_ITEMS_PER_TOOL
-    };
-    
-    const url = 'https://slack.com/api/search.messages?' + toQueryString_(params);
-    const res = UrlFetchApp.fetch(url, {
-      method: 'get',
-      headers: {
-        'Authorization': 'Bearer ' + userToken
-      },
-      muteHttpExceptions: true
-    });
-    
-    const json = safeJsonParse_(res.getContentText());
-    
-    if (!json || !json.ok) {
-      const err = json && json.error ? String(json.error) : 'unknown_error';
-      Logger.log('Slack履歴取得失敗: ' + err);
-      
-      if (err === 'missing_scope') {
-        return { success: false, items: [], error: 'search:read権限が必要です' };
-      }
-      return { success: false, items: [], error: err };
-    }
-    
-    const items = [];
-    const messages = json.messages && json.messages.matches ? json.messages.matches : [];
-    
-    for (var i = 0; i < messages.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
-      var msg = messages[i];
-      var ts = parseFloat(msg.ts) * 1000;
-      var msgDate = new Date(ts);
-      
-      if (msgDate >= todayStart && msgDate <= todayEnd) {
-        var channelName = msg.channel && msg.channel.name ? msg.channel.name : 'DM';
-        var text = msg.text || '';
-        if (text.length > 30) {
-          text = text.substring(0, 30) + '...';
-        }
-        
-        items.push({
-          type: 'slack',
-          time: Utilities.formatDate(msgDate, TIMEZONE, TIME_FORMAT),
-          content: '#' + channelName + ': 「' + text + '」'
-        });
-      }
-    }
-    
-    Logger.log('Slack履歴取得完了: ' + items.length + '件');
-    return { success: true, items: items, error: '' };
-    
-  } catch (e) {
-    Logger.log('getSlackHistory error: ' + e.message);
-    return { success: false, items: [], error: e.message };
-  }
-}
-
-/**
- * Notion履歴を取得
- * @returns {Object} {success: boolean, items: Array, error: string}
- */
-function getNotionHistory() {
-  Logger.log('Notion履歴取得開始');
-  
-  try {
-    var props = PropertiesService.getUserProperties();
-    var notionToken = props.getProperty(USER_PROPERTY_NOTION_TOKEN);
-    
-    if (!notionToken) {
-      return { success: false, items: [], error: 'Notion未連携' };
-    }
-    
-    var today = new Date();
-    var todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-    var todayIso = todayStart.toISOString();
-    
-    var payload = {
-      filter: {
-        timestamp: 'last_edited_time',
-        last_edited_time: {
-          on_or_after: todayIso
-        }
-      },
-      sort: {
-        direction: 'descending',
-        timestamp: 'last_edited_time'
-      },
-      page_size: MAX_ITEMS_PER_TOOL
-    };
-    
-    var res = UrlFetchApp.fetch('https://api.notion.com/v1/search', {
-      method: 'post',
-      headers: {
-        'Authorization': 'Bearer ' + notionToken,
-        'Content-Type': 'application/json',
-        'Notion-Version': '2022-06-28'
-      },
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    });
-    
-    var json = safeJsonParse_(res.getContentText());
-    
-    if (!json || json.object === 'error') {
-      var err = json && json.message ? String(json.message) : 'unknown_error';
-      Logger.log('Notion履歴取得失敗: ' + err);
-      
-      if (err.indexOf('unauthorized') >= 0 || err.indexOf('invalid_token') >= 0) {
-        return { success: false, items: [], error: 'Notionトークンが無効です' };
-      }
-      return { success: false, items: [], error: err };
-    }
-    
-    var items = [];
-    var results = json.results || [];
-    
-    for (var i = 0; i < results.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
-      var page = results[i];
-      var lastEdited = page.last_edited_time ? new Date(page.last_edited_time) : null;
-      
-      if (!lastEdited || lastEdited < todayStart) {
-        continue;
-      }
-      
-      var title = '(無題)';
-      if (page.properties) {
-        if (page.properties.title && page.properties.title.title && page.properties.title.title[0]) {
-          title = page.properties.title.title[0].plain_text || '(無題)';
-        } else if (page.properties.Name && page.properties.Name.title && page.properties.Name.title[0]) {
-          title = page.properties.Name.title[0].plain_text || '(無題)';
-        }
-      }
-      
-      if (title.length > 30) {
-        title = title.substring(0, 30) + '...';
-      }
-      
-      var pageType = page.object === 'database' ? 'DB' : 'ページ';
-      
-      items.push({
-        type: 'notion',
-        time: Utilities.formatDate(lastEdited, TIMEZONE, TIME_FORMAT),
-        content: pageType + ': 「' + title + '」'
-      });
-    }
-    
-    items.sort(function(a, b) {
-      return a.time.localeCompare(b.time);
-    });
-    
-    Logger.log('Notion履歴取得完了: ' + items.length + '件');
-    return { success: true, items: items, error: '' };
-    
-  } catch (e) {
-    Logger.log('getNotionHistory error: ' + e.message);
-    return { success: false, items: [], error: e.message };
-  }
-}
-
-/**
- * Notionトークンを保存
- * @param {string} token - Notion Integration Token
- * @returns {boolean} 保存成功/失敗
- */
-function saveNotionToken(token) {
-  try {
-    if (!token || token.trim() === '') {
-      PropertiesService.getUserProperties().deleteProperty(USER_PROPERTY_NOTION_TOKEN);
-      return true;
-    }
-    PropertiesService.getUserProperties().setProperty(USER_PROPERTY_NOTION_TOKEN, token.trim());
-    return true;
-  } catch (e) {
-    Logger.log('saveNotionToken error: ' + e.message);
-    return false;
-  }
-}
-
-/**
- * Notion連携状態を取得
- * @returns {boolean} 連携済みかどうか
- */
-function isNotionLinked() {
-  try {
-    var token = PropertiesService.getUserProperties().getProperty(USER_PROPERTY_NOTION_TOKEN);
-    return !!token;
-  } catch (e) {
-    return false;
-  }
-}
-
-/**
- * カレンダー予定とGmail/Slack/Notion履歴を一括取得（V3）
- * @param {string} dateString - 日付文字列
- * @returns {Object} {calendar: string, gmail: Object, slack: Object, notion: Object, errors: Array}
- */
-function getAllHistoryV3(dateString) {
-  Logger.log('全履歴取得開始（V3）');
-  
-  var result = {
-    calendar: '',
-    gmail: { items: [], error: '' },
-    slack: { items: [], error: '' },
-    notion: { items: [], error: '' },
-    errors: []
-  };
-  
-  // ツール設定を取得
-  var settings = getToolSettings();
-  
-  // カレンダー予定取得（既存）
-  result.calendar = getEventsForDate(dateString);
-  
-  // Gmail履歴
-  if (settings.gmail) {
-    var gmailResult = getGmailHistory();
-    result.gmail = { items: gmailResult.items, error: gmailResult.error };
-    if (!gmailResult.success && gmailResult.error) {
-      result.errors.push('[Gmail] ' + gmailResult.error);
-    }
-  }
-  
-  // Slack履歴
-  if (settings.slack) {
-    var slackResult = getSlackHistory();
-    result.slack = { items: slackResult.items, error: slackResult.error };
-    if (!slackResult.success && slackResult.error) {
-      result.errors.push('[Slack] ' + slackResult.error);
-    }
-  }
-  
-  // Notion履歴
-  if (settings.notion) {
-    var notionResult = getNotionHistory();
-    result.notion = { items: notionResult.items, error: notionResult.error };
-    if (!notionResult.success && notionResult.error) {
-      result.errors.push('[Notion] ' + notionResult.error);
-    }
-  }
-  
-  Logger.log('全履歴取得完了（V3）');
-  return result;
 }
