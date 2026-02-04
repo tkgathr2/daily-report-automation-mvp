@@ -1266,7 +1266,10 @@
 
     <!-- 今日やったこと -->
     <div class="section textarea-container">
-      <div class="section-title">【今日やったこと】</div>
+      <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <span>【今日やったこと】</span>
+        <button id="loadCalendarBtn" onclick="loadCalendarEvents()" style="background: #27ae60; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">予定を取得</button>
+      </div>
       <div class="textarea-with-toolbar">
         <div class="format-toolbar">
           <button type="button" class="format-btn" onclick="applyWysiwygFormat('todayTasks', 'bold')" title="太字 (Ctrl+B)"><b>B</b></button>
@@ -3076,11 +3079,45 @@
     }
 
     // ============================================
+    // カレンダー予定取得機能
+    // ============================================
+    function loadCalendarEvents() {
+      var btn = document.getElementById('loadCalendarBtn');
+      var originalText = btn.textContent;
+      btn.textContent = '取得中...';
+      btn.disabled = true;
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          btn.textContent = originalText;
+          btn.disabled = false;
+          
+          if (result && !result.startsWith('エラー')) {
+            var todayTasksEditor = document.getElementById('todayTasks');
+            // 既存の内容がある場合は追加、なければ置換
+            var currentContent = todayTasksEditor.innerHTML.trim();
+            if (currentContent && currentContent !== '<br>') {
+              todayTasksEditor.innerHTML = result.replace(/\n/g, '<br>') + '<br><br>' + currentContent;
+            } else {
+              todayTasksEditor.innerHTML = result.replace(/\n/g, '<br>');
+            }
+            showMessage('カレンダー予定を取得しました', false);
+          } else {
+            showMessage(result || 'カレンダー予定の取得に失敗しました', true);
+          }
+        })
+        .withFailureHandler(function(error) {
+          btn.textContent = originalText;
+          btn.disabled = false;
+          showMessage('カレンダー予定の取得に失敗しました: ' + error.message, true);
+        })
+        .getEventsForDate(null);
+    }
+
+    // ============================================
     // ページ読み込み時の初期化
     // ============================================
     window.addEventListener('load', function() {
-      // MVP版: 日付選択・カレンダー取得は非表示のため初期化をスキップ
-      // initDateSelects();
       refreshSlackLinkStatus();
       initV2();  // V2初期化を追加
       initIndentTextareas();  // インデント機能を初期化（デフォルト値も設定）
@@ -3088,14 +3125,12 @@
       initWysiwygEditors();  // WYSIWYGエディタを初期化
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
       initTutorial();  // 使い方ガイドを初期化
-      // MVP版: 更新お知らせは非表示
-      // initUpdateNotice();
       initDraftAutoSave();  // 下書き自動保存を初期化
       restoreDraft();  // 下書きがあれば復元を提案
-      // MVP版: ツール設定・カレンダー取得は非表示のため初期化をスキップ
-      // loadToolSettings();
-      // loadEventsForSelectedDate();
       initNameRegistration();  // 名前登録機能を初期化
+      
+      // カレンダー予定を自動取得
+      loadCalendarEvents();
     });
   </script>
 </body>
