@@ -1370,7 +1370,7 @@
         <button id="btnCopy" class="btn btn-secondary" onclick="copyToClipboardV2()">
           コピー
         </button>
-        <button id="btnPreview" class="btn btn-secondary" onclick="showPreview()">
+        <button id="btnPreview" class="btn btn-secondary" onclick="showPreview()" ontouchend="showPreview()">
           プレビュー
         </button>
         <!-- MVP版では非表示
@@ -2219,25 +2219,37 @@
     // プレビュー機能
     // ============================================
     function showPreview() {
-      // 氏名を取得
-      var userName = document.getElementById('reportUserName').textContent;
-      if (!userName) {
-        var manualUserNameEl = document.getElementById('manualUserName');
-        userName = (manualUserNameEl && manualUserNameEl.value) ? manualUserNameEl.value.trim() : '（氏名未入力）';
+      try {
+        console.log('showPreview called');
+        
+        // 氏名を取得
+        var userName = document.getElementById('reportUserName').textContent;
+        if (!userName) {
+          var manualUserNameEl = document.getElementById('manualUserName');
+          userName = (manualUserNameEl && manualUserNameEl.value) ? manualUserNameEl.value.trim() : '（氏名未入力）';
+        }
+
+        var date = document.getElementById('reportDate').textContent;
+        var header = '【' + date + '　' + userName + '　日報】';
+
+        // WYSIWYGエディタからリッチテキスト（HTML）で値を取得してプレビュー表示
+        var previewHtml = '<div style="font-weight: bold; font-size: 16px; margin-bottom: 16px;">' + header + '</div>' +
+          '<div style="margin-bottom: 12px;"><strong>【今日やったこと】</strong><br>' + getWysiwygHtml('todayTasks') + '</div>' +
+          '<div style="margin-bottom: 12px;"><strong>【わかった事・問題・共有事項】</strong><br>' + getWysiwygHtml('notices') + '</div>' +
+          '<div style="margin-bottom: 12px;"><strong>【売上・利益に関わるポイント】</strong><br>' + getWysiwygHtml('salesPoints') + '</div>' +
+          '<div style="margin-bottom: 12px;"><strong>【次すること】</strong><br>' + getWysiwygHtml('nextTasks') + '</div>';
+
+        var previewText = document.getElementById('previewText');
+        var previewModal = document.getElementById('previewModal');
+        
+        if (previewText) previewText.innerHTML = previewHtml;
+        if (previewModal) previewModal.classList.add('show');
+        
+        console.log('showPreview completed');
+      } catch (e) {
+        console.log('showPreview error: ' + e.message);
+        showMessage('プレビューエラー: ' + e.message, true);
       }
-
-      var date = document.getElementById('reportDate').textContent;
-      var header = '【' + date + '　' + userName + '　日報】';
-
-      // WYSIWYGエディタからリッチテキスト（HTML）で値を取得してプレビュー表示
-      var previewHtml = '<div style="font-weight: bold; font-size: 16px; margin-bottom: 16px;">' + header + '</div>' +
-        '<div style="margin-bottom: 12px;"><strong>【今日やったこと】</strong><br>' + getWysiwygHtml('todayTasks') + '</div>' +
-        '<div style="margin-bottom: 12px;"><strong>【わかった事・問題・共有事項】</strong><br>' + getWysiwygHtml('notices') + '</div>' +
-        '<div style="margin-bottom: 12px;"><strong>【売上・利益に関わるポイント】</strong><br>' + getWysiwygHtml('salesPoints') + '</div>' +
-        '<div style="margin-bottom: 12px;"><strong>【次すること】</strong><br>' + getWysiwygHtml('nextTasks') + '</div>';
-
-      document.getElementById('previewText').innerHTML = previewHtml;
-      document.getElementById('previewModal').classList.add('show');
     }
     
     // WYSIWYGエディタのHTMLを取得（プレビュー用）
