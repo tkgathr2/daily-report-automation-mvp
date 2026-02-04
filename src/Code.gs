@@ -511,9 +511,9 @@ function getEventsForDate(dateString) {
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
       
-      // 予定の作成者を確認（共有カレンダーからの予定を除外）
+      // 予定の作成者を確認
       const creators = event.getCreators();
-      const isOwnEvent = creators.length === 0 || creators.some(function(creator) {
+      const isCreator = creators.some(function(creator) {
         return creator.toLowerCase() === userEmail.toLowerCase();
       });
       
@@ -523,8 +523,12 @@ function getEventsForDate(dateString) {
         return guest.getEmail().toLowerCase() === userEmail.toLowerCase();
       });
       
-      // 自分が作成した予定、または自分が招待された予定のみを追加
-      if (isOwnEvent || isInvited) {
+      // 作成者情報がない場合（自分のカレンダーで自分が作成した予定は creators が空の場合がある）
+      // この場合、ゲストリストも空であれば自分の予定として扱う
+      const isOwnPrivateEvent = creators.length === 0 && guestList.length === 0;
+      
+      // 自分が作成した予定、自分が招待された予定、または自分のプライベート予定のみを追加
+      if (isCreator || isInvited || isOwnPrivateEvent) {
         eventList.push({
           title: event.getTitle(),
           isAllDay: event.isAllDayEvent(),
