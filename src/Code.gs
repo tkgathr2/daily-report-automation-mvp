@@ -40,6 +40,113 @@ const USER_PROPERTY_TOOL_SETTINGS = 'TOOL_SETTINGS';
 const MAX_ITEMS_PER_TOOL = 20;
 
 // ============================================
+// アクセス制御
+// ============================================
+
+// 許可されたドメイン（このドメインのユーザーは全員アクセス可能）
+const ALLOWED_DOMAINS = [
+  'takagi.bz',
+  'stepupnext.com',
+  'kotsuyudo.com'
+];
+
+/**
+ * ユーザーのアクセス権限をチェック
+ * @returns {boolean} アクセス許可されている場合はtrue
+ */
+function checkUserAccess() {
+  try {
+    const email = Session.getActiveUser().getEmail();
+    if (!email) {
+      return false;
+    }
+    
+    const domain = email.split('@')[1];
+    if (!domain) {
+      return false;
+    }
+    
+    // 許可されたドメインかチェック
+    return ALLOWED_DOMAINS.includes(domain.toLowerCase());
+  } catch (e) {
+    Logger.log('アクセスチェックエラー: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * アクセス拒否ページを生成
+ * @returns {HtmlOutput} アクセス拒否ページ
+ */
+function createAccessDeniedPage() {
+  const email = Session.getActiveUser().getEmail() || '不明';
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>アクセス権限がありません</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 100vh;
+          margin: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+          background: white;
+          padding: 40px;
+          border-radius: 16px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+          text-align: center;
+          max-width: 400px;
+        }
+        h1 {
+          color: #e74c3c;
+          margin-bottom: 20px;
+        }
+        p {
+          color: #666;
+          line-height: 1.6;
+        }
+        .email {
+          background: #f5f5f5;
+          padding: 10px;
+          border-radius: 8px;
+          font-family: monospace;
+          margin: 20px 0;
+        }
+        .btn {
+          display: inline-block;
+          background: #667eea;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 8px;
+          text-decoration: none;
+          margin-top: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>アクセス権限がありません</h1>
+        <p>このアプリケーションにアクセスする権限がありません。</p>
+        <div class="email">${email}</div>
+        <p>アクセスが必要な場合は、管理者にお問い合わせください。</p>
+      </div>
+    </body>
+    </html>
+  `;
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('アクセス権限がありません')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ============================================
 // WEBアプリエントリーポイント
 // ============================================
 
@@ -60,6 +167,11 @@ function doGet(e) {
     if (e.parameter.code) {
       return handleSlackOAuthCallback_(e);
     }
+  }
+
+  // アクセス権限チェック
+  if (!checkUserAccess()) {
+    return createAccessDeniedPage();
   }
 
   // 通常表示

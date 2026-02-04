@@ -3054,7 +3054,24 @@
       // 投稿成功したので下書きをクリア
       clearDraft();
       
+      // WYSIWYGエディタの内容をクリア
+      clearFormAfterPost();
+      
       document.getElementById('completionScreen').classList.add('show');
+    }
+    
+    function clearFormAfterPost() {
+      // WYSIWYGエディタの内容をクリア
+      var editors = ['todayTasks', 'notices', 'salesPoints', 'nextTasks'];
+      editors.forEach(function(id) {
+        var editor = document.getElementById(id);
+        if (editor) {
+          editor.innerHTML = '';
+        }
+      });
+      
+      // スケジュールを再取得
+      loadCalendarEvents();
     }
 
     function closeCompletionScreen() {
