@@ -675,7 +675,8 @@ function getSlackAuthorizeUrl() {
     return '';
   }
 
-  const redirectUri = getServiceUrl_();
+  // 固定のOAuthプロキシURLを使用（Slack Appに登録されているURL）
+  const redirectUri = getSlackRedirectUri_();
   const state = generateAndStoreSlackOAuthState_();
 
   const params = {
@@ -711,7 +712,8 @@ function handleSlackOAuthCallback_(e) {
       ).setTitle('Slack連携（失敗）');
     }
 
-    const redirectUri = getServiceUrl_();
+    // 固定のOAuthプロキシURLを使用（認可時と同じURLを使用する必要がある）
+    const redirectUri = getSlackRedirectUri_();
 
     const tokenRes = UrlFetchApp.fetch('https://slack.com/api/oauth.v2.access', {
       method: 'post',
@@ -857,16 +859,28 @@ function formatSlackMessage(date, text) {
 // ユーティリティ関数
 // ============================================
 
+// OAuth Proxy URL（Slack Appに登録する固定のredirect_uri）
+// これにより、どのドメインのユーザーでも同じredirect_uriを使用できる
+const OAUTH_PROXY_URL = 'https://kantan-nippou.takagi.bz/oauth/callback';
+
+/**
+ * Slack OAuth用のリダイレクトURIを取得
+ * 固定のOAuthプロキシURLを返す（Slack Appに登録されているURL）
+ * @returns {string} OAuth redirect URI
+ */
+function getSlackRedirectUri_() {
+  return OAUTH_PROXY_URL;
+}
+
 /**
  * WebアプリのURL（/exec）を取得
- * Slack OAuthのリダイレクトURIとして使用するため、ドメイン部分をtakagi.bzに固定
- * （異なるドメインのユーザーがアクセスしても同じドメインのURLを使用）
+ * アプリ内のリンク用（「アプリに戻る」など）
  * @returns {string} WebアプリURL
  */
 function getServiceUrl_() {
   // 現在のURLを取得（デプロイメントIDは動的に取得）
   const currentUrl = ScriptApp.getService().getUrl();
-  // ドメイン部分を takagi.bz に置換（Slack Appに登録されているドメイン）
+  // ドメイン部分を takagi.bz に置換
   // 例: script.google.com/a/kotsuyudo.com/macros/s/... → script.google.com/a/macros/takagi.bz/s/...
   return currentUrl.replace(/script\.google\.com\/a\/[^\/]+\/macros/, 'script.google.com/a/macros/takagi.bz');
 }
