@@ -444,7 +444,8 @@ function getTodayEvents() {
 
 /**
  * 指定日のカレンダー予定を取得
- * プライマリカレンダーから指定日の予定を取得し、フォーマット済みテキストを返却
+ * ユーザー自身が所有するカレンダーから指定日の予定を取得し、フォーマット済みテキストを返却
+ * 共有カレンダーの予定は除外される
  * @param {string} dateString - 日付文字列（YYYY-MM-DD形式）、nullの場合は今日
  * @returns {string} フォーマット済み予定テキスト、またはエラーメッセージ
  */
@@ -452,6 +453,10 @@ function getEventsForDate(dateString) {
   Logger.log('カレンダー予定取得開始');
 
   try {
+    // 現在のユーザーのメールアドレスを取得
+    const userEmail = Session.getActiveUser().getEmail();
+    Logger.log('ユーザーメール：' + userEmail);
+
     // 対象日を設定
     let targetDate;
     if (dateString) {
@@ -469,19 +474,26 @@ function getEventsForDate(dateString) {
     const startTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
     const endTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
 
-    // プライマリカレンダーを取得
+    // ユーザーが所有するカレンダーを取得（共有カレンダーは除外）
     let calendar;
     try {
-      calendar = CalendarApp.getCalendarById('primary');
+      // ユーザーのメールアドレスでカレンダーを取得（自分のカレンダーのみ）
+      calendar = CalendarApp.getCalendarById(userEmail);
+      if (!calendar) {
+        // フォールバック：デフォルトカレンダーを使用
+        calendar = CalendarApp.getDefaultCalendar();
+      }
     } catch (e) {
       Logger.log('カレンダーアクセスエラー：' + e.message);
       return 'エラー：カレンダーへのアクセス権限がありません。権限を確認してください。';
     }
 
     if (!calendar) {
-      Logger.log('カレンダー取得失敗：プライマリカレンダーが見つかりません');
+      Logger.log('カレンダー取得失敗：カレンダーが見つかりません');
       return 'エラー：カレンダーへのアクセス権限がありません。権限を確認してください。';
     }
+
+    Logger.log('カレンダー取得成功：' + calendar.getName());
 
     // 予定を取得
     let events;
@@ -494,17 +506,35 @@ function getEventsForDate(dateString) {
 
     Logger.log('カレンダー予定取得完了：' + events.length + '件');
 
-    // イベント情報を配列に変換
+    // イベント情報を配列に変換（ユーザー自身の予定のみ）
     const eventList = [];
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
-      eventList.push({
-        title: event.getTitle(),
-        isAllDay: event.isAllDayEvent(),
-        startTime: event.getStartTime(),
-        endTime: event.getEndTime()
+      
+      // 予定の作成者を確認（共有カレンダーからの予定を除外）
+      const creators = event.getCreators();
+      const isOwnEvent = creators.length === 0 || creators.some(function(creator) {
+        return creator.toLowerCase() === userEmail.toLowerCase();
       });
+      
+      // 自分が参加者として招待された予定も含める
+      const guestList = event.getGuestList();
+      const isInvited = guestList.some(function(guest) {
+        return guest.getEmail().toLowerCase() === userEmail.toLowerCase();
+      });
+      
+      // 自分が作成した予定、または自分が招待された予定のみを追加
+      if (isOwnEvent || isInvited) {
+        eventList.push({
+          title: event.getTitle(),
+          isAllDay: event.isAllDayEvent(),
+          startTime: event.getStartTime(),
+          endTime: event.getEndTime()
+        });
+      }
     }
+
+    Logger.log('フィルタリング後の予定数：' + eventList.length + '件');
 
     // 開始時刻の昇順でソート
     eventList.sort(function(a, b) {
