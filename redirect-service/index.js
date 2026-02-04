@@ -1,6 +1,11 @@
 const http = require('http');
+const url = require('url');
 
 const TARGET_URL = 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwQw2aK8wTUBqUIaufRFvnr697f3JHrT53prxF69BMF4H6JPITtFP9_8aWpERJw9PdnUg/exec';
+
+// OAuth Proxy: 固定のredirect_uriを使用してSlack OAuthを処理
+// これにより、どのドメインのユーザーでも同じredirect_uriを使用できる
+const OAUTH_CALLBACK_PATH = '/oauth/callback';
 
 const loginPageHTML = `
 <!DOCTYPE html>
@@ -110,13 +115,28 @@ const loginPageHTML = `
 `;
 
 const server = http.createServer((req, res) => {
+  const parsedUrl = url.parse(req.url, true);
+  const pathname = parsedUrl.pathname;
+  
   // ルートパスの場合はログインページを表示
-  if (req.url === '/' || req.url === '') {
+  if (pathname === '/' || pathname === '') {
     res.writeHead(200, {
       'Content-Type': 'text/html; charset=utf-8'
     });
     res.end(loginPageHTML);
-  } else {
+  } 
+  // OAuth コールバック: SlackからのOAuthコールバックをGASにリダイレクト
+  else if (pathname === OAUTH_CALLBACK_PATH) {
+    // クエリパラメータをそのままGASに転送
+    const queryString = parsedUrl.search || '';
+    const redirectUrl = TARGET_URL + queryString;
+    console.log('OAuth callback received, redirecting to:', redirectUrl);
+    res.writeHead(302, {
+      'Location': redirectUrl
+    });
+    res.end();
+  }
+  else {
     // その他のパスはGASにリダイレクト
     res.writeHead(302, {
       'Location': TARGET_URL
