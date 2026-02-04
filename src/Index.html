@@ -3043,8 +3043,13 @@
     // 投稿完了画面
     // ============================================
     function showCompletionScreen() {
-      var slackUrl = 'https://slack.com/app_redirect?channel=' + SLACK_CHANNEL_ID;
-      document.getElementById('slackChannelLink').href = slackUrl;
+      var slackLink = document.getElementById('slackChannelLink');
+      var slackDeepLink = 'slack://channel?id=' + SLACK_CHANNEL_ID;
+      var slackWebUrl = 'https://slack.com/app_redirect?channel=' + SLACK_CHANNEL_ID;
+      
+      // iPhoneの場合はディープリンクを使用（Slackアプリを直接開く）
+      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      slackLink.href = isIOS ? slackDeepLink : slackWebUrl;
       
       // 投稿成功したので下書きをクリア
       clearDraft();
