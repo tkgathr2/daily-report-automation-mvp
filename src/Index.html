@@ -2218,7 +2218,8 @@
       // 氏名を取得
       var userName = document.getElementById('reportUserName').textContent;
       if (!userName) {
-        userName = document.getElementById('manualUserName').value.trim() || '（氏名未入力）';
+        var manualUserNameEl = document.getElementById('manualUserName');
+        userName = (manualUserNameEl && manualUserNameEl.value) ? manualUserNameEl.value.trim() : '（氏名未入力）';
       }
 
       var date = document.getElementById('reportDate').textContent;
@@ -2763,10 +2764,10 @@
     // ============================================
     function validateSectionsV2() {
       var sections = [
-        { id: 'todayTasks', name: '今日やったこと', isTextarea: true },
-        { id: 'notices', name: 'わかった事・問題・共有事項', isTextarea: false },
-        { id: 'salesPoints', name: '売上・利益に関わるポイント', isTextarea: false },
-        { id: 'nextTasks', name: '次すること', isTextarea: false }
+        { id: 'todayTasks', name: '今日やったこと' },
+        { id: 'notices', name: 'わかった事・問題・共有事項' },
+        { id: 'salesPoints', name: '売上・利益に関わるポイント' },
+        { id: 'nextTasks', name: '次すること' }
       ];
       
       var errors = [];
@@ -2774,8 +2775,12 @@
       
       sections.forEach(function(section) {
         var element = document.getElementById(section.id);
-        // textareaはvalue、WYSIWYGエディタはinnerTextで値を取得
-        var value = section.isTextarea ? element.value.trim() : element.innerText.trim();
+        if (!element) {
+          console.log('Element not found: ' + section.id);
+          return;
+        }
+        // WYSIWYGエディタはinnerTextで値を取得
+        var value = (element.innerText || element.textContent || '').trim();
         
         if (!value) {
           errors.push(section.name);
@@ -2812,7 +2817,8 @@
       // 氏名を取得
       var userName = document.getElementById('reportUserName').textContent;
       if (!userName) {
-        userName = document.getElementById('manualUserName').value.trim() || '（氏名未入力）';
+        var manualUserNameEl = document.getElementById('manualUserName');
+        userName = (manualUserNameEl && manualUserNameEl.value) ? manualUserNameEl.value.trim() : '（氏名未入力）';
       }
 
       var date = document.getElementById('reportDate').textContent;
@@ -2906,72 +2912,95 @@
     // V2 Slack送信
     // ============================================
     function sendSlackV2() {
-      if (isLoading) return;
-
-      // バリデーション
-      clearValidationErrors();
-      var validation = validateSectionsV2();
-      
-      if (!validation.valid) {
-        showMessage('未入力の項目があります：' + validation.errors.join('、'), true);
-        return;
-      }
-
-      if (!isSlackLinked) {
-        showMessage('Slack未連携です。「Slack連携（認可）」を実行してください。', true);
-        return;
-      }
-
-      // 氏名を取得（手動入力の場合）
-      var userName = document.getElementById('reportUserName').textContent;
-      if (!userName) {
-        userName = document.getElementById('manualUserName').value.trim();
-        if (!userName) {
-          showMessage('氏名を入力してください。', true);
+      try {
+        console.log('sendSlackV2 called');
+        if (isLoading) {
+          console.log('isLoading is true, returning');
           return;
         }
+
+        // バリデーション
+        clearValidationErrors();
+        var validation = validateSectionsV2();
+        
+        if (!validation.valid) {
+          showMessage('未入力の項目があります：' + validation.errors.join('、'), true);
+          return;
+        }
+
+        if (!isSlackLinked) {
+          showMessage('Slack未連携です。「Slack連携（認可）」を実行してください。', true);
+          return;
+        }
+
+        // 氏名を取得（手動入力の場合）
+        var userName = document.getElementById('reportUserName').textContent;
+        if (!userName) {
+          var manualUserNameEl = document.getElementById('manualUserName');
+          userName = (manualUserNameEl && manualUserNameEl.value) ? manualUserNameEl.value.trim() : '';
+          if (!userName) {
+            showMessage('氏名を入力してください。', true);
+            return;
+          }
+        }
+
+        // ヘッダーを生成
+        var date = document.getElementById('reportDate').textContent;
+        var header = '【' + date + '　' + userName + '　日報】';
+
+        // 日報データを作成（WYSIWYGエディタからSlackフォーマットで取得）
+        var reportData = {
+          header: header,
+          todayTasks: getWysiwygValue('todayTasks'),
+          notices: getWysiwygValue('notices'),
+          salesPoints: getWysiwygValue('salesPoints'),
+          nextTasks: getWysiwygValue('nextTasks')
+        };
+
+        console.log('Sending to Slack...');
+        showLoading(true);
+        hideMessage();
+        var btnSend = document.getElementById('btnSendSlack');
+        if (btnSend) btnSend.disabled = true;
+
+        google.script.run
+          .withSuccessHandler(onSendSlackSuccessV2)
+          .withFailureHandler(onSendSlackFailureV2)
+          .sendToSlackV2(reportData);
+      } catch (e) {
+        console.log('sendSlackV2 error: ' + e.message);
+        showMessage('エラー：' + e.message, true);
+        showLoading(false);
       }
-
-      // ヘッダーを生成
-      var date = document.getElementById('reportDate').textContent;
-      var header = '【' + date + '　' + userName + '　日報】';
-
-      // 日報データを作成（WYSIWYGエディタからSlackフォーマットで取得）
-      var reportData = {
-        header: header,
-        todayTasks: getWysiwygValue('todayTasks'),
-        notices: getWysiwygValue('notices'),
-        salesPoints: getWysiwygValue('salesPoints'),
-        nextTasks: getWysiwygValue('nextTasks')
-      };
-
-      showLoading(true);
-      hideMessage();
-      document.getElementById('btnSendSlack').disabled = true;
-
-      google.script.run
-        .withSuccessHandler(onSendSlackSuccessV2)
-        .withFailureHandler(onSendSlackFailureV2)
-        .sendToSlackV2(reportData);
     }
 
     function onSendSlackSuccessV2(result) {
-      showLoading(false);
-      document.getElementById('btnSendSlack').disabled = false;
+      try {
+        showLoading(false);
+        var btnSend = document.getElementById('btnSendSlack');
+        if (btnSend) btnSend.disabled = false;
 
-      var isError = result && result.startsWith('エラー：');
-      
-      if (isError) {
-        showMessage(result, true);
-      } else {
-        showCompletionScreen();
+        var isError = result && result.startsWith('エラー：');
+        
+        if (isError) {
+          showMessage(result, true);
+        } else {
+          showCompletionScreen();
+        }
+      } catch (e) {
+        console.log('onSendSlackSuccessV2 error: ' + e.message);
       }
     }
 
     function onSendSlackFailureV2(error) {
-      showLoading(false);
-      document.getElementById('btnSendSlack').disabled = false;
-      showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
+      try {
+        showLoading(false);
+        var btnSend = document.getElementById('btnSendSlack');
+        if (btnSend) btnSend.disabled = false;
+        showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
+      } catch (e) {
+        console.log('onSendSlackFailureV2 error: ' + e.message);
+      }
     }
 
     // 旧Slack送信（互換性のため残す）
@@ -3114,36 +3143,53 @@
     // カレンダー予定取得機能
     // ============================================
     function loadCalendarEvents() {
-      var btn = document.getElementById('loadCalendarBtn');
-      var originalText = btn.textContent;
-      btn.textContent = '取得中...';
-      btn.disabled = true;
-      
-      google.script.run
-        .withSuccessHandler(function(result) {
-          btn.textContent = originalText;
-          btn.disabled = false;
-          
-          if (result && !result.startsWith('エラー')) {
-            var todayTasksEditor = document.getElementById('todayTasks');
-            // 既存の内容がある場合は追加、なければ置換
-            var currentContent = todayTasksEditor.innerHTML.trim();
-            if (currentContent && currentContent !== '<br>') {
-              todayTasksEditor.innerHTML = result.replace(/\n/g, '<br>') + '<br><br>' + currentContent;
-            } else {
-              todayTasksEditor.innerHTML = result.replace(/\n/g, '<br>');
+      try {
+        var btn = document.getElementById('loadCalendarBtn');
+        if (!btn) {
+          console.log('loadCalendarBtn not found');
+          return;
+        }
+        var originalText = btn.textContent;
+        btn.textContent = '取得中...';
+        btn.disabled = true;
+        
+        google.script.run
+          .withSuccessHandler(function(result) {
+            try {
+              btn.textContent = originalText;
+              btn.disabled = false;
+              
+              if (result && !result.startsWith('エラー')) {
+                var todayTasksEditor = document.getElementById('todayTasks');
+                if (todayTasksEditor) {
+                  var currentContent = todayTasksEditor.innerHTML.trim();
+                  if (currentContent && currentContent !== '<br>') {
+                    todayTasksEditor.innerHTML = result.replace(/\n/g, '<br>') + '<br><br>' + currentContent;
+                  } else {
+                    todayTasksEditor.innerHTML = result.replace(/\n/g, '<br>');
+                  }
+                }
+                showMessage('カレンダー予定を取得しました', false);
+              } else {
+                showMessage(result || 'カレンダー予定の取得に失敗しました', true);
+              }
+            } catch (e) {
+              console.log('Calendar success handler error: ' + e.message);
             }
-            showMessage('カレンダー予定を取得しました', false);
-          } else {
-            showMessage(result || 'カレンダー予定の取得に失敗しました', true);
-          }
-        })
-        .withFailureHandler(function(error) {
-          btn.textContent = originalText;
-          btn.disabled = false;
-          showMessage('カレンダー予定の取得に失敗しました: ' + error.message, true);
-        })
-        .getEventsForDate(null);
+          })
+          .withFailureHandler(function(error) {
+            try {
+              btn.textContent = originalText;
+              btn.disabled = false;
+              showMessage('カレンダー予定の取得に失敗しました: ' + error.message, true);
+            } catch (e) {
+              console.log('Calendar failure handler error: ' + e.message);
+            }
+          })
+          .getEventsForDate(null);
+      } catch (e) {
+        console.log('loadCalendarEvents error: ' + e.message);
+      }
     }
 
     // ============================================
