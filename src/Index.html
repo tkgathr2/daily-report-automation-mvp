@@ -2670,6 +2670,7 @@
     // ============================================
     var NAME_STORAGE_KEY = 'kantan_nippou_user_name';
     var CURRENT_USER_EMAIL = '';
+    var nameRegistrationInputInitialized = false;
     
     function getUserStorageKey(baseKey) {
       if (CURRENT_USER_EMAIL) {
@@ -2702,11 +2703,15 @@
       var input = document.getElementById('nameRegistrationInput');
       input.focus();
       
-      input.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          saveRegisteredName();
-        }
-      });
+      // イベントリスナーは一度だけ追加（重複登録を防止）
+      if (!nameRegistrationInputInitialized) {
+        input.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            saveRegisteredName();
+          }
+        });
+        nameRegistrationInputInitialized = true;
+      }
     }
     
     function saveRegisteredName() {
