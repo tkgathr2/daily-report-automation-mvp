@@ -852,7 +852,10 @@ function toQueryString_(params) {
  * @returns {string} Slack投稿本文
  */
 function formatSlackMessage(date, text) {
-  return '【日報】' + date + '\n\n■ 本日のスケジュール\n' + text;
+  var appUrl = 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwQw2aK8wTUBqUIaufRFvnr697f3JHrT53prxF69BMF4H6JPITtFP9_8aWpERJw9PdnUg/exec';
+  return '【日報】' + date + '\n\n■ 本日のスケジュール\n' + text + '\n\n' +
+    '---\n' +
+    'Powered by <' + appUrl + '|簡単日報くん>';
 }
 
 // ============================================
@@ -1070,9 +1073,12 @@ function sendToSlackV2(reportData) {
  * @returns {string} Slack投稿本文
  */
 function formatSlackMessageV2(reportData) {
+  var appUrl = 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwQw2aK8wTUBqUIaufRFvnr697f3JHrT53prxF69BMF4H6JPITtFP9_8aWpERJw9PdnUg/exec';
   return reportData.header + '\n\n' +
     '【今日やったこと】\n' + reportData.todayTasks + '\n\n' +
     '【わかった事・問題・共有事項】\n' + reportData.notices + '\n\n' +
     '【売上・利益に関わるポイント】\n' + reportData.salesPoints + '\n\n' +
-    '【次すること】\n' + reportData.nextTasks;
+    '【次すること】\n' + reportData.nextTasks + '\n\n' +
+    '---\n' +
+    'Powered by <' + appUrl + '|簡単日報くん>';
 }
