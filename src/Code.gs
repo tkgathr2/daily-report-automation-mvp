@@ -50,6 +50,11 @@ const ALLOWED_DOMAINS = [
   'kotsuyudo.com'
 ];
 
+// 管理者ドメイン（管理画面にアクセス可能）
+const ADMIN_DOMAINS = [
+  'takagi.bz'
+];
+
 /**
  * ユーザーのアクセス権限をチェック
  * @returns {boolean} アクセス許可されている場合はtrue
@@ -72,6 +77,44 @@ function checkUserAccess() {
     Logger.log('アクセスチェックエラー: ' + e.message);
     return false;
   }
+}
+
+/**
+ * 管理者権限をチェック
+ * @returns {boolean} 管理者の場合はtrue
+ */
+function checkAdminAccess() {
+  try {
+    const email = Session.getActiveUser().getEmail();
+    if (!email) {
+      return false;
+    }
+    
+    const domain = email.split('@')[1];
+    if (!domain) {
+      return false;
+    }
+    
+    return ADMIN_DOMAINS.includes(domain.toLowerCase());
+  } catch (e) {
+    Logger.log('管理者チェックエラー: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * 現在のユーザー情報を取得
+ * @returns {Object} ユーザー情報
+ */
+function getCurrentUserInfo() {
+  const email = Session.getActiveUser().getEmail() || '';
+  const domain = email ? email.split('@')[1] : '';
+  return {
+    email: email,
+    domain: domain,
+    isAdmin: ADMIN_DOMAINS.includes(domain.toLowerCase()),
+    isAllowed: ALLOWED_DOMAINS.includes(domain.toLowerCase())
+  };
 }
 
 /**
@@ -146,6 +189,188 @@ function createAccessDeniedPage() {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+/**
+ * 管理画面を生成
+ * @returns {HtmlOutput} 管理画面ページ
+ */
+function createAdminPage() {
+  const userInfo = getCurrentUserInfo();
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>管理画面 - 簡単日報くん</title>
+      <style>
+        * { box-sizing: border-box; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          margin: 0;
+          padding: 20px;
+          background: #f5f5f5;
+        }
+        .container {
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        .header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 30px;
+        }
+        h1 {
+          color: #333;
+          margin: 0;
+        }
+        .back-link {
+          color: #667eea;
+          text-decoration: none;
+        }
+        .card {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+          margin-top: 0;
+          color: #333;
+          font-size: 18px;
+          border-bottom: 2px solid #667eea;
+          padding-bottom: 10px;
+        }
+        .info-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 12px 0;
+          border-bottom: 1px solid #eee;
+        }
+        .info-row:last-child {
+          border-bottom: none;
+        }
+        .info-label {
+          color: #666;
+          font-weight: 500;
+        }
+        .info-value {
+          color: #333;
+        }
+        .domain-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        .domain-list li {
+          padding: 10px 15px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          margin-bottom: 8px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .domain-list li.admin {
+          background: #e8f4fd;
+          border-left: 3px solid #667eea;
+        }
+        .badge {
+          font-size: 12px;
+          padding: 4px 8px;
+          border-radius: 4px;
+          background: #667eea;
+          color: white;
+        }
+        .stats {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+          gap: 15px;
+        }
+        .stat-box {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 20px;
+          border-radius: 12px;
+          text-align: center;
+        }
+        .stat-number {
+          font-size: 32px;
+          font-weight: bold;
+        }
+        .stat-label {
+          font-size: 14px;
+          opacity: 0.9;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>管理画面</h1>
+          <a href="${getServiceUrl_()}" class="back-link">← アプリに戻る</a>
+        </div>
+        
+        <div class="card">
+          <h2>現在のユーザー</h2>
+          <div class="info-row">
+            <span class="info-label">メールアドレス</span>
+            <span class="info-value">${userInfo.email}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">ドメイン</span>
+            <span class="info-value">${userInfo.domain}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">権限</span>
+            <span class="info-value">${userInfo.isAdmin ? '管理者' : '一般ユーザー'}</span>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2>許可されたドメイン</h2>
+          <ul class="domain-list">
+            ${ALLOWED_DOMAINS.map(domain => {
+              const isAdmin = ADMIN_DOMAINS.includes(domain);
+              return '<li class="' + (isAdmin ? 'admin' : '') + '">' +
+                '<span>@' + domain + '</span>' +
+                (isAdmin ? '<span class="badge">管理者</span>' : '') +
+                '</li>';
+            }).join('')}
+          </ul>
+        </div>
+        
+        <div class="card">
+          <h2>システム情報</h2>
+          <div class="stats">
+            <div class="stat-box">
+              <div class="stat-number">${ALLOWED_DOMAINS.length}</div>
+              <div class="stat-label">許可ドメイン数</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-number">${ADMIN_DOMAINS.length}</div>
+              <div class="stat-label">管理者ドメイン数</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2>管理画面URL</h2>
+          <div class="info-row">
+            <span class="info-label">管理画面</span>
+            <span class="info-value" style="word-break: break-all;">${getServiceUrl_()}?page=admin</span>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('管理画面 - 簡単日報くん')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
 // ============================================
 // WEBアプリエントリーポイント
 // ============================================
@@ -166,6 +391,14 @@ function doGet(e) {
     }
     if (e.parameter.code) {
       return handleSlackOAuthCallback_(e);
+    }
+    
+    // 管理画面へのアクセス
+    if (e.parameter.page === 'admin') {
+      if (!checkAdminAccess()) {
+        return createAccessDeniedPage();
+      }
+      return createAdminPage();
     }
   }
 
