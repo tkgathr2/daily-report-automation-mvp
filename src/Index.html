@@ -2126,7 +2126,7 @@
           savedAt: new Date().toISOString(),
           isWysiwyg: true
         };
-        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        localStorage.setItem(getUserStorageKey(DRAFT_STORAGE_KEY), JSON.stringify(draft));
         console.log('下書き保存完了:', new Date().toLocaleTimeString());
       } catch (e) {
         console.error('下書き保存エラー:', e);
@@ -2146,7 +2146,7 @@
 
     function loadDraft() {
       try {
-        var draftStr = localStorage.getItem(DRAFT_STORAGE_KEY);
+        var draftStr = localStorage.getItem(getUserStorageKey(DRAFT_STORAGE_KEY));
         if (!draftStr) return null;
         
         var draft = JSON.parse(draftStr);
@@ -2201,7 +2201,7 @@
 
     function clearDraft() {
       try {
-        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        localStorage.removeItem(getUserStorageKey(DRAFT_STORAGE_KEY));
         console.log('下書きをクリアしました');
       } catch (e) {
         console.error('下書きクリアエラー:', e);
@@ -2658,9 +2658,17 @@
     // 名前登録機能
     // ============================================
     var NAME_STORAGE_KEY = 'kantan_nippou_user_name';
+    var CURRENT_USER_EMAIL = '';
+    
+    function getUserStorageKey(baseKey) {
+      if (CURRENT_USER_EMAIL) {
+        return baseKey + '_' + CURRENT_USER_EMAIL.replace(/[@.]/g, '_');
+      }
+      return baseKey;
+    }
     
     function initNameRegistration() {
-      var savedName = localStorage.getItem(NAME_STORAGE_KEY);
+      var savedName = localStorage.getItem(getUserStorageKey(NAME_STORAGE_KEY));
       
       if (!savedName) {
         showNameRegistrationModal();
@@ -2700,7 +2708,7 @@
         return;
       }
       
-      localStorage.setItem(NAME_STORAGE_KEY, name);
+      localStorage.setItem(getUserStorageKey(NAME_STORAGE_KEY), name);
       applyRegisteredName(name);
       
       var modal = document.getElementById('nameRegistrationModal');
@@ -2715,7 +2723,7 @@
     // 名前編集モーダルを表示
     var nameEditInputInitialized = false;
     function showNameEditModal() {
-      var currentName = localStorage.getItem(NAME_STORAGE_KEY) || '';
+      var currentName = localStorage.getItem(getUserStorageKey(NAME_STORAGE_KEY)) || '';
       var input = document.getElementById('nameEditInput');
       input.value = currentName;
       
@@ -2751,7 +2759,7 @@
         return;
       }
       
-      localStorage.setItem(NAME_STORAGE_KEY, name);
+      localStorage.setItem(getUserStorageKey(NAME_STORAGE_KEY), name);
       applyRegisteredName(name);
       closeNameEditModal();
     }
@@ -3249,9 +3257,27 @@
       initWysiwygEditors();  // WYSIWYGエディタを初期化
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
       initTutorial();  // 使い方ガイドを初期化
-      initDraftAutoSave();  // 下書き自動保存を初期化
-      restoreDraft();  // 下書きがあれば復元を提案
-      initNameRegistration();  // 名前登録機能を初期化
+      
+      // ユーザーのメールアドレスを取得してからlocalStorage操作を行う
+      google.script.run
+        .withSuccessHandler(function(userInfo) {
+          if (userInfo && userInfo.email) {
+            CURRENT_USER_EMAIL = userInfo.email;
+            console.log('ユーザー識別子を設定:', CURRENT_USER_EMAIL);
+          }
+          // メールアドレス取得後にlocalStorage操作を行う
+          initDraftAutoSave();  // 下書き自動保存を初期化
+          restoreDraft();  // 下書きがあれば復元を提案
+          initNameRegistration();  // 名前登録機能を初期化
+        })
+        .withFailureHandler(function(error) {
+          console.error('ユーザー情報取得エラー:', error);
+          // エラー時もlocalStorage操作を行う（旧キーを使用）
+          initDraftAutoSave();
+          restoreDraft();
+          initNameRegistration();
+        })
+        .getCurrentUserInfo();
       
       // カレンダー予定を自動取得
       loadCalendarEvents();
