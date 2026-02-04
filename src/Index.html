@@ -2108,12 +2108,13 @@
     // WYSIWYG用下書き保存
     function saveDraftWysiwyg() {
       try {
+        var manualUserNameEl = document.getElementById('manualUserName');
         var draft = {
-          todayTasks: document.getElementById('todayTasks').innerHTML,
-          notices: document.getElementById('notices').innerHTML,
-          salesPoints: document.getElementById('salesPoints').innerHTML,
-          nextTasks: document.getElementById('nextTasks').innerHTML,
-          manualUserName: document.getElementById('manualUserName').value,
+          todayTasks: document.getElementById('todayTasks') ? document.getElementById('todayTasks').innerHTML : '',
+          notices: document.getElementById('notices') ? document.getElementById('notices').innerHTML : '',
+          salesPoints: document.getElementById('salesPoints') ? document.getElementById('salesPoints').innerHTML : '',
+          nextTasks: document.getElementById('nextTasks') ? document.getElementById('nextTasks').innerHTML : '',
+          manualUserName: (manualUserNameEl && manualUserNameEl.value) ? manualUserNameEl.value : '',
           savedAt: new Date().toISOString(),
           isWysiwyg: true
         };
@@ -2180,7 +2181,10 @@
           if (draft.salesPoints) document.getElementById('salesPoints').innerHTML = draft.salesPoints.replace(/\n/g, '<br>');
           if (draft.nextTasks) document.getElementById('nextTasks').innerHTML = draft.nextTasks.replace(/\n/g, '<br>');
         }
-        if (draft.manualUserName) document.getElementById('manualUserName').value = draft.manualUserName;
+        if (draft.manualUserName) {
+          var manualUserNameEl = document.getElementById('manualUserName');
+          if (manualUserNameEl) manualUserNameEl.value = draft.manualUserName;
+        }
         showMessage('下書きを復元しました。', false);
         return true;
       }
