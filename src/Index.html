@@ -1255,9 +1255,14 @@
     -->
 
     <!-- 日報ヘッダー -->
-    <div id="reportHeader" class="report-header">
-      【<span id="reportDate"></span>　<span id="reportUserName"></span>　日報】
-      <button id="editNameBtn" onclick="showNameEditModal()" style="margin-left: 10px; background: #3498db; color: white; border: none; border-radius: 4px; padding: 4px 10px; font-size: 11px; cursor: pointer;">名前を編集</button>
+    <div id="reportHeader" class="report-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <span>【<span id="reportDate"></span>　<span id="reportUserName"></span>　日報】</span>
+      <div style="position: relative;">
+        <button id="settingsBtn" onclick="toggleSettingsMenu()" style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px 8px;" title="設定">&#9881;</button>
+        <div id="settingsMenu" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 150px; z-index: 1000;">
+          <button onclick="showNameEditModal(); closeSettingsMenu();" style="display: block; width: 100%; padding: 12px 16px; background: none; border: none; text-align: left; cursor: pointer; font-size: 14px;">名前を編集</button>
+        </div>
+      </div>
     </div>
     <div id="nameInputContainer" class="form-group" style="display: none;">
       <label>氏名を入力してください</label>
@@ -2724,6 +2729,33 @@
       localStorage.setItem(NAME_STORAGE_KEY, name);
       applyRegisteredName(name);
       closeNameEditModal();
+    }
+
+    // ============================================
+    // 設定メニュー
+    // ============================================
+    function toggleSettingsMenu() {
+      var menu = document.getElementById('settingsMenu');
+      if (menu.style.display === 'none' || menu.style.display === '') {
+        menu.style.display = 'block';
+        document.addEventListener('click', closeSettingsMenuOnClickOutside);
+      } else {
+        closeSettingsMenu();
+      }
+    }
+    
+    function closeSettingsMenu() {
+      var menu = document.getElementById('settingsMenu');
+      menu.style.display = 'none';
+      document.removeEventListener('click', closeSettingsMenuOnClickOutside);
+    }
+    
+    function closeSettingsMenuOnClickOutside(e) {
+      var menu = document.getElementById('settingsMenu');
+      var btn = document.getElementById('settingsBtn');
+      if (!menu.contains(e.target) && !btn.contains(e.target)) {
+        closeSettingsMenu();
+      }
     }
 
     // ============================================
