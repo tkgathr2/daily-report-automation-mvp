@@ -859,14 +859,16 @@ function formatSlackMessage(date, text) {
 
 /**
  * WebアプリのURL（/exec）を取得
- * Slack OAuthのリダイレクトURIとして使用するため、固定のURLを返す
- * （異なるドメインのユーザーがアクセスしても同じURLを使用）
+ * Slack OAuthのリダイレクトURIとして使用するため、ドメイン部分をtakagi.bzに固定
+ * （異なるドメインのユーザーがアクセスしても同じドメインのURLを使用）
  * @returns {string} WebアプリURL
  */
 function getServiceUrl_() {
-  // 固定のリダイレクトURI（Slack Appに登録されているURL）
-  // 注意: このURLはSlack Appの設定と一致している必要があります
-  return 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwQw2aK8wTUBqUIaufRFvnr697f3JHrT53prxF69BMF4H6JPITtFP9_8aWpERJw9PdnUg/exec';
+  // 現在のURLを取得（デプロイメントIDは動的に取得）
+  const currentUrl = ScriptApp.getService().getUrl();
+  // ドメイン部分を takagi.bz に置換（Slack Appに登録されているドメイン）
+  // 例: script.google.com/a/kotsuyudo.com/macros/s/... → script.google.com/a/macros/takagi.bz/s/...
+  return currentUrl.replace(/script\.google\.com\/a\/[^\/]+\/macros/, 'script.google.com/a/macros/takagi.bz');
 }
 
 /**
