@@ -115,7 +115,7 @@ function getCurrentUserInfo() {
 }
 
 /**
- * アクセス拒否ページを生成
+ * アクセス拒否ページを生成（いりでくん風デザイン）
  * @returns {HtmlOutput} アクセス拒否ページ
  */
 function createAccessDeniedPage() {
@@ -126,7 +126,7 @@ function createAccessDeniedPage() {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>アクセス権限がありません</title>
+      <title>アクセス権限がありません - 簡単日報くん</title>
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -135,45 +135,64 @@ function createAccessDeniedPage() {
           align-items: center;
           min-height: 100vh;
           margin: 0;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(180deg, #00bfff 0%, #87ceeb 50%, #e0f7ff 100%);
         }
         .container {
           background: white;
-          padding: 40px;
-          border-radius: 16px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+          padding: 40px 30px;
+          border-radius: 20px;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.15);
           text-align: center;
           max-width: 400px;
+          width: 90%;
+        }
+        .logo {
+          margin-bottom: 20px;
+        }
+        .logo svg {
+          width: 60px;
+          height: 60px;
         }
         h1 {
+          color: #00a0e9;
+          margin: 0 0 8px 0;
+          font-size: 22px;
+          font-weight: bold;
+        }
+        h2 {
           color: #e74c3c;
-          margin-bottom: 20px;
+          margin: 20px 0 15px 0;
+          font-size: 18px;
         }
         p {
           color: #666;
           line-height: 1.6;
+          margin: 10px 0;
+          font-size: 14px;
         }
         .email {
           background: #f5f5f5;
-          padding: 10px;
-          border-radius: 8px;
+          padding: 12px;
+          border-radius: 10px;
           font-family: monospace;
           margin: 20px 0;
-        }
-        .btn {
-          display: inline-block;
-          background: #667eea;
-          color: white;
-          padding: 12px 24px;
-          border-radius: 8px;
-          text-decoration: none;
-          margin-top: 20px;
+          font-size: 14px;
+          color: #333;
         }
       </style>
     </head>
     <body>
       <div class="container">
-        <h1>アクセス権限がありません</h1>
+        <div class="logo">
+          <svg viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="45" fill="none" stroke="#333" stroke-width="3"/>
+            <text x="50" y="58" text-anchor="middle" font-size="32" font-weight="bold" fill="#333">髙</text>
+            <line x1="50" y1="5" x2="50" y2="15" stroke="#333" stroke-width="3"/>
+            <line x1="50" y1="85" x2="50" y2="95" stroke="#333" stroke-width="3"/>
+          </svg>
+        </div>
+        <h1>簡単日報くん</h1>
+        <h2>アクセス権限がありません</h2>
         <p>このアプリケーションにアクセスする権限がありません。</p>
         <div class="email">${email}</div>
         <p>アクセスが必要な場合は、管理者にお問い合わせください。</p>
@@ -182,7 +201,7 @@ function createAccessDeniedPage() {
     </html>
   `;
   return HtmlService.createHtmlOutput(html)
-    .setTitle('アクセス権限がありません')
+    .setTitle('アクセス権限がありません - 簡単日報くん')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
