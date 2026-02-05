@@ -3028,11 +3028,21 @@
         var btnSend = document.getElementById('btnSendSlack');
         if (btnSend) btnSend.disabled = false;
 
-        var isError = result && result.startsWith('エラー：');
-        
-        if (isError) {
+        // 新しいJSON形式のレスポンスをパース
+        var response = null;
+        try {
+          response = JSON.parse(result);
+        } catch (e) {
+          // 旧形式の文字列レスポンス
+        }
+
+        if (response && response.success) {
+          // 新形式：メッセージtsを使って特定メッセージへのリンクを作成
+          showCompletionScreen(response.channelId, response.messageTs);
+        } else if (result && result.startsWith('エラー：')) {
           showMessage(result, true);
         } else {
+          // 旧形式の成功レスポンス
           showCompletionScreen();
         }
       } catch (e) {
@@ -3067,10 +3077,22 @@
     // ============================================
     // 投稿完了画面
     // ============================================
-    function showCompletionScreen() {
+    function showCompletionScreen(channelId, messageTs) {
       var slackLink = document.getElementById('slackChannelLink');
-      var slackDeepLink = 'slack://channel?id=' + SLACK_CHANNEL_ID;
-      var slackWebUrl = 'https://slack.com/app_redirect?channel=' + SLACK_CHANNEL_ID;
+      var channel = channelId || SLACK_CHANNEL_ID;
+      
+      // メッセージtsがある場合は特定のメッセージへのリンクを作成
+      var slackDeepLink, slackWebUrl;
+      if (messageTs) {
+        // 特定メッセージへのリンク（tsをp形式に変換：1234567890.123456 → p1234567890123456）
+        var pTs = 'p' + messageTs.replace('.', '');
+        slackDeepLink = 'slack://channel?team=&id=' + channel + '&message=' + messageTs;
+        slackWebUrl = 'https://slack.com/app_redirect?channel=' + channel + '&message_ts=' + messageTs;
+      } else {
+        // チャンネルへのリンク（フォールバック）
+        slackDeepLink = 'slack://channel?id=' + channel;
+        slackWebUrl = 'https://slack.com/app_redirect?channel=' + channel;
+      }
       
       // iPhoneの場合はディープリンクを使用（Slackアプリを直接開く）
       var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);

@@ -961,7 +961,13 @@ function sendToSlackV2(reportData) {
       // 送信成功時、「次すること」を保存
       saveNextTasks(reportData.nextTasks);
       Logger.log('Slack送信完了（V2）');
-      return '送信成功：Slackに投稿しました。';
+      // メッセージのtsとチャンネルIDを返す（特定メッセージへのリンク用）
+      return JSON.stringify({
+        success: true,
+        message: '送信成功：Slackに投稿しました。',
+        channelId: channelId,
+        messageTs: res.ts
+      });
     }
 
     const err = res && res.error ? String(res.error) : 'unknown_error';
