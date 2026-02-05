@@ -1276,9 +1276,12 @@
 
     <!-- 今日やったこと -->
     <div class="section textarea-container">
-      <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <span>【今日やったこと】</span>
-        <button id="loadCalendarBtn" onclick="loadCalendarEvents()" style="background: #27ae60; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">予定を取得</button>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <input type="date" id="calendarDatePicker" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+          <button id="loadCalendarBtn" onclick="loadCalendarEventsForDate()" style="background: #27ae60; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">予定を取得</button>
+        </div>
       </div>
       <div class="textarea-with-toolbar">
         <div class="format-toolbar">
@@ -3234,7 +3237,27 @@
     // ============================================
     // カレンダー予定取得機能
     // ============================================
-    function loadCalendarEvents() {
+    
+    // 日付ピッカーを初期化（今日の日付をデフォルトに設定）
+    function initCalendarDatePicker() {
+      var datePicker = document.getElementById('calendarDatePicker');
+      if (datePicker) {
+        var today = new Date();
+        var yyyy = today.getFullYear();
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var dd = String(today.getDate()).padStart(2, '0');
+        datePicker.value = yyyy + '-' + mm + '-' + dd;
+      }
+    }
+    
+    // 日付選択で予定を取得
+    function loadCalendarEventsForDate() {
+      var datePicker = document.getElementById('calendarDatePicker');
+      var selectedDate = datePicker ? datePicker.value : null;
+      loadCalendarEvents(selectedDate);
+    }
+    
+    function loadCalendarEvents(dateString) {
       try {
         var btn = document.getElementById('loadCalendarBtn');
         if (!btn) {
@@ -3244,6 +3267,9 @@
         var originalText = btn.textContent;
         btn.textContent = '取得中...';
         btn.disabled = true;
+        
+        // 日付が指定されていない場合は今日の日付を使用
+        var targetDate = dateString || null;
         
         google.script.run
           .withSuccessHandler(function(result) {
@@ -3261,7 +3287,8 @@
                     todayTasksEditor.innerHTML = result.replace(/\n/g, '<br>');
                   }
                 }
-                showMessage('カレンダー予定を取得しました', false);
+                var dateLabel = targetDate || '今日';
+                showMessage(dateLabel + 'のカレンダー予定を取得しました', false);
               } else {
                 showMessage(result || 'カレンダー予定の取得に失敗しました', true);
               }
@@ -3278,7 +3305,7 @@
               console.log('Calendar failure handler error: ' + e.message);
             }
           })
-          .getEventsForDate(null);
+          .getEventsForDate(targetDate);
       } catch (e) {
         console.log('loadCalendarEvents error: ' + e.message);
       }
@@ -3295,6 +3322,7 @@
       initWysiwygEditors();  // WYSIWYGエディタを初期化
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
       initTutorial();  // 使い方ガイドを初期化
+      initCalendarDatePicker();  // 日付ピッカーを初期化
       
       // ユーザーのメールアドレスを取得してからlocalStorage操作を行う
       google.script.run
@@ -3317,7 +3345,7 @@
         })
         .getCurrentUserInfo();
       
-      // カレンダー予定を自動取得
+      // カレンダー予定を自動取得（今日の日付で）
       loadCalendarEvents();
     });
   </script>
