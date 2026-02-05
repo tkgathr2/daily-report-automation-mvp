@@ -35,6 +35,9 @@ const TIME_FORMAT = 'HH:mm';
 const USER_PROPERTY_NEXT_TASKS = 'NEXT_TASKS_DATA';
 const DATE_FORMAT_V2 = 'yyyy年MM月dd日';
 
+// アプリURL（フッター用）
+const APP_URL = 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwQw2aK8wTUBqUIaufRFvnr697f3JHrT53prxF69BMF4H6JPITtFP9_8aWpERJw9PdnUg/exec';
+
 
 // ============================================
 // アクセス制御
@@ -53,27 +56,28 @@ const ADMIN_DOMAINS = [
 ];
 
 /**
+ * ユーザーのドメインを取得（共通ヘルパー）
+ * @returns {string} ドメイン（取得できない場合は空文字）
+ */
+function getUserDomain_() {
+  try {
+    const email = Session.getActiveUser().getEmail();
+    if (!email) return '';
+    const domain = email.split('@')[1];
+    return domain ? domain.toLowerCase() : '';
+  } catch (e) {
+    Logger.log('ドメイン取得エラー: ' + e.message);
+    return '';
+  }
+}
+
+/**
  * ユーザーのアクセス権限をチェック
  * @returns {boolean} アクセス許可されている場合はtrue
  */
 function checkUserAccess() {
-  try {
-    const email = Session.getActiveUser().getEmail();
-    if (!email) {
-      return false;
-    }
-    
-    const domain = email.split('@')[1];
-    if (!domain) {
-      return false;
-    }
-    
-    // 許可されたドメインかチェック
-    return ALLOWED_DOMAINS.includes(domain.toLowerCase());
-  } catch (e) {
-    Logger.log('アクセスチェックエラー: ' + e.message);
-    return false;
-  }
+  const domain = getUserDomain_();
+  return domain && ALLOWED_DOMAINS.includes(domain);
 }
 
 /**
@@ -81,22 +85,8 @@ function checkUserAccess() {
  * @returns {boolean} 管理者の場合はtrue
  */
 function checkAdminAccess() {
-  try {
-    const email = Session.getActiveUser().getEmail();
-    if (!email) {
-      return false;
-    }
-    
-    const domain = email.split('@')[1];
-    if (!domain) {
-      return false;
-    }
-    
-    return ADMIN_DOMAINS.includes(domain.toLowerCase());
-  } catch (e) {
-    Logger.log('管理者チェックエラー: ' + e.message);
-    return false;
-  }
+  const domain = getUserDomain_();
+  return domain && ADMIN_DOMAINS.includes(domain);
 }
 
 /**
@@ -105,12 +95,12 @@ function checkAdminAccess() {
  */
 function getCurrentUserInfo() {
   const email = Session.getActiveUser().getEmail() || '';
-  const domain = email ? email.split('@')[1] : '';
+  const domain = getUserDomain_();
   return {
     email: email,
     domain: domain,
-    isAdmin: ADMIN_DOMAINS.includes(domain.toLowerCase()),
-    isAllowed: ALLOWED_DOMAINS.includes(domain.toLowerCase())
+    isAdmin: ADMIN_DOMAINS.includes(domain),
+    isAllowed: ALLOWED_DOMAINS.includes(domain)
   };
 }
 
@@ -589,69 +579,6 @@ function formatScheduleText(events) {
 // ============================================
 
 /**
- * Slackに投稿
- * @param {string} text - テキストエリアの内容
- * @returns {string} 成功/失敗メッセージ
- */
-function sendToSlack(text) {
-  Logger.log('Slack送信開始');
-
-  try {
-    // 本文のバリデーション
-    if (!text || String(text).trim() === '') {
-      return 'エラー：送信するテキストがありません。';
-    }
-
-    // OAuth連携済みユーザートークンを取得（ユーザーごと）
-    const userToken = getSlackUserToken_();
-    if (!userToken) {
-      return 'エラー：Slack連携が必要です。「Slack連携（認可）」を実行してください。';
-    }
-
-    const channelId = getSlackChannelId_();
-    if (!channelId) {
-      return 'エラー：Slackチャンネル設定がありません。管理者に連絡してください。';
-    }
-
-    // 今日の日付を取得
-    const todayString = getTodayDateString();
-
-    // Slack投稿本文を生成
-    const slackMessage = formatSlackMessage(todayString, text);
-    Logger.log('Slack投稿本文生成完了');
-
-    const res = slackApiPost_(
-      'https://slack.com/api/chat.postMessage',
-      userToken,
-      {
-        channel: channelId,
-        text: slackMessage
-      }
-    );
-
-    if (res && res.ok) {
-      Logger.log('Slack送信完了');
-      return '送信成功：Slackに投稿しました。';
-    }
-
-    const err = res && res.error ? String(res.error) : 'unknown_error';
-    Logger.log('Slack送信失敗：' + err);
-
-    if (err === 'not_in_channel') {
-      return 'エラー：#日報に参加していないため投稿できません。#日報に参加してから再度お試しください。';
-    }
-    if (err === 'missing_scope' || err === 'invalid_auth' || err === 'token_revoked') {
-      return 'エラー：Slack連携が無効になりました。再度「Slack連携（認可）」を実行してください。';
-    }
-    return 'エラー：Slackへの送信に失敗しました。エラー：' + err;
-
-  } catch (error) {
-    Logger.log('sendToSlackエラー：' + error.message);
-    return 'エラー：予期しないエラーが発生しました。詳細：' + error.message;
-  }
-}
-
-/**
  * Slack連携状態を取得
  * @returns {{linked: boolean, slackUserId: (string|null)}} 連携状態
  */
@@ -843,19 +770,6 @@ function toQueryString_(params) {
     parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(String(v)));
   }
   return parts.join('&');
-}
-
-/**
- * Slack投稿本文を生成
- * @param {string} date - 日付（YYYY/MM/DD形式）
- * @param {string} text - テキストエリアの内容
- * @returns {string} Slack投稿本文
- */
-function formatSlackMessage(date, text) {
-  var appUrl = 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwQw2aK8wTUBqUIaufRFvnr697f3JHrT53prxF69BMF4H6JPITtFP9_8aWpERJw9PdnUg/exec';
-  return '【日報】' + date + '\n\n■ 本日のスケジュール\n' + text + '\n\n' +
-    '---\n' +
-    'Powered by <' + appUrl + '|簡単日報くん>';
 }
 
 // ============================================
@@ -1073,12 +987,11 @@ function sendToSlackV2(reportData) {
  * @returns {string} Slack投稿本文
  */
 function formatSlackMessageV2(reportData) {
-  var appUrl = 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwQw2aK8wTUBqUIaufRFvnr697f3JHrT53prxF69BMF4H6JPITtFP9_8aWpERJw9PdnUg/exec';
   return reportData.header + '\n\n' +
     '【今日やったこと】\n' + reportData.todayTasks + '\n\n' +
     '【わかった事・問題・共有事項】\n' + reportData.notices + '\n\n' +
     '【売上・利益に関わるポイント】\n' + reportData.salesPoints + '\n\n' +
     '【次すること】\n' + reportData.nextTasks + '\n\n' +
     '---\n' +
-    'Powered by <' + appUrl + '|簡単日報くん>';
+    'Powered by <' + APP_URL + '|簡単日報くん>';
 }
