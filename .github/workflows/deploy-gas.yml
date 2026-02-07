@@ -6,6 +6,8 @@ on:
       - master
     paths:
       - 'src/**'
+      - '.clasp.json'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -13,6 +15,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Check CLASP_TOKEN secret
+        if: ${{ secrets.CLASP_TOKEN == '' }}
+        run: |
+          echo "::error::CLASP_TOKEN secret is not set. Please add it in Repository Settings > Secrets and variables > Actions."
+          echo "Value should be the contents of your ~/.clasprc.json file."
+          exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -23,15 +32,17 @@ jobs:
         run: npm install -g @google/clasp
 
       - name: Setup clasp credentials
+        env:
+          CLASP_TOKEN: ${{ secrets.CLASP_TOKEN }}
         run: |
-          echo '${{ secrets.CLASP_TOKEN }}' > ~/.clasprc.json
+          mkdir -p $HOME
+          printf "%s" "$CLASP_TOKEN" > $HOME/.clasprc.json
 
       - name: Push to Google Apps Script
-        run: clasp push --force
+        run: clasp push
         working-directory: ${{ github.workspace }}
 
       - name: Deployment complete
         run: |
           echo "Deployed to GAS successfully!"
-          echo "Script ID: $(cat .clasp.json | jq -r '.scriptId')"
-          echo "@HEAD URL: https://script.google.com/a/macros/takagi.bz/s/AKfycbwQw2aK8wTUBqUIaufRFvnr697f3JHrT53prxF69BMF4H6JPITtFP9_8aWpERJw9PdnUg/dev"
+          echo "Check @HEAD URL to verify changes."
