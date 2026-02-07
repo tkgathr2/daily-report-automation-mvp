@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - 'src/**'
-      - '.clasp.json'
-      - '.github/workflows/deploy-gas.yml'
   workflow_dispatch:
 
 jobs:
