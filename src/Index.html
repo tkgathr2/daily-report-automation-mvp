@@ -1217,18 +1217,15 @@
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
     
-    <!-- 更新のお知らせ（MVP版では非表示）
-    <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+    <!-- お知らせ -->
+    <div id="newsNotice" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
       <div style="display: flex; align-items: center; margin-bottom: 8px;">
         <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">NEW</span>
-              <strong style="font-size: 15px;">v3.4.0 がリリースされました！</strong>
-            </div>
-            <ul style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.95;">
-              <li>モバイル対応を強化（スマートフォンでの操作性を改善）</li>
-            </ul>
-      <button onclick="dismissUpdateNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
+        <strong id="newsTitle" style="font-size: 15px;"></strong>
+      </div>
+      <div id="newsContent" style="margin: 8px 0 0 0; opacity: 0.95; line-height: 1.6;"></div>
+      <button onclick="dismissNewsNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
     </div>
-    -->
 
     <!-- ローディング表示 -->
     <div id="loading" class="loading">
@@ -1264,8 +1261,17 @@
       <span>【<span id="reportDate"></span>　<span id="reportUserName"></span>　日報】</span>
       <div style="position: relative;">
         <button id="settingsBtn" onclick="toggleSettingsMenu()" style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px 8px;" title="設定">&#9881;</button>
-        <div id="settingsMenu" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 150px; z-index: 1000;">
-          <button onclick="showNameEditModal(); closeSettingsMenu();" style="display: block; width: 100%; padding: 12px 16px; background: none; border: none; text-align: left; cursor: pointer; font-size: 14px;">名前を編集</button>
+        <div id="settingsMenu" style="display: none; position: absolute; right: 0; top: 100%; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000;">
+          <div style="padding: 12px 16px; border-bottom: 1px solid #eee;">
+            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">機能一覧</div>
+            <ul style="margin: 0; padding-left: 16px; font-size: 13px; color: #333; line-height: 1.8;">
+              <li>WYSIWYGエディタ</li>
+              <li>Slack投稿</li>
+              <li>カレンダー予定取得</li>
+              <li>下書き自動保存</li>
+            </ul>
+          </div>
+          <button onclick="showNameEditModal(); closeSettingsMenu();" style="display: block; width: 100%; padding: 12px 16px; background: none; border: none; border-top: none; text-align: left; cursor: pointer; font-size: 14px; border-radius: 0 0 8px 8px;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='white'">名前を編集</button>
         </div>
       </div>
     </div>
@@ -1585,6 +1591,45 @@
     // ============================================
     let isLoading = false;
     let isSlackLinked = false;
+
+    // ============================================
+    // お知らせ機能
+    // ============================================
+    const NEWS_DATA = {
+      id: 'news-2026-02-07',
+      title: 'カレンダー日付選択機能を追加しました',
+      content: '過去や未来の日付を選択して、その日のカレンダー予定を取得できるようになりました。【今日やったこと】セクションの日付ピッカーをお試しください。'
+    };
+
+    function getUserStorageKey(key) {
+      var userEmail = '';
+      try {
+        userEmail = localStorage.getItem('userEmail') || '';
+      } catch(e) {}
+      return userEmail ? key + '_' + userEmail : key;
+    }
+
+    function checkAndShowNews() {
+      try {
+        var dismissedNewsId = localStorage.getItem(getUserStorageKey('dismissedNewsId'));
+        if (dismissedNewsId !== NEWS_DATA.id) {
+          document.getElementById('newsTitle').textContent = NEWS_DATA.title;
+          document.getElementById('newsContent').textContent = NEWS_DATA.content;
+          document.getElementById('newsNotice').style.display = 'block';
+        }
+      } catch(e) {
+        console.log('News check error:', e);
+      }
+    }
+
+    function dismissNewsNotice() {
+      try {
+        localStorage.setItem(getUserStorageKey('dismissedNewsId'), NEWS_DATA.id);
+        document.getElementById('newsNotice').style.display = 'none';
+      } catch(e) {
+        console.log('News dismiss error:', e);
+      }
+    }
 
     // ============================================
     // インデント設定
@@ -3329,12 +3374,14 @@
         .withSuccessHandler(function(userInfo) {
           if (userInfo && userInfo.email) {
             CURRENT_USER_EMAIL = userInfo.email;
+            localStorage.setItem('userEmail', userInfo.email);
             console.log('ユーザー識別子を設定:', CURRENT_USER_EMAIL);
           }
           // メールアドレス取得後にlocalStorage操作を行う
           initDraftAutoSave();  // 下書き自動保存を初期化
           restoreDraft();  // 下書きがあれば復元を提案
           initNameRegistration();  // 名前登録機能を初期化
+          checkAndShowNews();  // お知らせを表示
         })
         .withFailureHandler(function(error) {
           console.error('ユーザー情報取得エラー:', error);
@@ -3342,6 +3389,7 @@
           initDraftAutoSave();
           restoreDraft();
           initNameRegistration();
+          checkAndShowNews();  // お知らせを表示
         })
         .getCurrentUserInfo();
       
