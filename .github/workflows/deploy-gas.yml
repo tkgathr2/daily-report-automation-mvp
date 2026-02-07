@@ -7,6 +7,7 @@ on:
     paths:
       - 'src/**'
       - '.clasp.json'
+      - '.github/workflows/deploy-gas.yml'
   workflow_dispatch:
 
 jobs:
@@ -40,6 +41,17 @@ jobs:
         run: |
           mkdir -p $HOME
           printf "%s" "$CLASP_TOKEN" > $HOME/.clasprc.json
+
+      - name: Debug info
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Workspace: ${{ github.workspace }}"
+          echo "Checking .clasp.json:"
+          cat .clasp.json || echo ".clasp.json not found"
+          echo "Checking src directory:"
+          ls -la src/ || echo "src directory not found"
+          echo "Checking appsscript.json:"
+          cat src/appsscript.json || echo "appsscript.json not found"
 
       - name: Push to Google Apps Script
         run: clasp push
