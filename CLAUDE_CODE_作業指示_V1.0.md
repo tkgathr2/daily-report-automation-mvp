@@ -14,7 +14,7 @@
 
 ### 実行コマンド
 ```bash
-git add CLAUDE_CODE_NEXT_STEPS.md CLAUDE_CODE_WORKFLOW_FIX_VERIFY.md CLAUDE_CODE_IMMEDIATE_ACTIONS.md
+git add CLAUDE_CODE_NEXT_STEPS.md CLAUDE_CODE_WORKFLOW_FIX_VERIFY.md CLAUDE_CODE_IMMEDIATE_ACTIONS.md CLAUDE_CODE_作業指示_V1.0.md
 git commit -m "docs: 作業指示書を追加"
 git push origin master
 ```
@@ -31,17 +31,30 @@ git push origin master
 
 ## 作業2: GitHub Actionsの実行結果確認
 
-### 確認手順
-1. ブラウザで以下のURLにアクセス：
-   ```
-   https://github.com/tkgathr2/daily-report-automation-mvp/actions/workflows/deploy-gas.yml
-   ```
-2. 最新のworkflow実行を確認
-3. コミット `87d4892` のpushでworkflowが自動実行されたか確認
+### 確認手順1: ローカルで最新の状態を取得
+```bash
+git pull origin master
+```
 
-### 実行されていない場合
-- 「Run workflow」ボタンをクリックして手動実行
-- 実行結果を確認
+### 確認手順2: GitHub APIでworkflow実行状況を確認
+```bash
+# GitHub CLIがインストールされている場合
+gh run list --workflow=deploy-gas.yml --limit 5
+
+# または、GitHub APIを直接呼び出す（トークンが必要）
+# curl -H "Authorization: token YOUR_TOKEN" https://api.github.com/repos/tkgathr2/daily-report-automation-mvp/actions/workflows/deploy-gas.yml/runs?per_page=5
+```
+
+### 確認手順3: ブラウザでの確認（ユーザーに依頼）
+以下のURLをユーザーに確認してもらう：
+```
+https://github.com/tkgathr2/daily-report-automation-mvp/actions/workflows/deploy-gas.yml
+```
+
+確認事項：
+- 最新のworkflow実行を確認
+- コミット `87d4892` のpushでworkflowが自動実行されたか確認
+- 実行されていない場合は、「Run workflow」ボタンをクリックして手動実行
 
 ### 確認すべき内容
 - 「Debug info」ステップの出力：
@@ -62,13 +75,24 @@ git push origin master
 
 ## 作業3: PR#60（お知らせ機能）の状態確認
 
-### 確認手順1: GitHubでPR#60を確認
-1. 以下のURLにアクセス：
-   ```
-   https://github.com/tkgathr2/daily-report-automation-mvp/pull/60
-   ```
-2. PRの状態を確認（Open / Merged / Closed）
-3. マージ済みの場合は、マージ日時を確認
+### 確認手順1: GitHub CLIでPR#60を確認
+```bash
+# GitHub CLIがインストールされている場合
+gh pr view 60
+
+# または、GitHub APIを直接呼び出す
+# curl -H "Authorization: token YOUR_TOKEN" https://api.github.com/repos/tkgathr2/daily-report-automation-mvp/pulls/60
+```
+
+### 確認手順1-2: ブラウザでの確認（ユーザーに依頼）
+以下のURLをユーザーに確認してもらう：
+```
+https://github.com/tkgathr2/daily-report-automation-mvp/pull/60
+```
+
+確認事項：
+- PRの状態を確認（Open / Merged / Closed）
+- マージ済みの場合は、マージ日時を確認
 
 ### 確認手順2: ローカルで確認
 ```bash
@@ -97,15 +121,15 @@ git log --oneline --all -20 | grep -i "60\|notice\|お知らせ"
 - 日報履歴全体を保存する機能があるか確認
 
 ### 確認手順2: 仕様書の確認
-```bash
-# 日報履歴関連の仕様書を検索
-find docs -name "*.md" -type f | xargs grep -l "履歴\|history\|保存\|save" | head -10
-```
-
-Windows環境の場合は：
+Windows環境（PowerShell）：
 ```powershell
 Get-ChildItem -Path docs -Recurse -Filter "*.md" | Select-String -Pattern "履歴|history|保存|save" | Select-Object -First 10
 ```
+
+または、ファイルを直接確認：
+- `docs/backlog.md` を確認
+- `docs/plan.md` を確認
+- `docs/specs/` ディレクトリ内のファイルを確認
 
 ### 完了報告
 - 日報履歴保存機能の実装状況を報告
