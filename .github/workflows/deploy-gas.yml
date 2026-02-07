@@ -17,11 +17,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check CLASP_TOKEN secret
-        if: ${{ secrets.CLASP_TOKEN == '' }}
+        env:
+          CLASP_TOKEN: ${{ secrets.CLASP_TOKEN }}
         run: |
-          echo "::error::CLASP_TOKEN secret is not set. Please add it in Repository Settings > Secrets and variables > Actions."
-          echo "Value should be the contents of your ~/.clasprc.json file."
-          exit 1
+          if [ -z "$CLASP_TOKEN" ]; then
+            echo "::error::CLASP_TOKEN secret is not set. Please add it in Repository Settings > Secrets and variables > Actions."
+            echo "Value should be the contents of your ~/.clasprc.json file."
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
