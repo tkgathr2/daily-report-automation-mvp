@@ -1237,14 +1237,21 @@
       <span>読み込み中...</span>
     </div>
 
-    <!-- V3: ツール設定（MVP版では非表示）
     <div class="section tool-settings" style="background-color: #f8f9fa; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
         <div style="font-weight: bold; font-size: 13px; color: #495057;">取得ツール設定</div>
-        <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
+                <input type="checkbox" id="settingSlack" checked style="width: 16px; height: 16px;">
+                <span style="color: #4A154B; font-weight: bold;">Slack</span>
+              </label>
               <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
                 <input type="checkbox" id="settingGmail" checked style="width: 16px; height: 16px;">
                 <span style="color: #EA4335; font-weight: bold;">Gmail</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
+                <input type="checkbox" id="settingGmailReceived" style="width: 16px; height: 16px;">
+                <span style="color: #EA4335; font-weight: bold;">Gmail受信</span>
               </label>
               <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
                 <input type="checkbox" id="settingNotion" checked style="width: 16px; height: 16px;">
@@ -1258,7 +1265,6 @@
             <button onclick="showNotionTokenDialog()" style="margin-left: 10px; padding: 3px 8px; font-size: 11px; cursor: pointer;">トークン設定</button>
           </div>
         </div>
-    -->
 
     <!-- 日報ヘッダー -->
     <div id="reportHeader" class="report-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -1280,8 +1286,7 @@
       <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <span>【今日やったこと】</span>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <input type="date" id="calendarDatePicker" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
-          <button id="loadCalendarBtn" onclick="loadCalendarEventsForDate()" style="background: #27ae60; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">予定を取得</button>
+          <button id="loadCalendarBtn" onclick="loadEventsForSelectedDate()" style="background: #27ae60; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">履歴を取得</button>
         </div>
       </div>
       <div class="textarea-with-toolbar">
@@ -1327,9 +1332,9 @@
       <div class="indent-hint">Ctrl+B: 太字 / Ctrl+I: 斜体 / Ctrl+U: 下線 / Ctrl+Enter: 送信</div>
     </div>
 
-    <!-- 売上・利益に関わるポイント -->
+    <!-- 売上・利益・経費削減に関わるポイント -->
     <div class="section textarea-container">
-      <div class="section-title">【売上・利益に関わるポイント】</div>
+      <div class="section-title">【売上・利益・経費削減に関わるポイント】</div>
       <div class="textarea-with-toolbar">
         <div class="format-toolbar">
           <button type="button" class="format-btn" onclick="applyWysiwygFormat('salesPoints', 'bold')" title="太字 (Ctrl+B)"><b>B</b></button>
@@ -1390,7 +1395,7 @@
       </div>
     </div>
 
-    <!-- 日付選択・予定取得セクション（MVP版では非表示）
+    <!-- 日付選択・予定取得セクション -->
     <div class="section">
       <div class="form-group">
         <label>日付を選択</label>
@@ -1412,19 +1417,20 @@
         予定を取得
       </button>
     </div>
-    -->
+
+    <!-- Slack連携（履歴取得用） -->
+    <div id="slackOAuthSection" class="section" style="display: none;">
+      <div id="slackLinkHint" class="form-hint" style="margin-bottom: 10px;">
+        Slack履歴を取得するには連携が必要です。
+      </div>
+      <button id="btnSlackConnect" class="btn btn-primary" onclick="connectSlack()">
+        Slack連携（認可）
+      </button>
+    </div>
 
     <!-- Slack送信フォーム -->
     <div class="section slack-form">
       <div class="section-title">Slack送信</div>
-      <div id="slackLinkHint" class="form-hint" style="margin-bottom: 10px;">
-        Slack未連携です。「Slack連携（認可）」を実行してください。
-      </div>
-      <div class="button-group" style="margin-bottom: 10px;">
-        <button id="btnSlackConnect" class="btn btn-primary" onclick="connectSlack()">
-          Slack連携（認可）
-        </button>
-      </div>
       <button id="btnSendSlack" class="btn btn-success" onclick="sendSlackV2()">
         Slackに投稿
       </button>
@@ -1504,8 +1510,8 @@
           </div>
           
           <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">2. Slack連携</h3>
-            <p style="margin: 0;">初回は「Slack連携（認可）」ボタンでSlackと連携してください。連携後は「Slackに投稿」ボタンで日報を送信できます。</p>
+            <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #2c3e50;">2. Slack送信</h3>
+            <p style="margin: 0;">「Slackに投稿」ボタンで日報をSlackに送信できます。</p>
           </div>
           
           <div style="margin-bottom: 20px;">
@@ -1585,7 +1591,7 @@
     // 状態管理
     // ============================================
     let isLoading = false;
-    let isSlackLinked = false;
+    let isSlackLinked = false;  // V3: Slack OAuth連携状態（履歴取得用。日報送信はWebhookなので不要）
 
     // ============================================
     // インデント設定
@@ -2049,7 +2055,7 @@
             var bulletItems = '';
             var lis = node.querySelectorAll(':scope > li');
             for (var j = 0; j < lis.length; j++) {
-              bulletItems += '• ' + processNode(lis[j]).trim() + '\n';
+              bulletItems += '⚫︎ ' + processNode(lis[j]).trim() + '\n';
             }
             return bulletItems;
           case 'ol':
@@ -2259,7 +2265,7 @@
         var previewHtml = '<div style="font-weight: bold; font-size: 16px; margin-bottom: 16px;">' + header + '</div>' +
           '<div style="margin-bottom: 12px;"><strong>【今日やったこと】</strong><br>' + getWysiwygHtml('todayTasks') + '</div>' +
           '<div style="margin-bottom: 12px;"><strong>【わかった事・問題・共有事項】</strong><br>' + getWysiwygHtml('notices') + '</div>' +
-          '<div style="margin-bottom: 12px;"><strong>【売上・利益に関わるポイント】</strong><br>' + getWysiwygHtml('salesPoints') + '</div>' +
+          '<div style="margin-bottom: 12px;"><strong>【売上・利益・経費削減に関わるポイント】</strong><br>' + getWysiwygHtml('salesPoints') + '</div>' +
           '<div style="margin-bottom: 12px;"><strong>【次すること】</strong><br>' + getWysiwygHtml('nextTasks') + '</div>';
 
         var previewText = document.getElementById('previewText');
@@ -2292,7 +2298,9 @@
     function loadToolSettings() {
       google.script.run
         .withSuccessHandler(function(settings) {
+          document.getElementById('settingSlack').checked = settings.slack !== false;
           document.getElementById('settingGmail').checked = settings.gmail !== false;
+          document.getElementById('settingGmailReceived').checked = !!settings.gmailReceived;
           document.getElementById('settingNotion').checked = settings.notion !== false;
           // Notion連携状態を確認
           checkNotionLinkStatus();
@@ -2305,7 +2313,9 @@
 
     function saveToolSettingsUI() {
       var settings = {
+        slack: document.getElementById('settingSlack').checked,
         gmail: document.getElementById('settingGmail').checked,
+        gmailReceived: document.getElementById('settingGmailReceived').checked,
         notion: document.getElementById('settingNotion').checked
       };
       
@@ -2371,17 +2381,16 @@
       var dateInput = document.getElementById('dateSelect');
       var selectedDate = dateInput.value;
 
-      showLoading(true);
-      hideMessage();
-
       document.getElementById('btnGetEvents').disabled = true;
       var btnRefresh = document.getElementById('btnRefreshEvents');
       if (btnRefresh) btnRefresh.disabled = true;
+      showLoading(true);
 
+      // V3: 全ツール履歴を統合取得
       google.script.run
         .withSuccessHandler(onLoadAllHistorySuccessV3)
         .withFailureHandler(onLoadEventsFailure)
-        .getAllHistoryV3(selectedDate || null);
+        .getAllToolHistoryV3(selectedDate);
     }
 
     function loadEvents() {
@@ -2515,6 +2524,8 @@
       document.getElementById('btnGetEvents').disabled = false;
       var btnRefresh = document.getElementById('btnRefreshEvents');
       if (btnRefresh) btnRefresh.disabled = false;
+      var btnCalendar = document.getElementById('loadCalendarBtn');
+      if (btnCalendar) btnCalendar.disabled = false;
 
       // カレンダー予定を整形（今日やったことに自動挿入）
       var lines = [];
@@ -2596,13 +2607,7 @@
       
       container.innerHTML = html;
     }
-    
-    function escapeHtml(text) {
-      var div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-    
+
     function addGmailItemToTasks(index) {
       var item = gmailItemsCache[index];
       if (!item) return;
@@ -2645,16 +2650,30 @@
       document.getElementById('btnGetEvents').disabled = false;
       var btnRefresh = document.getElementById('btnRefreshEvents');
       if (btnRefresh) btnRefresh.disabled = false;
+      var btnCalendar = document.getElementById('loadCalendarBtn');
+      if (btnCalendar) btnCalendar.disabled = false;
       showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
     }
 
     // ============================================
     // V2初期化
     // ============================================
+    var serverUserName = '';  // サーバーから取得した氏名（Googleアカウント由来）
+
     function initV2() {
-      // MVP版: 名前はlocalStorageから取得するため、サーバー側の処理は最小限に
       google.script.run
         .withSuccessHandler(function(data) {
+          // 日付を設定（JST基準、サーバーで生成）
+          if (data.date) {
+            document.getElementById('reportDate').textContent = data.date;
+          }
+
+          // 氏名を設定（Googleアカウントから取得）
+          if (!data.needsNameInput && data.userName) {
+            serverUserName = data.userName;
+            document.getElementById('reportUserName').textContent = data.userName;
+          }
+
           // 前日の「次すること」を設定（WYSIWYGエディタなのでinnerHTMLを使用）
           if (data.nextTasks) {
             var nextTasksEditor = document.getElementById('nextTasks');
@@ -2684,20 +2703,21 @@
     }
     
     function initNameRegistration() {
+      // サーバーから氏名が取得できている場合はlocalStorageにも保存して使用
+      if (serverUserName) {
+        localStorage.setItem(getUserStorageKey(NAME_STORAGE_KEY), serverUserName);
+        applyRegisteredName(serverUserName);
+        return;
+      }
+
+      // サーバーから取得できなかった場合はlocalStorageフォールバック
       var savedName = localStorage.getItem(getUserStorageKey(NAME_STORAGE_KEY));
-      
+
       if (!savedName) {
         showNameRegistrationModal();
       } else {
         applyRegisteredName(savedName);
       }
-      
-      // 日付を設定
-      var today = new Date();
-      var dateStr = today.getFullYear() + '年' + 
-                    String(today.getMonth() + 1).padStart(2, '0') + '月' + 
-                    String(today.getDate()).padStart(2, '0') + '日';
-      document.getElementById('reportDate').textContent = dateStr;
     }
     
     function showNameRegistrationModal() {
@@ -2818,7 +2838,7 @@
       var sections = [
         { id: 'todayTasks', name: '今日やったこと' },
         { id: 'notices', name: 'わかった事・問題・共有事項' },
-        { id: 'salesPoints', name: '売上・利益に関わるポイント' },
+        { id: 'salesPoints', name: '売上・利益・経費削減に関わるポイント' },
         { id: 'nextTasks', name: '次すること' }
       ];
       
@@ -2880,7 +2900,7 @@
       var text = header + '\n\n' +
         '【今日やったこと】\n' + getWysiwygValue('todayTasks') + '\n\n' +
         '【わかった事・問題・共有事項】\n' + getWysiwygValue('notices') + '\n\n' +
-        '【売上・利益に関わるポイント】\n' + getWysiwygValue('salesPoints') + '\n\n' +
+        '【売上・利益・経費削減に関わるポイント】\n' + getWysiwygValue('salesPoints') + '\n\n' +
         '【次すること】\n' + getWysiwygValue('nextTasks');
 
       navigator.clipboard.writeText(text).then(function() {
@@ -2903,40 +2923,31 @@
     }
 
     // ============================================
-    // Slack送信
+    // Slack連携状態チェック（履歴取得用）
     // ============================================
     function refreshSlackLinkStatus() {
       google.script.run
         .withSuccessHandler(function(status) {
           isSlackLinked = !!(status && status.linked);
 
-          const hint = document.getElementById('slackLinkHint');
-          const btnConnect = document.getElementById('btnSlackConnect');
-          const btnSend = document.getElementById('btnSendSlack');
+          var oauthSection = document.getElementById('slackOAuthSection');
+          if (!oauthSection) return;
 
           if (isSlackLinked) {
-            if (hint) hint.style.display = 'none';
-            if (btnConnect) btnConnect.style.display = 'none';
-            if (btnSend) btnSend.disabled = false;
+            oauthSection.style.display = 'none';
           } else {
-            if (hint) {
-              hint.textContent = 'Slack未連携です。「Slack連携（認可）」を実行してください。';
-              hint.style.display = 'block';
-            }
-            if (btnConnect) btnConnect.style.display = 'inline-block';
-            if (btnSend) btnSend.disabled = true;
+            // Slack設定がONの場合のみ認可ボタンを表示
+            oauthSection.style.display = 'block';
           }
         })
         .withFailureHandler(function(error) {
           isSlackLinked = false;
-          const btnSend = document.getElementById('btnSendSlack');
-          if (btnSend) btnSend.disabled = true;
         })
         .getSlackLinkStatus();
     }
 
     function connectSlack() {
-      const btnConnect = document.getElementById('btnSlackConnect');
+      var btnConnect = document.getElementById('btnSlackConnect');
       if (btnConnect) btnConnect.disabled = true;
 
       showLoading(true);
@@ -2961,7 +2972,7 @@
     }
 
     // ============================================
-    // V2 Slack送信
+    // V2 Slack送信（Incoming Webhook方式）
     // ============================================
     function sendSlackV2() {
       try {
@@ -2977,11 +2988,6 @@
         
         if (!validation.valid) {
           showMessage('未入力の項目があります：' + validation.errors.join('、'), true);
-          return;
-        }
-
-        if (!isSlackLinked) {
-          showMessage('Slack未連携です。「Slack連携（認可）」を実行してください。', true);
           return;
         }
 
@@ -3032,21 +3038,10 @@
         var btnSend = document.getElementById('btnSendSlack');
         if (btnSend) btnSend.disabled = false;
 
-        // 新しいJSON形式のレスポンスをパース
-        var response = null;
-        try {
-          response = JSON.parse(result);
-        } catch (e) {
-          // 旧形式の文字列レスポンス
-        }
-
-        if (response && response.success) {
-          // 新形式：メッセージtsを使って特定メッセージへのリンクを作成
-          showCompletionScreen(response.channelId, response.messageTs);
-        } else if (result && result.startsWith('エラー：')) {
+        if (result && result.startsWith('エラー：')) {
           showMessage(result, true);
         } else {
-          // 旧形式の成功レスポンス
+          // Webhook送信成功
           showCompletionScreen();
         }
       } catch (e) {
@@ -3081,33 +3076,24 @@
     // ============================================
     // 投稿完了画面
     // ============================================
-    function showCompletionScreen(channelId, messageTs) {
+    function showCompletionScreen() {
       var slackLink = document.getElementById('slackChannelLink');
-      var channel = channelId || SLACK_CHANNEL_ID;
-      
-      // メッセージtsがある場合は特定のメッセージへのリンクを作成
-      var slackDeepLink, slackWebUrl;
-      if (messageTs) {
-        // 特定メッセージへのリンク（tsをp形式に変換：1234567890.123456 → p1234567890123456）
-        var pTs = 'p' + messageTs.replace('.', '');
-        slackDeepLink = 'slack://channel?team=&id=' + channel + '&message=' + messageTs;
-        slackWebUrl = 'https://slack.com/app_redirect?channel=' + channel + '&message_ts=' + messageTs;
-      } else {
-        // チャンネルへのリンク（フォールバック）
-        slackDeepLink = 'slack://channel?id=' + channel;
-        slackWebUrl = 'https://slack.com/app_redirect?channel=' + channel;
-      }
-      
+      var channel = SLACK_CHANNEL_ID;
+
+      // チャンネルへのリンク（Webhook方式ではメッセージtsが取得できないため、チャンネルリンクのみ）
+      var slackDeepLink = 'slack://channel?id=' + channel;
+      var slackWebUrl = 'https://slack.com/app_redirect?channel=' + channel;
+
       // iPhoneの場合はディープリンクを使用（Slackアプリを直接開く）
       var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       slackLink.href = isIOS ? slackDeepLink : slackWebUrl;
-      
+
       // 投稿成功したので下書きをクリア
       clearDraft();
-      
+
       // WYSIWYGエディタの内容をクリア
       clearFormAfterPost();
-      
+
       document.getElementById('completionScreen').classList.add('show');
     }
     
@@ -3121,8 +3107,8 @@
         }
       });
       
-      // スケジュールを再取得
-      loadCalendarEvents();
+      // スケジュールを再取得（V3: 全ツール履歴）
+      loadEventsForSelectedDate();
     }
 
     function closeCompletionScreen() {
@@ -3178,7 +3164,7 @@
     // ============================================
     // バージョン管理・更新お知らせ機能
     // ============================================
-    var CURRENT_VERSION = '3.3.0';
+    var CURRENT_VERSION = '4.0.0';  // V3: ツール連携＋日付指定UI
 
     function dismissUpdateNotice() {
       var updateNotice = document.getElementById('updateNotice');
@@ -3236,94 +3222,17 @@
     }
 
     // ============================================
-    // カレンダー予定取得機能
-    // ============================================
-    
-    // 日付ピッカーを初期化（今日の日付をデフォルトに設定）
-    function initCalendarDatePicker() {
-      var datePicker = document.getElementById('calendarDatePicker');
-      if (datePicker) {
-        var today = new Date();
-        var yyyy = today.getFullYear();
-        var mm = String(today.getMonth() + 1).padStart(2, '0');
-        var dd = String(today.getDate()).padStart(2, '0');
-        datePicker.value = yyyy + '-' + mm + '-' + dd;
-      }
-    }
-    
-    // 日付選択で予定を取得
-    function loadCalendarEventsForDate() {
-      var datePicker = document.getElementById('calendarDatePicker');
-      var selectedDate = datePicker ? datePicker.value : null;
-      loadCalendarEvents(selectedDate);
-    }
-    
-    function loadCalendarEvents(dateString) {
-      try {
-        var btn = document.getElementById('loadCalendarBtn');
-        if (!btn) {
-          console.log('loadCalendarBtn not found');
-          return;
-        }
-        var originalText = btn.textContent;
-        btn.textContent = '取得中...';
-        btn.disabled = true;
-        
-        // 日付が指定されていない場合は今日の日付を使用
-        var targetDate = dateString || null;
-        
-        google.script.run
-          .withSuccessHandler(function(result) {
-            try {
-              btn.textContent = originalText;
-              btn.disabled = false;
-              
-              if (result && !result.startsWith('エラー')) {
-                var todayTasksEditor = document.getElementById('todayTasks');
-                if (todayTasksEditor) {
-                  var currentContent = todayTasksEditor.innerHTML.trim();
-                  if (currentContent && currentContent !== '<br>') {
-                    todayTasksEditor.innerHTML = result.replace(/\n/g, '<br>') + '<br><br>' + currentContent;
-                  } else {
-                    todayTasksEditor.innerHTML = result.replace(/\n/g, '<br>');
-                  }
-                }
-                var dateLabel = targetDate || '今日';
-                showMessage(dateLabel + 'のカレンダー予定を取得しました', false);
-              } else {
-                showMessage(result || 'カレンダー予定の取得に失敗しました', true);
-              }
-            } catch (e) {
-              console.log('Calendar success handler error: ' + e.message);
-            }
-          })
-          .withFailureHandler(function(error) {
-            try {
-              btn.textContent = originalText;
-              btn.disabled = false;
-              showMessage('カレンダー予定の取得に失敗しました: ' + error.message, true);
-            } catch (e) {
-              console.log('Calendar failure handler error: ' + e.message);
-            }
-          })
-          .getEventsForDate(targetDate);
-      } catch (e) {
-        console.log('loadCalendarEvents error: ' + e.message);
-      }
-    }
-
-    // ============================================
     // ページ読み込み時の初期化
     // ============================================
     window.addEventListener('load', function() {
-      refreshSlackLinkStatus();
-      initV2();  // V2初期化を追加
+      initV2();  // V2初期化
+      initDateSelects();  // 日付ピッカーを初期化
+      refreshSlackLinkStatus();  // Slack連携状態チェック（履歴取得用）
       initIndentTextareas();  // インデント機能を初期化（デフォルト値も設定）
       initFormatShortcuts();  // 書式ショートカットを初期化
       initWysiwygEditors();  // WYSIWYGエディタを初期化
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
       initTutorial();  // 使い方ガイドを初期化
-      initCalendarDatePicker();  // 日付ピッカーを初期化
       
       // ユーザーのメールアドレスを取得してからlocalStorage操作を行う
       google.script.run
@@ -3346,8 +3255,9 @@
         })
         .getCurrentUserInfo();
       
-      // カレンダー予定を自動取得（今日の日付で）
-      loadCalendarEvents();
+      // V3: ツール設定を読み込み＋全履歴を自動取得（今日の日付で）
+      loadToolSettings();
+      loadEventsForSelectedDate();
     });
   </script>
 </body>
