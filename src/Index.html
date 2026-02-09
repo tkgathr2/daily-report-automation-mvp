@@ -1570,7 +1570,8 @@
       <span>読み込み中...</span>
     </div>
 
-    <div class="section tool-settings" style="background-color: #f8f9fa; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
+    <!-- 取得ツール設定（非表示） -->
+    <div class="section tool-settings" style="display: none; background-color: #f8f9fa; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
         <div style="font-weight: bold; font-size: 13px; color: #495057;">取得ツール設定</div>
         <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
@@ -1618,7 +1619,8 @@
     <div class="section textarea-container">
       <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <span>【今日やったこと】</span>
-        <div style="display: flex; align-items: center; gap: 6px;">
+        <!-- 履歴を取得ボタン（非表示） -->
+        <div style="display: none; align-items: center; gap: 6px;">
           <button id="loadCalendarBtn" onclick="loadEventsForSelectedDate()" style="background: #27ae60; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">履歴を取得</button>
         </div>
       </div>
@@ -1791,8 +1793,8 @@
   -->
   </div><!-- /.app-wrapper -->
 
-  <!-- フローティング履歴サイドバー -->
-  <div id="historySidebar" class="history-sidebar">
+  <!-- フローティング履歴サイドバー（非表示） -->
+  <div id="historySidebar" class="history-sidebar" style="display: none !important;">
     <div class="history-sidebar-header" onclick="toggleHistorySidebar()">
       <div class="history-sidebar-header-title">
         <span>履歴</span>
@@ -1834,8 +1836,8 @@
     </div>
   </div>
 
-  <!-- モバイル用フローティングボタン -->
-  <button id="historySidebarFab" class="history-sidebar-fab" onclick="toggleHistorySidebar()">📋</button>
+  <!-- モバイル用フローティングボタン（非表示） -->
+  <button id="historySidebarFab" class="history-sidebar-fab" onclick="toggleHistorySidebar()" style="display: none !important;">📋</button>
 
   <!-- モバイル用サイドバートグルボタン（MVP版では非表示）
   <button id="gmailSidebarToggle" class="gmail-sidebar-toggle" onclick="toggleGmailSidebar()">📧</button>
@@ -2957,16 +2959,17 @@
         console.error('renderHistorySidebar error:', e);
       }
       
-      // エラーがあれば表示
-      if (result.errors && result.errors.length > 0) {
-        showMessage('一部のツールで取得に失敗しました: ' + result.errors.join(', '), true);
-      } else if (lines.length === 0 && (!result.gmail || result.gmail.items.length === 0)) {
+      // エラーがあれば表示（ツール非表示中はエラーを表示しない）
+      // if (result.errors && result.errors.length > 0) {
+      //   showMessage('一部のツールで取得に失敗しました: ' + result.errors.join(', '), true);
+      // } else
+      if (lines.length === 0 && (!result.gmail || result.gmail.items.length === 0)) {
         showMessage('今日の履歴はありません。', false);
       } else {
         var gmailCount = result.gmail && result.gmail.items ? result.gmail.items.length : 0;
         var slackCount = result.slack && result.slack.items ? result.slack.items.length : 0;
         var notionCount = result.notion && result.notion.items ? result.notion.items.length : 0;
-        showMessage('履歴を取得しました（カレンダー+Slack+Notion: ' + lines.length + '件、Gmail: ' + gmailCount + '件）', false);
+        showMessage('予定を取得しました', false);
       }
     }
     

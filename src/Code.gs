@@ -781,17 +781,17 @@ function toQueryString_(params) {
 // ユーティリティ関数
 // ============================================
 
-// OAuth Proxy URL（Slack Appに登録する固定のredirect_uri）
-// これにより、どのドメインのユーザーでも同じredirect_uriを使用できる
-const OAUTH_PROXY_URL = 'https://kantan-nippou.takagi.bz/oauth/callback';
+// GAS直接URL（Slack Appに登録するredirect_uri）
+// 固定のデプロイメントURLを使用
+const GAS_REDIRECT_URI = 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwXoIPauTul1v4vKdvZekeDliT3IaWUb33VPYGlHENyeTBWpNsNhQLQ4rbQ6EQ2OeFcJg/exec';
 
 /**
  * Slack OAuth用のリダイレクトURIを取得
- * 固定のOAuthプロキシURLを返す（Slack Appに登録されているURL）
+ * GASの直接URLを返す（Slack Appに登録されているURL）
  * @returns {string} OAuth redirect URI
  */
 function getSlackRedirectUri_() {
-  return OAUTH_PROXY_URL;
+  return GAS_REDIRECT_URI;
 }
 
 /**
