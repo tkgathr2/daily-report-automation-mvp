@@ -3541,6 +3541,7 @@
         // 日報データを作成（WYSIWYGエディタからSlackフォーマットで取得）
         var reportData = {
           header: header,
+          userName: userName,  // Slack投稿者名として使用
           todayTasks: getWysiwygValue('todayTasks'),
           notices: getWysiwygValue('notices'),
           salesPoints: getWysiwygValue('salesPoints'),
