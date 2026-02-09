@@ -1966,7 +1966,7 @@
     // ============================================
     // 設定
     // ============================================
-    var SLACK_CHANNEL_ID = 'C03CHRY682U';
+    var SLACK_CHANNEL_ID = null;  // サーバーから動的に取得
 
     // ============================================
     // 状態管理
@@ -3614,8 +3614,15 @@
 
       // チャンネルへのリンク（Webhook方式ではメッセージtsが取得できないため、チャンネルリンクのみ）
       // app_redirect形式はSlackアプリがインストールされていれば自動的にアプリを開く（iOS/Android両対応）
-      var slackUrl = 'https://slack.com/app_redirect?channel=' + channel;
-      slackLink.href = slackUrl;
+      if (channel) {
+        var slackUrl = 'https://slack.com/app_redirect?channel=' + channel;
+        slackLink.href = slackUrl;
+        slackLink.style.display = 'inline-block';
+      } else {
+        // チャンネルIDが取得できない場合はリンクを非表示
+        slackLink.style.display = 'none';
+        console.warn('SlackチャンネルIDが設定されていません');
+      }
 
       // 投稿成功したので下書きをクリア
       clearDraft();
@@ -3762,6 +3769,19 @@
       initWysiwygEditors();  // WYSIWYGエディタを初期化
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
       initTutorial();  // 使い方ガイドを初期化
+      
+      // SlackチャンネルIDをサーバーから取得
+      google.script.run
+        .withSuccessHandler(function(channelId) {
+          if (channelId) {
+            SLACK_CHANNEL_ID = channelId;
+            console.log('SlackチャンネルIDを設定:', SLACK_CHANNEL_ID);
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('SlackチャンネルID取得エラー:', error);
+        })
+        .getSlackChannelIdForClient();
       
       // ユーザーのメールアドレスを取得してからlocalStorage操作を行う
       google.script.run

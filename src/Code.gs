@@ -717,6 +717,11 @@ function getSlackChannelId_() {
   return channelId || null;
 }
 
+// クライアント用: Script PropertiesからSlackチャンネルIDを取得
+function getSlackChannelIdForClient() {
+  return getSlackChannelId_();
+}
+
 function getSlackClientConfig_() {
   const properties = PropertiesService.getScriptProperties();
   return {
