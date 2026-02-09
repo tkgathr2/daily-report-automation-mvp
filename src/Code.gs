@@ -966,10 +966,20 @@ function sendToSlackV2(reportData) {
     Logger.log('Slack投稿本文生成完了（V2）');
 
     // Incoming Webhook でPOST送信
+    // usernameパラメータでSlack投稿者名を設定（Slack App設定で「カスタム名を許可」が必要）
+    const payload = {
+      text: slackMessage
+    };
+    
+    // ユーザー名が指定されている場合は投稿者名として設定
+    if (reportData.userName) {
+      payload.username = reportData.userName;
+    }
+    
     const response = UrlFetchApp.fetch(webhookUrl, {
       method: 'post',
       contentType: 'application/json',
-      payload: JSON.stringify({ text: slackMessage }),
+      payload: JSON.stringify(payload),
       muteHttpExceptions: true
     });
 
