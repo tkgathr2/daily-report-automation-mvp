@@ -2938,16 +2938,24 @@
       document.getElementById('todayTasks').innerHTML = lines.join('<br>');
       
       // Gmail履歴をサイドバーに表示（ピッカー方式）
-      if (result.gmail && result.gmail.items) {
-        gmailItemsCache = result.gmail.items;
-        renderGmailSidebar(result.gmail.items);
-      } else {
-        gmailItemsCache = [];
-        renderGmailSidebar([]);
+      try {
+        if (result.gmail && result.gmail.items) {
+          gmailItemsCache = result.gmail.items;
+          renderGmailSidebar(result.gmail.items);
+        } else {
+          gmailItemsCache = [];
+          renderGmailSidebar([]);
+        }
+      } catch (e) {
+        console.error('renderGmailSidebar error:', e);
       }
       
       // フローティング履歴サイドバーに全履歴を表示
-      renderHistorySidebar(result);
+      try {
+        renderHistorySidebar(result);
+      } catch (e) {
+        console.error('renderHistorySidebar error:', e);
+      }
       
       // エラーがあれば表示
       if (result.errors && result.errors.length > 0) {
