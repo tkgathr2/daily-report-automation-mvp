@@ -3613,12 +3613,9 @@
       var channel = SLACK_CHANNEL_ID;
 
       // チャンネルへのリンク（Webhook方式ではメッセージtsが取得できないため、チャンネルリンクのみ）
-      var slackDeepLink = 'slack://channel?id=' + channel;
-      var slackWebUrl = 'https://slack.com/app_redirect?channel=' + channel;
-
-      // iPhoneの場合はディープリンクを使用（Slackアプリを直接開く）
-      var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      slackLink.href = isIOS ? slackDeepLink : slackWebUrl;
+      // app_redirect形式はSlackアプリがインストールされていれば自動的にアプリを開く（iOS/Android両対応）
+      var slackUrl = 'https://slack.com/app_redirect?channel=' + channel;
+      slackLink.href = slackUrl;
 
       // 投稿成功したので下書きをクリア
       clearDraft();
