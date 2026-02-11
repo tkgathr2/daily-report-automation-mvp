@@ -1,5 +1,5 @@
 /**
- * 簡単日報くん（WEBアプリ版）
+ * 簡単日報君（WEBアプリ版）
  *
  * Googleカレンダーから今日の予定を取得し、
  * WEBブラウザ上で表示・編集・コピー → Slack送信できるWEBアプリ
@@ -121,7 +121,7 @@ function createAccessDeniedPage() {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>アクセス権限がありません - 簡単日報くん</title>
+      <title>アクセス権限がありません - 簡単日報君</title>
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -186,7 +186,7 @@ function createAccessDeniedPage() {
             <line x1="50" y1="85" x2="50" y2="95" stroke="#333" stroke-width="3"/>
           </svg>
         </div>
-        <h1>簡単日報くん</h1>
+        <h1>簡単日報君</h1>
         <h2>アクセス権限がありません</h2>
         <p>このアプリケーションにアクセスする権限がありません。</p>
         <div class="email">${email}</div>
@@ -196,7 +196,7 @@ function createAccessDeniedPage() {
     </html>
   `;
   return HtmlService.createHtmlOutput(html)
-    .setTitle('アクセス権限がありません - 簡単日報くん')
+    .setTitle('アクセス権限がありません - 簡単日報君')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -212,7 +212,7 @@ function createAdminPage() {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>管理画面 - 簡単日報くん</title>
+      <title>管理画面 - 簡単日報君</title>
       <style>
         * { box-sizing: border-box; }
         body {
@@ -378,7 +378,7 @@ function createAdminPage() {
     </html>
   `;
   return HtmlService.createHtmlOutput(html)
-    .setTitle('管理画面 - 簡単日報くん')
+    .setTitle('管理画面 - 簡単日報君')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -420,7 +420,7 @@ function doGet(e) {
 
   // 通常表示
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('簡単日報くん')
+    .setTitle('簡単日報君')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
@@ -1015,7 +1015,7 @@ function formatSlackMessageV2(reportData) {
     '【売上・利益・経費削減に関わるポイント】\n' + reportData.salesPoints + '\n\n' +
     '【次すること】\n' + reportData.nextTasks + '\n\n' +
     '---\n' +
-    'Powered by <' + APP_URL + '|簡単日報くん>';
+    'Powered by <' + APP_URL + '|簡単日報君>';
 }
 
 // ============================================
