@@ -982,36 +982,44 @@ function getSlackWebhookUrl_() {
  * @returns {string} 成功/失敗メッセージ
  */
 function sendToSlackV2(reportData) {
-  Logger.log('Slack送信開始（V2 Webhook）');
+  Logger.log('Slack送信開始（V2）');
 
   try {
-    // Webhook URLを取得
+    // 1) ユーザーのSlackトークンがある場合は chat.postMessage で「本人として」投稿
+    try {
+      const userToken = getSlackUserToken_ && getSlackUserToken_();
+      const channelId = getSlackChannelId_ && getSlackChannelId_();
+      if (userToken && channelId) {
+        const slackMessage = formatSlackMessageV2(reportData);
+        const apiRes = slackApiPost_('https://slack.com/api/chat.postMessage', userToken, {
+          channel: channelId,
+          text: slackMessage
+        });
+        Logger.log('chat.postMessage 応答: ' + JSON.stringify(apiRes));
+        if (apiRes && apiRes.ok) {
+          saveNextTasks(reportData.nextTasks);
+          Logger.log('Slack送信完了（user token / chat.postMessage）');
+          return '送信成功：Slackに投稿しました。';
+        }
+      }
+    } catch (e) {
+      Logger.log('chat.postMessage 送信スキップ/失敗: ' + (e && e.message ? e.message : e));
+    }
+
+    // 2) フォールバック: Incoming Webhook で投稿（App名/アイコンはWebhook設定に依存）
     const webhookUrl = getSlackWebhookUrl_();
     if (!webhookUrl) {
       return 'エラー：Slack Webhook URLが設定されていません。管理者にScript PropertiesへSLACK_WEBHOOK_URLを設定するよう依頼してください。';
     }
 
-    // Slack投稿本文を生成（V2フォーマット）
     const slackMessage = formatSlackMessageV2(reportData);
-    Logger.log('Slack投稿本文生成完了（V2）');
+    Logger.log('Slack投稿本文生成完了（V2 / Webhook）');
 
-    // Incoming Webhook でPOST送信
-    // usernameパラメータでSlack投稿者名を設定（Slack App設定で「カスタム名を許可」が必要）
-    const payload = {
-      text: slackMessage
-    };
-    
-    // ユーザー名が指定されている場合は投稿者名として設定
-    if (reportData.userName) {
-      payload.username = reportData.userName;
-    }
-    
-    // ユーザーのプロフィール画像を取得してアイコンとして設定
+    const payload = { text: slackMessage };
+    if (reportData.userName) payload.username = reportData.userName;
     const profilePictureUrl = getUserProfilePictureUrl();
-    if (profilePictureUrl) {
-      payload.icon_url = profilePictureUrl;
-    }
-    
+    if (profilePictureUrl) payload.icon_url = profilePictureUrl;
+
     const response = UrlFetchApp.fetch(webhookUrl, {
       method: 'post',
       contentType: 'application/json',
@@ -1024,7 +1032,6 @@ function sendToSlackV2(reportData) {
     Logger.log('Slack Webhook応答: HTTP ' + statusCode + ' / ' + responseBody);
 
     if (statusCode === 200 && responseBody === 'ok') {
-      // 送信成功時、「次すること」を保存
       saveNextTasks(reportData.nextTasks);
       Logger.log('Slack送信完了（V2 Webhook）');
       return '送信成功：Slackに投稿しました。';
