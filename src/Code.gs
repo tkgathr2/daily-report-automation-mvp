@@ -855,6 +855,36 @@ function getUserName() {
 }
 
 /**
+ * ログインユーザーのGoogleプロフィール画像URLを取得
+ * @returns {string|null} プロフィール画像URL（取得できない場合はnull）
+ */
+function getUserProfilePictureUrl() {
+  try {
+    // Google OAuth2 userinfo エンドポイントからプロフィール情報を取得
+    const url = 'https://www.googleapis.com/oauth2/v1/userinfo?alt=json';
+    const response = UrlFetchApp.fetch(url, {
+      headers: {
+        'Authorization': 'Bearer ' + ScriptApp.getOAuthToken()
+      },
+      muteHttpExceptions: true
+    });
+    
+    if (response.getResponseCode() === 200) {
+      const userInfo = JSON.parse(response.getContentText());
+      if (userInfo.picture) {
+        Logger.log('プロフィール画像URL取得成功: ' + userInfo.picture);
+        return userInfo.picture;
+      }
+    }
+    Logger.log('プロフィール画像URL取得失敗: HTTP ' + response.getResponseCode());
+    return null;
+  } catch (e) {
+    Logger.log('getUserProfilePictureUrl error: ' + e.message);
+    return null;
+  }
+}
+
+/**
  * 今日の日付をV2フォーマットで返す
  * @returns {string} YYYY年MM月DD日形式の日付
  */
@@ -974,6 +1004,12 @@ function sendToSlackV2(reportData) {
     // ユーザー名が指定されている場合は投稿者名として設定
     if (reportData.userName) {
       payload.username = reportData.userName;
+    }
+    
+    // ユーザーのプロフィール画像を取得してアイコンとして設定
+    const profilePictureUrl = getUserProfilePictureUrl();
+    if (profilePictureUrl) {
+      payload.icon_url = profilePictureUrl;
     }
     
     const response = UrlFetchApp.fetch(webhookUrl, {
