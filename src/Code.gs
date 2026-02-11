@@ -4,7 +4,7 @@
  * Googleカレンダーから今日の予定を取得し、
  * WEBブラウザ上で表示・編集・コピー → Slack送信できるWEBアプリ
  *
- * @version 2.0
+ * @version 4.0
  * @author Claude Code
  */
 
