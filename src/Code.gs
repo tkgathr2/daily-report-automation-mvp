@@ -682,8 +682,12 @@ function handleSlackOAuthCallback_(e) {
 
     // OAuth v2のユーザートークン
     const userToken = json.authed_user && json.authed_user.access_token ? String(json.authed_user.access_token) : '';
+    const botToken = json.access_token ? String(json.access_token) : '';
     const slackUserId = json.authed_user && json.authed_user.id ? String(json.authed_user.id) : '';
     const teamId = json.team && json.team.id ? String(json.team.id) : '';
+
+    Logger.log('OAuth応答: userToken prefix=' + (userToken ? userToken.substring(0, 5) : 'なし') +
+               ', botToken prefix=' + (botToken ? botToken.substring(0, 5) : 'なし'));
 
     if (!userToken) {
       return HtmlService.createHtmlOutput(
@@ -694,8 +698,9 @@ function handleSlackOAuthCallback_(e) {
 
     saveSlackUserToken_(userToken, slackUserId, teamId);
 
+    var tokenPrefix = userToken.substring(0, 5);
     return HtmlService.createHtmlOutput(
-      'Slack連携が完了しました。'
+      'Slack連携が完了しました。（トークン種別: ' + tokenPrefix + '）'
       + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
     ).setTitle('Slack連携（完了）');
   } catch (err) {
@@ -1000,6 +1005,13 @@ function sendToSlackV2(reportData) {
       return 'エラー：Slack連携が必要です。画面下部の「Slack連携（認可）」ボタンからSlackアカウントを連携してください。';
     }
 
+    var tokenType = userToken.substring(0, 5);
+    Logger.log('トークン種別: ' + tokenType + ' (xoxp-=ユーザー, xoxb-=ボット)');
+
+    if (tokenType === 'xoxb-') {
+      Logger.log('警告: ボットトークンが使用されています。ユーザー名義で投稿するにはユーザートークン(xoxp-)が必要です。');
+    }
+
     if (!channelId) {
       Logger.log('Slack送信失敗：チャンネルID未設定');
       return 'エラー：Slackチャンネルが設定されていません。管理者にScript PropertiesへSLACK_CHANNEL_IDを設定するよう依頼してください。';
@@ -1008,13 +1020,14 @@ function sendToSlackV2(reportData) {
     var slackMessage = formatSlackMessageV2(reportData);
     var apiRes = slackApiPost_('https://slack.com/api/chat.postMessage', userToken, {
       channel: channelId,
-      text: slackMessage
+      text: slackMessage,
+      as_user: true
     });
     Logger.log('chat.postMessage 応答: ' + JSON.stringify(apiRes));
 
     if (apiRes && apiRes.ok) {
       saveNextTasks(reportData.nextTasks);
-      Logger.log('Slack送信完了（user token / chat.postMessage）');
+      Logger.log('Slack送信完了（token type: ' + tokenType + '）');
       return '送信成功：Slackに投稿しました。';
     }
 
