@@ -41,7 +41,7 @@ const PROPERTY_NOTION_TOKEN = 'NOTION_INTEGRATION_TOKEN';
 const MAX_ITEMS_PER_TOOL = 50;
 
 // アプリURL（フッター用）
-const APP_URL = 'https://script.google.com/a/macros/takagi.bz/s/AKfycbyRu1Sye5cpmXqoqfGOI2BBReFh4cvqhkSr9CW7JS2XyhY7q32tv3A5gLG5rGwNtO5a4Q/exec';
+const APP_URL = 'https://nippou.up.railway.app';
 
 
 // ============================================
@@ -805,11 +805,7 @@ function getSlackRedirectUri_() {
  * @returns {string} WebアプリURL
  */
 function getServiceUrl_() {
-  // 現在のURLを取得（デプロイメントIDは動的に取得）
-  const currentUrl = ScriptApp.getService().getUrl();
-  // ドメイン部分を takagi.bz に置換
-  // 例: script.google.com/a/kotsuyudo.com/macros/s/... → script.google.com/a/macros/takagi.bz/s/...
-  return currentUrl.replace(/script\.google\.com\/a\/[^\/]+\/macros/, 'script.google.com/a/macros/takagi.bz');
+  return APP_URL;
 }
 
 /**
