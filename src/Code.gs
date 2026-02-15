@@ -981,60 +981,40 @@ function sendToSlackV2(reportData) {
   Logger.log('Slack送信開始（V2）');
 
   try {
-    // 1) ユーザーのSlackトークンがある場合は chat.postMessage で「本人として」投稿
-    try {
-      const userToken = getSlackUserToken_ && getSlackUserToken_();
-      const channelId = getSlackChannelId_ && getSlackChannelId_();
-      if (userToken && channelId) {
-        const slackMessage = formatSlackMessageV2(reportData);
-        const apiRes = slackApiPost_('https://slack.com/api/chat.postMessage', userToken, {
-          channel: channelId,
-          text: slackMessage
-        });
-        Logger.log('chat.postMessage 応答: ' + JSON.stringify(apiRes));
-        if (apiRes && apiRes.ok) {
-          saveNextTasks(reportData.nextTasks);
-          Logger.log('Slack送信完了（user token / chat.postMessage）');
-          return '送信成功：Slackに投稿しました。';
-        }
-      }
-    } catch (e) {
-      Logger.log('chat.postMessage 送信スキップ/失敗: ' + (e && e.message ? e.message : e));
+    var userToken = getSlackUserToken_();
+    var channelId = getSlackChannelId_();
+
+    if (!userToken) {
+      Logger.log('Slack送信失敗：ユーザートークンなし');
+      return 'エラー：Slack連携が必要です。画面下部の「Slack連携（認可）」ボタンからSlackアカウントを連携してください。';
     }
 
-    // 2) フォールバック: Incoming Webhook で投稿（App名/アイコンはWebhook設定に依存）
-    const webhookUrl = getSlackWebhookUrl_();
-    if (!webhookUrl) {
-      return 'エラー：Slack Webhook URLが設定されていません。管理者にScript PropertiesへSLACK_WEBHOOK_URLを設定するよう依頼してください。';
+    if (!channelId) {
+      Logger.log('Slack送信失敗：チャンネルID未設定');
+      return 'エラー：Slackチャンネルが設定されていません。管理者にScript PropertiesへSLACK_CHANNEL_IDを設定するよう依頼してください。';
     }
 
-    const slackMessage = formatSlackMessageV2(reportData);
-    Logger.log('Slack投稿本文生成完了（V2 / Webhook）');
-
-    const payload = { text: slackMessage };
-    if (reportData.userName) payload.username = reportData.userName;
-    const profilePictureUrl = getUserProfilePictureUrl();
-    if (profilePictureUrl) payload.icon_url = profilePictureUrl;
-
-    const response = UrlFetchApp.fetch(webhookUrl, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
+    var slackMessage = formatSlackMessageV2(reportData);
+    var apiRes = slackApiPost_('https://slack.com/api/chat.postMessage', userToken, {
+      channel: channelId,
+      text: slackMessage
     });
+    Logger.log('chat.postMessage 応答: ' + JSON.stringify(apiRes));
 
-    const statusCode = response.getResponseCode();
-    const responseBody = response.getContentText();
-    Logger.log('Slack Webhook応答: HTTP ' + statusCode + ' / ' + responseBody);
-
-    if (statusCode === 200 && responseBody === 'ok') {
+    if (apiRes && apiRes.ok) {
       saveNextTasks(reportData.nextTasks);
-      Logger.log('Slack送信完了（V2 Webhook）');
+      Logger.log('Slack送信完了（user token / chat.postMessage）');
       return '送信成功：Slackに投稿しました。';
     }
 
-    Logger.log('Slack送信失敗（V2 Webhook）：HTTP ' + statusCode + ' / ' + responseBody);
-    return 'エラー：Slackへの送信に失敗しました。ネットワーク接続を確認してください。';
+    var errorMsg = (apiRes && apiRes.error) ? apiRes.error : '不明なエラー';
+    Logger.log('chat.postMessage 失敗: ' + errorMsg);
+
+    if (errorMsg === 'token_revoked' || errorMsg === 'invalid_auth' || errorMsg === 'token_expired') {
+      return 'エラー：Slack連携の有効期限が切れています。再度「Slack連携（認可）」から連携してください。';
+    }
+
+    return 'エラー：Slackへの送信に失敗しました。（' + errorMsg + '）';
 
   } catch (error) {
     Logger.log('sendToSlackV2エラー：' + error.message);
