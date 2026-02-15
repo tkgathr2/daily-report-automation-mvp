@@ -14,6 +14,7 @@ const loginPageHTML = `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>簡単日報くん - ログイン</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%2300a0e9'/%3E%3Ctext x='50' y='62' text-anchor='middle' font-size='40' font-weight='bold' fill='white' font-family='sans-serif'%3E%E9%AB%99%3C/text%3E%3C/svg%3E">
   <style>
     * {
       margin: 0;
@@ -144,8 +145,15 @@ const server = http.createServer((req, res) => {
     });
     res.end();
   }
+  else if (pathname === '/favicon.ico') {
+    const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#00a0e9"/><text x="50" y="62" text-anchor="middle" font-size="40" font-weight="bold" fill="white" font-family="sans-serif">髙</text></svg>`;
+    res.writeHead(200, {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=86400'
+    });
+    res.end(svgFavicon);
+  }
   else {
-    // その他のパスはGASにリダイレクト
     res.writeHead(302, {
       'Location': TARGET_URL
     });
