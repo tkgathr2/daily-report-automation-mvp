@@ -1571,7 +1571,7 @@
     </div>
 
     <!-- 取得ツール設定（非表示） -->
-    <div class="section tool-settings" style="display: none; background-color: #f8f9fa; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
+    <div class="section tool-settings" style="display: none !important; background-color: #f8f9fa; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
       <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
         <div style="font-weight: bold; font-size: 13px; color: #495057;">取得ツール設定</div>
         <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
@@ -1754,7 +1754,7 @@
     </div>
 
     <!-- Slack連携（履歴取得用） -->
-    <div id="slackOAuthSection" class="section" style="display: none;">
+    <div id="slackOAuthSection" class="section" style="display: none !important;">
       <div id="slackLinkHint" class="form-hint" style="margin-bottom: 10px;">
         Slack履歴を取得するには連携が必要です。
       </div>
@@ -2915,7 +2915,7 @@
         var calendarLines = result.calendar.split('\n');
         for (var i = 0; i < calendarLines.length; i++) {
           if (calendarLines[i].trim()) {
-            lines.push('<span style="color: #4285F4; font-weight: bold;">[予定]</span> ' + escapeHtml(calendarLines[i]));
+            lines.push(escapeHtml(calendarLines[i]));
           }
         }
       }
@@ -3465,12 +3465,7 @@
           var oauthSection = document.getElementById('slackOAuthSection');
           if (!oauthSection) return;
 
-          if (isSlackLinked) {
-            oauthSection.style.display = 'none';
-          } else {
-            // Slack設定がONの場合のみ認可ボタンを表示
-            oauthSection.style.display = 'block';
-          }
+          oauthSection.style.display = 'none';
         })
         .withFailureHandler(function(error) {
           isSlackLinked = false;
