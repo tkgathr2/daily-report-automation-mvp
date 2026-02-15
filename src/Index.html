@@ -1394,6 +1394,10 @@
         font-size: 12px !important;
       }
 
+      #updateNotice .news-list {
+        max-height: 200px !important;
+      }
+
       /* 日報ヘッダーのモバイル対応 */
       .report-header {
         font-size: 14px;
@@ -1551,18 +1555,39 @@
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
     
-    <!-- 更新のお知らせ（MVP版では非表示）
     <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-      <div style="display: flex; align-items: center; margin-bottom: 8px;">
-        <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">NEW</span>
-              <strong style="font-size: 15px;">v3.4.0 がリリースされました！</strong>
-            </div>
-            <ul style="margin: 8px 0 0 0; padding-left: 20px; opacity: 0.95;">
-              <li>モバイル対応を強化（スマートフォンでの操作性を改善）</li>
-            </ul>
-      <button onclick="dismissUpdateNotice()" style="margin-top: 12px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 16px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+        <div style="display: flex; align-items: center;">
+          <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">UPDATE</span>
+          <strong style="font-size: 15px;">最近のアップデート</strong>
+        </div>
+        <button onclick="dismissUpdateNotice()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;">閉じる</button>
+      </div>
+      <div class="news-list" style="max-height: 260px; overflow-y: auto; padding-right: 4px;">
+        <ul style="margin: 0; padding-left: 18px; opacity: 0.95; list-style: none;">
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/15</span>ファビコンをPaper+Pencilアイコンに変更</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>Slack投稿がユーザー名義で送信されるように改善</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>GAS直接アクセス時のリダイレクト処理を修正</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>GAS直接アクセスをRailwayに自動リダイレクト</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>clasp deployステップ追加でデプロイURL自動更新</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>ログイン画面ロゴをオリジナルSVGに修正</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>Webhookフォールバック削除で投稿者名の不具合を解消</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>ファビコン追加（SVG形式・簡単日報くんロゴ）</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>UIクリーンアップ（不要ラベル・パネル非表示化）</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/13</span>ユーザーアクセスURLを nippou.up.railway.app に統一</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/12</span>Slack投稿にユーザーのプロフィール画像アイコンを追加</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/12</span>簡単日報君 v4.0 リリース</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/11</span>Slack投稿者名をユーザー名に変更</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/11</span>SlackチャンネルIDを動的に取得するように改善</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/11</span>iPhoneでSlackリンクが動作しない問題を修正</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/10</span>フローティング履歴サイドバーのエラーハンドリング強化</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/09</span>フローティングサイドバーを初期展開表示に変更</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/09</span>フローティング履歴サイドバーを追加（Slack/Gmail/Notion対応）</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/08</span>V2+V3 実装完了（テンプレート・引き継ぎ・ツール履歴・日付選択）</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/07</span>カレンダー日付選択機能を追加</li>
+        </ul>
+      </div>
     </div>
-    -->
 
     <!-- ローディング表示 -->
     <div id="loading" class="loading">
@@ -3696,20 +3721,21 @@
     // ============================================
     // バージョン管理・更新お知らせ機能
     // ============================================
-    var CURRENT_VERSION = '4.0.0';  // V3: ツール連携＋日付指定UI
+    var NEWS_VERSION = '2026-02-15-v1';
 
     function dismissUpdateNotice() {
       var updateNotice = document.getElementById('updateNotice');
-      updateNotice.style.display = 'none';
-      localStorage.setItem('dismissed_version', CURRENT_VERSION);
+      if (updateNotice) {
+        updateNotice.style.display = 'none';
+        localStorage.setItem('dismissed_news_version', NEWS_VERSION);
+      }
     }
 
     function initUpdateNotice() {
       var updateNotice = document.getElementById('updateNotice');
-      var lastDismissedVersion = localStorage.getItem('dismissed_version');
-      
-      // 既に現在のバージョンを閉じていたら非表示
-      if (lastDismissedVersion === CURRENT_VERSION) {
+      if (!updateNotice) return;
+      var dismissed = localStorage.getItem('dismissed_news_version');
+      if (dismissed === NEWS_VERSION) {
         updateNotice.style.display = 'none';
       }
     }
@@ -3764,6 +3790,7 @@
       initFormatShortcuts();  // 書式ショートカットを初期化
       initWysiwygEditors();  // WYSIWYGエディタを初期化
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
+      initUpdateNotice();  // お知らせ表示制御を初期化
       initTutorial();  // 使い方ガイドを初期化
       
       // SlackチャンネルIDをサーバーから取得
