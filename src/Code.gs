@@ -786,17 +786,17 @@ function toQueryString_(params) {
 // ユーティリティ関数
 // ============================================
 
-// GAS直接URL（Slack Appに登録するredirect_uri）
-// 固定のデプロイメントURLを使用
-const GAS_REDIRECT_URI = 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwXoIPauTul1v4vKdvZekeDliT3IaWUb33VPYGlHENyeTBWpNsNhQLQ4rbQ6EQ2OeFcJg/exec';
+// OAuth Proxy URL（Slack Appに登録する固定のredirect_uri）
+// これにより、どのドメインのユーザーでも同じredirect_uriを使用できる
+const OAUTH_PROXY_URL = 'https://nippou.up.railway.app/oauth/callback';
 
 /**
  * Slack OAuth用のリダイレクトURIを取得
- * GASの直接URLを返す（Slack Appに登録されているURL）
+ * Railwayドメインを返す（Slack Appに登録されているURL）
  * @returns {string} OAuth redirect URI
  */
 function getSlackRedirectUri_() {
-  return GAS_REDIRECT_URI;
+  return OAUTH_PROXY_URL;
 }
 
 /**
