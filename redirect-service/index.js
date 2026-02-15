@@ -104,7 +104,7 @@ const loginPageHTML = `
     </div>
     <h1>簡単日報くん</h1>
     <p class="description">ログインしてください</p>
-    <a href="${TARGET_URL}" class="login-btn">
+    <a href="${TARGET_URL}?from=nippou" class="login-btn">
       <svg class="google-icon" viewBox="0 0 24 24">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -126,7 +126,8 @@ const server = http.createServer((req, res) => {
   if (pathname === '/' || pathname === '') {
     const queryString = parsedUrl.search || '';
     if (queryString) {
-      const redirectUrl = TARGET_URL + queryString;
+      const separator = queryString ? '&' : '?';
+      const redirectUrl = TARGET_URL + '?from=nippou' + separator.replace('?', '&') + queryString.replace('?', '');
       console.log('Root with query params, redirecting to:', redirectUrl);
       res.writeHead(302, { 'Location': redirectUrl });
       res.end();
@@ -139,7 +140,7 @@ const server = http.createServer((req, res) => {
   } 
   // OAuth コールバック: SlackからのOAuthコールバックをGASにリダイレクト
   else if (pathname === OAUTH_CALLBACK_PATH) {
-    // クエリパラメータをそのままGASに転送
+    // クエリパラメータをそのままGASに転送（from=nippouは不要、OAuthコールバックはcode付き）
     const queryString = parsedUrl.search || '';
     const redirectUrl = TARGET_URL + queryString;
     console.log('OAuth callback received, redirecting to:', redirectUrl);
@@ -158,7 +159,7 @@ const server = http.createServer((req, res) => {
   }
   else {
     res.writeHead(302, {
-      'Location': TARGET_URL
+      'Location': TARGET_URL + '?from=nippou'
     });
     res.end();
   }

@@ -397,7 +397,7 @@ function doGet(e) {
     if (e.parameter.error) {
       return HtmlService.createHtmlOutput(
         'Slack連携に失敗しました。エラー：' + String(e.parameter.error)
-        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
+        + '<br><br><a href="' + APP_URL + '">アプリに戻る</a>'
       ).setTitle('Slack連携（失敗）');
     }
     if (e.parameter.code) {
@@ -411,6 +411,14 @@ function doGet(e) {
       }
       return createAdminPage();
     }
+  }
+
+  // 直接アクセス防止: Railway経由（?from=nippou）でない場合はリダイレクト
+  if (!e || !e.parameter || e.parameter.from !== 'nippou') {
+    return HtmlService.createHtmlOutput(
+      '<html><head><meta http-equiv="refresh" content="0;url=' + APP_URL + '"></head>' +
+      '<body><p>リダイレクト中... <a href="' + APP_URL + '">こちらをクリック</a></p></body></html>'
+    ).setTitle('リダイレクト中');
   }
 
   // アクセス権限チェック
