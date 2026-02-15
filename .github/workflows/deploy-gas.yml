@@ -50,10 +50,14 @@ jobs:
           cat src/appsscript.json || echo "appsscript.json not found"
 
       - name: Push to Google Apps Script
-        run: clasp push
+        run: clasp push --force
+        working-directory: ${{ github.workspace }}
+
+      - name: Deploy to production
+        run: clasp deploy -i AKfycbyRu1Sye5cpmXqoqfGOI2BBReFh4cvqhkSr9CW7JS2XyhY7q32tv3A5gLG5rGwNtO5a4Q -d "Auto-deploy from GitHub Actions"
         working-directory: ${{ github.workspace }}
 
       - name: Deployment complete
         run: |
           echo "Deployed to GAS successfully!"
-          echo "Check @HEAD URL to verify changes."
+          echo "Production /exec URL has been updated."
