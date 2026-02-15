@@ -416,8 +416,11 @@ function doGet(e) {
   // 直接アクセス防止: Railway経由（?from=nippou）でない場合はリダイレクト
   if (!e || !e.parameter || e.parameter.from !== 'nippou') {
     return HtmlService.createHtmlOutput(
-      '<html><head><meta http-equiv="refresh" content="0;url=' + APP_URL + '"></head>' +
-      '<body><p>リダイレクト中... <a href="' + APP_URL + '">こちらをクリック</a></p></body></html>'
+      '<html><head><script>window.top.location.href="' + APP_URL + '";</script></head>' +
+      '<body style="font-family:sans-serif;text-align:center;padding:40px;">' +
+      '<p>リダイレクト中...</p>' +
+      '<p><a href="' + APP_URL + '" target="_top">自動でリダイレクトされない場合はこちら</a></p>' +
+      '</body></html>'
     ).setTitle('リダイレクト中');
   }
 
