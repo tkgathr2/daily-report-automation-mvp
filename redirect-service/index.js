@@ -1,7 +1,7 @@
 const http = require('http');
 const url = require('url');
 
-const TARGET_URL = process.env.TARGET_URL || 'https://script.google.com/a/macros/takagi.bz/s/AKfycbwQw2aK8wTUBqUIaufRFvnr697f3JHrT53prxF69BMF4H6JPITtFP9_8aWpERJw9PdnUg/exec';
+const TARGET_URL = process.env.TARGET_URL || 'https://script.google.com/a/macros/takagi.bz/s/AKfycbyRu1Sye5cpmXqoqfGOI2BBReFh4cvqhkSr9CW7JS2XyhY7q32tv3A5gLG5rGwNtO5a4Q/exec';
 
 // OAuth Proxy: 固定のredirect_uriを使用してSlack OAuthを処理
 // これにより、どのドメインのユーザーでも同じredirect_uriを使用できる
@@ -118,12 +118,20 @@ const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
   const pathname = parsedUrl.pathname;
   
-  // ルートパスの場合はログインページを表示
+  // ルートパスの場合
   if (pathname === '/' || pathname === '') {
-    res.writeHead(200, {
-      'Content-Type': 'text/html; charset=utf-8'
-    });
-    res.end(loginPageHTML);
+    const queryString = parsedUrl.search || '';
+    if (queryString) {
+      const redirectUrl = TARGET_URL + queryString;
+      console.log('Root with query params, redirecting to:', redirectUrl);
+      res.writeHead(302, { 'Location': redirectUrl });
+      res.end();
+    } else {
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8'
+      });
+      res.end(loginPageHTML);
+    }
   } 
   // OAuth コールバック: SlackからのOAuthコールバックをGASにリダイレクト
   else if (pathname === OAUTH_CALLBACK_PATH) {
