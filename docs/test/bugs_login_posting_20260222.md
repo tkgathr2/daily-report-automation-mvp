@@ -59,11 +59,174 @@
 
 ## 検出バグ一覧
 
-> テスト実施後に以下に追記する。実施前の時点では空。
-
 | BUG ID | 重要度 | 関連ケース | 概要 | 再現率 | 状態 |
 |--------|--------|-----------|------|--------|------|
-| （実施後に記入） | | | | | |
+| BUG-LP-001 | 低 | LG-005 | `?from=nippou`付きアクセスでリダイレクト先に`from=nippou`が二重付与 | 1/1 (100%) | NEW |
+| BUG-LP-002 | 低 | LG-006 | 存在しないパスが404ではなくGASへ302リダイレクト | 1/1 (100%) | NEW |
+| BUG-LP-003 | 中 | LG-015, EX-007 | PUT/DELETE/PATCH/POSTメソッドが全て受理される | 4/4 (100%) | NEW |
+| BUG-LP-004 | 中 | EX-011 | /oauth/callbackパラメータなしでGASへそのままリダイレクト | 1/1 (100%) | NEW |
+| BUG-LP-005 | 中 | EX-012 | /oauth/callbackに不正code/stateでもGASへリダイレクト | 1/1 (100%) | NEW |
+
+---
+
+### BUG-LP-001 `?from=nippou`付きアクセスでリダイレクト先にfrom=nippouが二重付与
+
+- **重要度**: 低
+- **関連ケース**: LG-005
+- **発見日**: 2026-02-22
+- **発見者**: Devin AI（自動テスト）
+- **ブラウザ/OS**: curl 7.81.0 / Ubuntu
+- **アカウント**: N/A（認証前）
+- **再現率**: 1/1回 (100%)
+
+#### 再現手順
+1. `curl -s -D- -o /dev/null "https://nippou.up.railway.app/?from=nippou"` を実行
+2. Locationヘッダーを確認
+
+#### 期待結果
+- リダイレクト先: `...exec?from=nippou`（1つだけ）
+
+#### 実結果
+- リダイレクト先: `...exec?from=nippou&from=nippou`（二重付与）
+
+#### 証拠
+- Network:
+```
+HTTP/2 302
+location: https://script.google.com/a/macros/takagi.bz/s/.../exec?from=nippou&from=nippou
+```
+
+#### 備考
+- redirect-service/index.jsが既にクエリパラメータにfrom=nippouがある場合でも追加してしまう
+- GAS側でfrom=nippouが二重になっても動作に影響はない（パラメータの最初の値を使用するため）
+
+---
+
+### BUG-LP-002 存在しないパスが404ではなくGASへ302リダイレクト
+
+- **重要度**: 低
+- **関連ケース**: LG-006
+- **発見日**: 2026-02-22
+- **発見者**: Devin AI（自動テスト）
+- **ブラウザ/OS**: curl 7.81.0 / Ubuntu
+- **アカウント**: N/A（認証前）
+- **再現率**: 1/1回 (100%)
+
+#### 再現手順
+1. `curl -s -o /dev/null -w "%{http_code}" "https://nippou.up.railway.app/nonexistent-path"` を実行
+
+#### 期待結果
+- HTTP 404 Not Found ページが表示される
+
+#### 実結果
+- HTTP 302 → GAS exec URLへリダイレクト
+
+#### 証拠
+- Network:
+```
+HTTP/2 302
+location: https://script.google.com/a/macros/takagi.bz/s/.../exec?from=nippou
+```
+
+#### 備考
+- redirect-serviceが全パスをGASへリダイレクトする設計。意図的な可能性あり
+- `/exec`, `/oauth/callback` 以外の全パスが対象
+
+---
+
+### BUG-LP-003 PUT/DELETE/PATCH/POSTメソッドが全て受理される
+
+- **重要度**: 中
+- **関連ケース**: LG-015, EX-007
+- **発見日**: 2026-02-22
+- **発見者**: Devin AI（自動テスト）
+- **ブラウザ/OS**: curl 7.81.0 / Ubuntu
+- **アカウント**: N/A（認証前）
+- **再現率**: 4/4回 (100%)
+
+#### 再現手順
+1. `curl -s -X PUT -o /dev/null -w "%{http_code}" "https://nippou.up.railway.app/"` を実行
+2. `curl -s -X DELETE -o /dev/null -w "%{http_code}" "https://nippou.up.railway.app/"` を実行
+3. `curl -s -X PATCH -o /dev/null -w "%{http_code}" "https://nippou.up.railway.app/"` を実行
+4. `curl -s -X POST -o /dev/null -w "%{http_code}" "https://nippou.up.railway.app/"` を実行
+
+#### 期待結果
+- HTTP 405 Method Not Allowed（GETのみ許可すべき）
+
+#### 実結果
+- 全て HTTP 200（ログインページHTMLを返却）
+
+#### 証拠
+- Network: PUT → 200, DELETE → 200, PATCH → 200, POST → 200
+
+#### 備考
+- redirect-service/index.jsのHTTPサーバーがメソッドのフィルタリングをしていない
+- 実害は低い（ログインページのHTMLを返すだけ）が、セキュリティベストプラクティスに反する
+
+---
+
+### BUG-LP-004 /oauth/callbackにパラメータなしでアクセスするとGASへそのままリダイレクト
+
+- **重要度**: 中
+- **関連ケース**: EX-011
+- **発見日**: 2026-02-22
+- **発見者**: Devin AI（自動テスト）
+- **ブラウザ/OS**: curl 7.81.0 / Ubuntu
+- **アカウント**: N/A（認証前）
+- **再現率**: 1/1回 (100%)
+
+#### 再現手順
+1. `curl -s -D- "https://nippou.up.railway.app/oauth/callback"` を実行
+
+#### 期待結果
+- エラーページ表示（「パラメータが不正です」等のガイダンス付き）
+
+#### 実結果
+- HTTP 302 → GAS exec URL → Google認証画面へリダイレクト
+
+#### 証拠
+- Network:
+```
+HTTP/2 302
+location: https://script.google.com/a/macros/takagi.bz/s/.../exec
+→ Google AccountChooser (hd=takagi.bz)
+```
+
+#### 備考
+- redirect-serviceで/oauth/callbackへのパラメータバリデーションが行われていない
+- GAS側のhandleSlackOAuthCallback_はcodeパラメータなしの場合エラーページを返す実装がある
+
+---
+
+### BUG-LP-005 /oauth/callbackに不正code/stateでもGASへリダイレクト
+
+- **重要度**: 中
+- **関連ケース**: EX-012
+- **発見日**: 2026-02-22
+- **発見者**: Devin AI（自動テスト）
+- **ブラウザ/OS**: curl 7.81.0 / Ubuntu
+- **アカウント**: N/A（認証前）
+- **再現率**: 1/1回 (100%)
+
+#### 再現手順
+1. `curl -s -D- "https://nippou.up.railway.app/oauth/callback?code=invalid&state=invalid"` を実行
+
+#### 期待結果
+- redirect-service側でバリデーションし、エラーページまたはトップページへリダイレクト
+
+#### 実結果
+- HTTP 302 → GAS exec URL（code=invalid&state=invalid がそのまま渡される）
+
+#### 証拠
+- Network:
+```
+HTTP/2 302
+location: https://script.google.com/a/macros/takagi.bz/s/.../exec?code=invalid&state=invalid
+```
+
+#### 備考
+- redirect-serviceがOAuthパラメータを無検証でGASへ転送している
+- GAS側でstate検証・エラーハンドリングは実装済みだが、不要なリクエストがGASに到達する
 
 ---
 
