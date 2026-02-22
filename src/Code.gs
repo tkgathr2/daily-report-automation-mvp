@@ -43,6 +43,224 @@ const MAX_ITEMS_PER_TOOL = 50;
 // アプリURL（フッター用）
 const APP_URL = 'https://nippou.up.railway.app';
 
+// エラー観測基盤
+const KNOWHOW_MEMORIZE_URL = 'https://knowhow.up.railway.app/api/devin/memorize';
+const ERROR_PROJECT_KEY = 'daily-report-automation-mvp';
+const ERROR_TOOL_NAME = 'daily-report';
+const PROPERTY_ERROR_NOTIFY_ENABLED = 'ERROR_NOTIFY_ENABLED';
+
+// ============================================
+// エラー観測基盤（Error Observability）
+// ============================================
+
+/**
+ * ランダムID生成（依存追加なし）
+ * @returns {string} 16桁のランダムHex文字列
+ */
+function generateErrorId_() {
+  var chars = '0123456789abcdef';
+  var id = '';
+  for (var i = 0; i < 16; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
+/**
+ * ERROR_NOTIFY_ENABLED フラグを読む
+ * @returns {boolean} true = Slack通知有効
+ */
+function isNotifyEnabled_() {
+  try {
+    var val = PropertiesService.getScriptProperties().getProperty(PROPERTY_ERROR_NOTIFY_ENABLED);
+    return val === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * スタックトレースを先頭10行に短縮
+ * @param {string} stack
+ * @returns {string}
+ */
+function truncateStack_(stack) {
+  if (!stack) return '';
+  var lines = String(stack).split('\n');
+  return lines.slice(0, 10).join('\n');
+}
+
+/**
+ * 秘匿情報をマスクする
+ * @param {string} text
+ * @returns {string}
+ */
+function maskSecrets_(text) {
+  if (!text) return '';
+  var s = String(text);
+  // Slackトークン
+  s = s.replace(/xox[pboa]-[0-9A-Za-z\-]+/g, 'xox*-****');
+  // OAuthコード
+  s = s.replace(/code=[^&\s]+/g, 'code=****');
+  // メールアドレス
+  s = s.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '****@****.***');
+  // client_secret
+  s = s.replace(/client_secret=[^&\s]+/g, 'client_secret=****');
+  // Bearer トークン
+  s = s.replace(/Bearer\s+[^\s]+/g, 'Bearer ****');
+  return s;
+}
+
+/**
+ * ErrorEvent オブジェクトを生成する
+ * @param {Error|Object} e - エラーオブジェクト
+ * @param {Object} context - 追加コンテキスト {component, action, url}
+ * @returns {Object} ErrorEvent
+ */
+function buildErrorEvent_(e, context) {
+  var ctx = context || {};
+  var email = '';
+  try {
+    email = Session.getActiveUser().getEmail() || '';
+    // メールアドレスはドメインのみ保持
+    if (email) {
+      var parts = email.split('@');
+      email = '***@' + (parts[1] || '***');
+    }
+  } catch (ignore) {}
+
+  var requestId = generateErrorId_();
+  var errorId = generateErrorId_();
+  var message = '';
+  var stack = '';
+  if (e && e.message) {
+    message = maskSecrets_(e.message);
+    stack = truncateStack_(maskSecrets_(e.stack || ''));
+  } else {
+    message = maskSecrets_(String(e || 'unknown error'));
+  }
+
+  return {
+    timestamp: new Date().toISOString(),
+    env: 'production',
+    app: ERROR_PROJECT_KEY,
+    component: ctx.component || 'gas-server',
+    requestId: requestId,
+    errorId: errorId,
+    userEmail: email,
+    action: ctx.action || 'unknown',
+    url: maskSecrets_(ctx.url || ''),
+    message: message,
+    stack: stack,
+    context: ctx.extra || {}
+  };
+}
+
+/**
+ * ノウハウキングにエラーを記録する
+ * @param {Object} errorEvent - buildErrorEvent_ の返り値
+ */
+function sendKnowhowMemorize_(errorEvent) {
+  try {
+    var payload = {
+      project_key: ERROR_PROJECT_KEY,
+      raw_log: JSON.stringify(errorEvent),
+      tool: ERROR_TOOL_NAME,
+      status: 'error',
+      environment: errorEvent.env || 'production',
+      tags: ['error', 'daily-report', errorEvent.component || 'unknown']
+    };
+    UrlFetchApp.fetch(KNOWHOW_MEMORIZE_URL, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    Logger.log('エラー記録完了: errorId=' + errorEvent.errorId);
+  } catch (memErr) {
+    Logger.log('ノウハウキング記録失敗: ' + memErr.message);
+  }
+}
+
+/**
+ * Slackにエラー通知を送る（ERROR_NOTIFY_ENABLED=true の場合のみ）
+ * @param {Object} errorEvent - buildErrorEvent_ の返り値
+ */
+function sendSlackError_(errorEvent) {
+  if (!isNotifyEnabled_()) return;
+  try {
+    var channelId = getSlackChannelId_();
+    if (!channelId) return;
+    var userToken = getSlackUserToken_();
+    if (!userToken) return;
+    var text = ':rotating_light: *エラー通知*\n'
+      + '`errorId`: ' + errorEvent.errorId + '\n'
+      + '`component`: ' + errorEvent.component + '\n'
+      + '`action`: ' + errorEvent.action + '\n'
+      + '`message`: ' + errorEvent.message + '\n'
+      + '`timestamp`: ' + errorEvent.timestamp;
+    slackApiPost_('https://slack.com/api/chat.postMessage', userToken, {
+      channel: channelId,
+      text: text
+    });
+  } catch (slackErr) {
+    Logger.log('Slackエラー通知失敗: ' + slackErr.message);
+  }
+}
+
+/**
+ * エラーを観測基盤に記録する（統合関数）
+ * @param {Error|Object} e - エラーオブジェクト
+ * @param {Object} context - {component, action, url, extra}
+ */
+function recordError_(e, context) {
+  try {
+    var errorEvent = buildErrorEvent_(e, context);
+    sendKnowhowMemorize_(errorEvent);
+    sendSlackError_(errorEvent);
+  } catch (ignore) {
+    Logger.log('recordError_ 自体が失敗: ' + (ignore && ignore.message ? ignore.message : ignore));
+  }
+}
+
+/**
+ * クライアントサイドからのエラーログを受け取る
+ * @param {Object} clientErrorData - クライアントで生成したErrorEventデータ
+ */
+function logClientError(clientErrorData) {
+  try {
+    if (!clientErrorData) return;
+    // クライアントデータをサーバー側でErrorEventに正規化
+    var errorEvent = {
+      timestamp: clientErrorData.timestamp || new Date().toISOString(),
+      env: 'production',
+      app: ERROR_PROJECT_KEY,
+      component: 'gas-client',
+      requestId: clientErrorData.requestId || generateErrorId_(),
+      errorId: clientErrorData.errorId || generateErrorId_(),
+      userEmail: '',
+      action: maskSecrets_(clientErrorData.action || 'client-error'),
+      url: maskSecrets_(clientErrorData.url || ''),
+      message: maskSecrets_(clientErrorData.message || 'unknown client error'),
+      stack: truncateStack_(maskSecrets_(clientErrorData.stack || '')),
+      context: clientErrorData.context || {}
+    };
+    // メールアドレスはサーバー側で安全に取得
+    try {
+      var email = Session.getActiveUser().getEmail() || '';
+      if (email) {
+        var parts = email.split('@');
+        errorEvent.userEmail = '***@' + (parts[1] || '***');
+      }
+    } catch (ignore) {}
+
+    sendKnowhowMemorize_(errorEvent);
+    sendSlackError_(errorEvent);
+  } catch (e) {
+    Logger.log('logClientError失敗: ' + (e && e.message ? e.message : e));
+  }
+}
+
 
 // ============================================
 // ユーティリティ
@@ -455,6 +673,7 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (err) {
     Logger.log('doGet予期しないエラー: ' + (err && err.message ? err.message : err));
+    recordError_(err, { component: 'gas-server', action: 'doGet', url: 'GAS /exec' });
     return HtmlService.createHtmlOutput(
       '<div style="font-family:sans-serif;text-align:center;padding:40px;">'
       + '<h2 style="color:#e74c3c;">予期しないエラーが発生しました</h2>'
@@ -588,6 +807,7 @@ function getEventsForDate(dateString) {
 
   } catch (error) {
     Logger.log('getTodayEventsエラー：' + error.message);
+    recordError_(error, { component: 'gas-server', action: 'getTodayEvents' });
     return 'エラー：予期しないエラーが発生しました。詳細：' + error.message;
   }
 }
@@ -792,6 +1012,7 @@ function handleSlackOAuthCallback_(e) {
     ).setTitle('Slack連携（完了）');
   } catch (err) {
     Logger.log('OAuthコールバック予期しないエラー: ' + (err && err.message ? err.message : err));
+    recordError_(err, { component: 'gas-server', action: 'handleSlackOAuthCallback' });
     return createOAuthErrorPage_(
       'Slack連携に失敗しました',
       '予期しないエラーが発生しました。しばらく時間をおいてから「Slack連携（認可）」をやり直してください。'
@@ -1254,6 +1475,7 @@ function sendToSlackV2(reportData) {
 
   } catch (error) {
     Logger.log('sendToSlackV2エラー：' + error.message);
+    recordError_(error, { component: 'gas-server', action: 'sendToSlackV2' });
     return 'エラー：予期しないエラーが発生しました。しばらく待ってから再度お試しください。';
   }
 }
