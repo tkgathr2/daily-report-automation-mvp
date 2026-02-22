@@ -1997,7 +1997,82 @@
     // 状態管理
     // ============================================
     let isLoading = false;
-    let isSlackLinked = false;  // V3: Slack OAuth連携状態（履歴取得用。日報送信はWebhookなので不要）
+    let isSlackLinked = false;  // V3: Slack OAuth連携状態（履歴取得用）
+
+    // ============================================
+    // GAS呼び出しタイムアウト・リトライユーティリティ
+    // ============================================
+    var GAS_TIMEOUT_MS = 30000; // 30秒タイムアウト
+    var GAS_SEND_TIMEOUT_MS = 60000; // Slack送信は60秒（リトライ含む）
+    var _loadingTimeoutId = null;
+
+    /**
+     * ローディング状態の安全なリセット（タイムアウト時やエラー時に固まり防止）
+     */
+    function resetLoadingState() {
+      if (_loadingTimeoutId) {
+        clearTimeout(_loadingTimeoutId);
+        _loadingTimeoutId = null;
+      }
+      showLoading(false);
+      // 全ボタンの無効化を解除
+      var btns = ['btnSendSlack', 'btnGetEvents', 'btnRefreshEvents', 'loadCalendarBtn', 'btnSlackConnect'];
+      btns.forEach(function(id) {
+        var btn = document.getElementById(id);
+        if (btn) btn.disabled = false;
+      });
+    }
+
+    /**
+     * ローディングを開始し、タイムアウトを設定する
+     * @param {number} timeoutMs - タイムアウト（ミリ秒）
+     * @param {string} [timeoutMessage] - タイムアウト時のメッセージ
+     */
+    function startLoadingWithTimeout(timeoutMs, timeoutMessage) {
+      showLoading(true);
+      if (_loadingTimeoutId) clearTimeout(_loadingTimeoutId);
+      _loadingTimeoutId = setTimeout(function() {
+        console.warn('GAS呼び出しタイムアウト: ' + (timeoutMessage || ''));
+        resetLoadingState();
+        showMessage(timeoutMessage || 'サーバーからの応答がタイムアウトしました。再度お試しください。', true);
+      }, timeoutMs);
+    }
+
+    /**
+     * ローディングを正常完了する（タイムアウトもクリア）
+     */
+    function finishLoading() {
+      if (_loadingTimeoutId) {
+        clearTimeout(_loadingTimeoutId);
+        _loadingTimeoutId = null;
+      }
+      showLoading(false);
+    }
+
+    /**
+     * localStorageへの安全な書き込み（容量超過対応）
+     */
+    function safeLocalStorageSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        console.warn('localStorage書き込み失敗:', e.message);
+        // 容量超過時は古いデータを削除してリトライ
+        try {
+          var keysToRemove = [];
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.startsWith('kantan_nippou_') && k !== key) {
+              keysToRemove.push(k);
+            }
+          }
+          keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
+          localStorage.setItem(key, value);
+        } catch (e2) {
+          console.error('localStorage書き込みリトライ失敗:', e2.message);
+        }
+      }
+    }
 
     // ============================================
     // インデント設定
@@ -2785,12 +2860,13 @@
       if (isLoading) return;
 
       var dateInput = document.getElementById('dateSelect');
-      var selectedDate = dateInput.value;
+      var selectedDate = dateInput ? dateInput.value : '';
 
-      document.getElementById('btnGetEvents').disabled = true;
+      var btnGet = document.getElementById('btnGetEvents');
+      if (btnGet) btnGet.disabled = true;
       var btnRefresh = document.getElementById('btnRefreshEvents');
       if (btnRefresh) btnRefresh.disabled = true;
-      showLoading(true);
+      startLoadingWithTimeout(GAS_TIMEOUT_MS, '予定取得がタイムアウトしました。再度お試しください。');
 
       // V3: 全ツール履歴を統合取得
       google.script.run
@@ -3203,13 +3279,14 @@
     }
 
     function onLoadEventsFailure(error) {
-      showLoading(false);
+      finishLoading();
       document.getElementById('btnGetEvents').disabled = false;
       var btnRefresh = document.getElementById('btnRefreshEvents');
       if (btnRefresh) btnRefresh.disabled = false;
       var btnCalendar = document.getElementById('loadCalendarBtn');
       if (btnCalendar) btnCalendar.disabled = false;
-      showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
+      var errMsg = (error && error.message) ? error.message : '不明なエラー';
+      showMessage('エラー：予期しないエラーが発生しました。詳細：' + errMsg, true);
     }
 
     // ============================================
@@ -3220,27 +3297,43 @@
     function initV2() {
       google.script.run
         .withSuccessHandler(function(data) {
-          // 日付を設定（JST基準、サーバーで生成）
-          if (data.date) {
-            document.getElementById('reportDate').textContent = data.date;
-          }
-
-          // 氏名を設定（Googleアカウントから取得）
-          if (!data.needsNameInput && data.userName) {
-            serverUserName = data.userName;
-            document.getElementById('reportUserName').textContent = data.userName;
-          }
-
-          // 前日の「次すること」を設定（WYSIWYGエディタなのでinnerHTMLを使用）
-          if (data.nextTasks) {
-            var nextTasksEditor = document.getElementById('nextTasks');
-            if (nextTasksEditor) {
-              nextTasksEditor.innerHTML = data.nextTasks.replace(/\n/g, '<br>');
+          try {
+            if (!data) {
+              console.warn('initV2: dataがnull');
+              return;
             }
+            // 日付を設定（JST基準、サーバーで生成）
+            if (data.date) {
+              var el = document.getElementById('reportDate');
+              if (el) el.textContent = data.date;
+            }
+
+            // 氏名を設定（Googleアカウントから取得）
+            if (!data.needsNameInput && data.userName) {
+              serverUserName = data.userName;
+              var nameEl = document.getElementById('reportUserName');
+              if (nameEl) nameEl.textContent = data.userName;
+            }
+
+            // 前日の「次すること」を設定（WYSIWYGエディタなのでinnerHTMLを使用）
+            if (data.nextTasks) {
+              var nextTasksEditor = document.getElementById('nextTasks');
+              if (nextTasksEditor) {
+                nextTasksEditor.innerHTML = data.nextTasks.replace(/\n/g, '<br>');
+              }
+            }
+          } catch (e) {
+            console.error('initV2 success handler error:', e);
           }
         })
         .withFailureHandler(function(error) {
           console.error('initV2 error:', error);
+          // 初期化失敗でも画面は使えるようにフォールバック
+          var dateEl = document.getElementById('reportDate');
+          if (dateEl && !dateEl.textContent) {
+            var now = new Date();
+            dateEl.textContent = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日';
+          }
         })
         .getInitialDataV2();
     }
@@ -3502,12 +3595,12 @@
       var btnConnect = document.getElementById('btnSlackConnect');
       if (btnConnect) btnConnect.disabled = true;
 
-      showLoading(true);
       hideMessage();
+      startLoadingWithTimeout(GAS_TIMEOUT_MS, 'Slack連携の開始がタイムアウトしました。再度お試しください。');
 
       google.script.run
         .withSuccessHandler(function(url) {
-          showLoading(false);
+          finishLoading();
           if (!url) {
             if (btnConnect) btnConnect.disabled = false;
             showMessage('エラー：Slack連携URLを生成できません。管理者に連絡してください。', true);
@@ -3516,9 +3609,10 @@
           window.top.location.href = url;
         })
         .withFailureHandler(function(error) {
-          showLoading(false);
+          finishLoading();
           if (btnConnect) btnConnect.disabled = false;
-          showMessage('エラー：Slack連携の開始に失敗しました。詳細：' + error.message, true);
+          var errMsg = (error && error.message) ? error.message : '不明なエラー';
+          showMessage('エラー：Slack連携の開始に失敗しました。詳細：' + errMsg, true);
         })
         .getSlackAuthorizeUrl();
     }
@@ -3569,10 +3663,12 @@
         };
 
         console.log('Sending to Slack...');
-        showLoading(true);
         hideMessage();
         var btnSend = document.getElementById('btnSendSlack');
         if (btnSend) btnSend.disabled = true;
+
+        // タイムアウト付きローディング開始（Slack送信は60秒）
+        startLoadingWithTimeout(GAS_SEND_TIMEOUT_MS, 'Slackへの送信がタイムアウトしました。再度お試しください。');
 
         google.script.run
           .withSuccessHandler(onSendSlackSuccessV2)
@@ -3581,35 +3677,37 @@
       } catch (e) {
         console.log('sendSlackV2 error: ' + e.message);
         showMessage('エラー：' + e.message, true);
-        showLoading(false);
+        resetLoadingState();
       }
     }
 
     function onSendSlackSuccessV2(result) {
       try {
-        showLoading(false);
+        finishLoading();
         var btnSend = document.getElementById('btnSendSlack');
         if (btnSend) btnSend.disabled = false;
 
-        if (result && result.startsWith('エラー：')) {
+        if (result && typeof result === 'string' && result.indexOf('エラー') === 0) {
           showMessage(result, true);
         } else {
-          // Webhook送信成功
           showCompletionScreen();
         }
       } catch (e) {
         console.log('onSendSlackSuccessV2 error: ' + e.message);
+        resetLoadingState();
       }
     }
 
     function onSendSlackFailureV2(error) {
       try {
-        showLoading(false);
+        finishLoading();
         var btnSend = document.getElementById('btnSendSlack');
         if (btnSend) btnSend.disabled = false;
-        showMessage('エラー：予期しないエラーが発生しました。詳細：' + error.message, true);
+        var errMsg = (error && error.message) ? error.message : '不明なエラー';
+        showMessage('エラー：予期しないエラーが発生しました。詳細：' + errMsg, true);
       } catch (e) {
         console.log('onSendSlackFailureV2 error: ' + e.message);
+        resetLoadingState();
       }
     }
 
@@ -3677,11 +3775,13 @@
     // ============================================
     function showLoading(show) {
       isLoading = show;
-      const loadingElement = document.getElementById('loading');
-      if (show) {
-        loadingElement.classList.add('show');
-      } else {
-        loadingElement.classList.remove('show');
+      var loadingElement = document.getElementById('loading');
+      if (loadingElement) {
+        if (show) {
+          loadingElement.classList.add('show');
+        } else {
+          loadingElement.classList.remove('show');
+        }
       }
     }
 
