@@ -45,6 +45,25 @@ const APP_URL = 'https://nippou.up.railway.app';
 
 
 // ============================================
+// ユーティリティ
+// ============================================
+
+/**
+ * HTMLエスケープ（XSS対策 / BUG-003修正）
+ * @param {string} str - エスケープ対象の文字列
+ * @returns {string} HTMLエスケープ済みの文字列
+ */
+function escapeHtml_(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ============================================
 // アクセス制御
 // ============================================
 
@@ -189,7 +208,7 @@ function createAccessDeniedPage() {
         <h1>簡単日報君</h1>
         <h2>アクセス権限がありません</h2>
         <p>このアプリケーションにアクセスする権限がありません。</p>
-        <div class="email">${email}</div>
+        <div class="email">${escapeHtml_(email)}</div>
         <p>アクセスが必要な場合は、管理者にお問い合わせください。</p>
       </div>
     </body>
@@ -327,11 +346,11 @@ function createAdminPage() {
           <h2>現在のユーザー</h2>
           <div class="info-row">
             <span class="info-label">メールアドレス</span>
-            <span class="info-value">${userInfo.email}</span>
+            <span class="info-value">${escapeHtml_(userInfo.email)}</span>
           </div>
           <div class="info-row">
             <span class="info-label">ドメイン</span>
-            <span class="info-value">${userInfo.domain}</span>
+            <span class="info-value">${escapeHtml_(userInfo.domain)}</span>
           </div>
           <div class="info-row">
             <span class="info-label">権限</span>
@@ -396,7 +415,7 @@ function doGet(e) {
   if (e && e.parameter) {
     if (e.parameter.error) {
       return HtmlService.createHtmlOutput(
-        'Slack連携に失敗しました。エラー：' + String(e.parameter.error)
+        'Slack連携に失敗しました。エラー：' + escapeHtml_(e.parameter.error)
         + '<br><br><a href="' + APP_URL + '">アプリに戻る</a>'
       ).setTitle('Slack連携（失敗）');
     }

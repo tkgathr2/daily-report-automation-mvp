@@ -1,6 +1,33 @@
 const http = require('http');
 const url = require('url');
 
+// セキュリティヘッダー（BUG-001修正）
+const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Content-Security-Policy': "default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; script-src 'none'",
+  'Referrer-Policy': 'strict-origin-when-cross-origin'
+};
+
+/**
+ * クエリ文字列をサニタイズする（BUG-002修正）
+ * 各パラメータの名前と値をURLエンコードして安全なクエリ文字列を再構築する
+ * @param {string} queryString - 元のクエリ文字列（?付き）
+ * @returns {string} サニタイズ済みクエリ文字列（&から始まる、空なら空文字）
+ */
+function sanitizeQueryString(queryString) {
+  if (!queryString) return '';
+  const parsed = new url.URL('http://dummy' + queryString);
+  const params = parsed.searchParams;
+  const parts = [];
+  for (const [key, value] of params) {
+    parts.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
+  }
+  return parts.length > 0 ? '&' + parts.join('&') : '';
+}
+
 const TARGET_URL = process.env.TARGET_URL || 'https://script.google.com/a/macros/takagi.bz/s/AKfycbyRu1Sye5cpmXqoqfGOI2BBReFh4cvqhkSr9CW7JS2XyhY7q32tv3A5gLG5rGwNtO5a4Q/exec';
 
 // OAuth Proxy: 固定のredirect_uriを使用してSlack OAuthを処理
@@ -126,13 +153,14 @@ const server = http.createServer((req, res) => {
   if (pathname === '/' || pathname === '') {
     const queryString = parsedUrl.search || '';
     if (queryString) {
-      const separator = queryString ? '&' : '?';
-      const redirectUrl = TARGET_URL + '?from=nippou' + separator.replace('?', '&') + queryString.replace('?', '');
+      const sanitizedQuery = sanitizeQueryString(queryString);
+      const redirectUrl = TARGET_URL + '?from=nippou' + sanitizedQuery;
       console.log('Root with query params, redirecting to:', redirectUrl);
-      res.writeHead(302, { 'Location': redirectUrl });
+      res.writeHead(302, { ...SECURITY_HEADERS, 'Location': redirectUrl });
       res.end();
     } else {
       res.writeHead(200, {
+        ...SECURITY_HEADERS,
         'Content-Type': 'text/html; charset=utf-8'
       });
       res.end(loginPageHTML);
@@ -142,9 +170,11 @@ const server = http.createServer((req, res) => {
   else if (pathname === OAUTH_CALLBACK_PATH) {
     // クエリパラメータをそのままGASに転送（from=nippouは不要、OAuthコールバックはcode付き）
     const queryString = parsedUrl.search || '';
-    const redirectUrl = TARGET_URL + queryString;
+    const sanitizedQuery = sanitizeQueryString(queryString);
+    const redirectUrl = TARGET_URL + (sanitizedQuery ? '?' + sanitizedQuery.substring(1) : '');
     console.log('OAuth callback received, redirecting to:', redirectUrl);
     res.writeHead(302, {
+      ...SECURITY_HEADERS,
       'Location': redirectUrl
     });
     res.end();
@@ -152,6 +182,7 @@ const server = http.createServer((req, res) => {
   else if (pathname === '/favicon.ico') {
     const svgFavicon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#00a0e9"/><rect x="7" y="5" width="14" height="22" rx="2" fill="white"/><line x1="10" y1="10" x2="18" y2="10" stroke="#ccc" stroke-width="1.2"/><line x1="10" y1="13.5" x2="18" y2="13.5" stroke="#ccc" stroke-width="1.2"/><line x1="10" y1="17" x2="16" y2="17" stroke="#ccc" stroke-width="1.2"/><g transform="translate(16,10) rotate(45)"><rect x="-1.5" y="-10" width="3" height="14" rx="0.5" fill="#FFB74D"/><polygon points="-1.5,4 1.5,4 0,7" fill="#FFB74D"/><rect x="-1.5" y="-10" width="3" height="3" rx="0.5" fill="#E57373"/></g></svg>`;
     res.writeHead(200, {
+      ...SECURITY_HEADERS,
       'Content-Type': 'image/svg+xml',
       'Cache-Control': 'public, max-age=86400'
     });
@@ -159,6 +190,7 @@ const server = http.createServer((req, res) => {
   }
   else {
     res.writeHead(302, {
+      ...SECURITY_HEADERS,
       'Location': TARGET_URL + '?from=nippou'
     });
     res.end();
