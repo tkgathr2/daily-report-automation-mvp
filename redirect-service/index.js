@@ -309,6 +309,13 @@ function sendErrorResponse(res, statusCode, message) {
 }
 
 const server = http.createServer((req, res) => {
+  // BUG-LP-003修正: GETメソッドのみ許可（HEAD も許可 - ブラウザの事前チェック用）
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    console.log('Method not allowed:', req.method, req.url);
+    sendErrorResponse(res, 405, 'このURLはGETリクエストのみ受け付けています。');
+    return;
+  }
+
   // リクエストタイムアウト設定
   req.setTimeout(REQUEST_TIMEOUT_MS);
   res.setTimeout(REQUEST_TIMEOUT_MS);
@@ -344,8 +351,12 @@ const server = http.createServer((req, res) => {
   if (pathname === '/' || pathname === '') {
     const queryString = parsedUrl.search || '';
     if (queryString) {
+      // BUG-LP-001修正: 既にfrom=nippouが含まれている場合は二重付与しない
       const sanitizedQuery = sanitizeQueryString(queryString);
-      const redirectUrl = TARGET_URL + '?from=nippou' + sanitizedQuery;
+      const hasFromNippou = sanitizedQuery.includes('from=nippou');
+      const redirectUrl = hasFromNippou
+        ? TARGET_URL + '?' + sanitizedQuery.substring(1)
+        : TARGET_URL + '?from=nippou' + sanitizedQuery;
       console.log('Root with query params, redirecting to:', redirectUrl);
       res.writeHead(302, { ...SECURITY_HEADERS, 'Location': redirectUrl });
       res.end();
@@ -359,8 +370,14 @@ const server = http.createServer((req, res) => {
   } 
   // OAuth コールバック: SlackからのOAuthコールバックをGASにリダイレクト
   else if (pathname === OAUTH_CALLBACK_PATH) {
-    // クエリパラメータをそのままGASに転送（from=nippouは不要、OAuthコールバックはcode付き）
+    // BUG-LP-004/005修正: codeパラメータがない場合はエラーページを表示
     const queryString = parsedUrl.search || '';
+    const queryParams = parsedUrl.query || {};
+    if (!queryParams.code) {
+      console.log('OAuth callback without code param, showing error');
+      sendErrorResponse(res, 400, 'Slack連携のパラメータが不正です。「Slack連携（認可）」からやり直してください。');
+      return;
+    }
     const sanitizedQuery = sanitizeQueryString(queryString);
     const redirectUrl = TARGET_URL + (sanitizedQuery ? '?' + sanitizedQuery.substring(1) : '');
     console.log('OAuth callback received, redirecting to:', redirectUrl);
@@ -368,6 +385,18 @@ const server = http.createServer((req, res) => {
       ...SECURITY_HEADERS,
       'Location': redirectUrl
     });
+    res.end();
+  }
+  // /exec パス: GAS直アクセス用のリダイレクト（既存機能維持）
+  else if (pathname === '/exec') {
+    const queryString = parsedUrl.search || '';
+    const sanitizedQuery = sanitizeQueryString(queryString);
+    const hasFromNippou = sanitizedQuery.includes('from=nippou');
+    const redirectUrl = hasFromNippou
+      ? TARGET_URL + '?' + sanitizedQuery.substring(1)
+      : TARGET_URL + '?from=nippou' + sanitizedQuery;
+    console.log('/exec redirect to:', redirectUrl);
+    res.writeHead(302, { ...SECURITY_HEADERS, 'Location': redirectUrl });
     res.end();
   }
   else if (pathname === '/favicon.ico') {
@@ -379,12 +408,10 @@ const server = http.createServer((req, res) => {
     });
     res.end(svgFavicon);
   }
+  // BUG-LP-002修正: 未知のパスは404を返す（GASへのリダイレクトではなく）
   else {
-    res.writeHead(302, {
-      ...SECURITY_HEADERS,
-      'Location': TARGET_URL + '?from=nippou'
-    });
-    res.end();
+    console.log('Unknown path, returning 404:', pathname);
+    sendErrorResponse(res, 404, 'お探しのページが見つかりません。<br><a href="/">ログイン画面に戻る</a>');
   }
 });
 
