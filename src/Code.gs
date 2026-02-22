@@ -411,47 +411,57 @@ function createAdminPage() {
  * @returns {HtmlOutput} HTMLページ
  */
 function doGet(e) {
-  // Slack OAuthコールバック
-  if (e && e.parameter) {
-    if (e.parameter.error) {
-      return HtmlService.createHtmlOutput(
-        'Slack連携に失敗しました。エラー：' + escapeHtml_(e.parameter.error)
-        + '<br><br><a href="' + APP_URL + '">アプリに戻る</a>'
-      ).setTitle('Slack連携（失敗）');
-    }
-    if (e.parameter.code) {
-      return handleSlackOAuthCallback_(e);
-    }
-    
-    // 管理画面へのアクセス
-    if (e.parameter.page === 'admin') {
-      if (!checkAdminAccess()) {
-        return createAccessDeniedPage();
+  try {
+    // Slack OAuthコールバック
+    if (e && e.parameter) {
+      if (e.parameter.error) {
+        return createOAuthErrorPage_(
+          'Slack連携に失敗しました',
+          'Slackからエラーが返されました：' + escapeHtml_(String(e.parameter.error || '')) + '。「Slack連携（認可）」をやり直してください。'
+        );
       }
-      return createAdminPage();
+      if (e.parameter.code) {
+        return handleSlackOAuthCallback_(e);
+      }
+      
+      // 管理画面へのアクセス
+      if (e.parameter.page === 'admin') {
+        if (!checkAdminAccess()) {
+          return createAccessDeniedPage();
+        }
+        return createAdminPage();
+      }
     }
-  }
 
-  // 直接アクセス防止: Railway経由（?from=nippou）でない場合はリダイレクト
-  if (!e || !e.parameter || e.parameter.from !== 'nippou') {
+    // 直接アクセス防止: Railway経由（?from=nippou）でない場合はリダイレクト
+    if (!e || !e.parameter || e.parameter.from !== 'nippou') {
+      return HtmlService.createHtmlOutput(
+        '<html><head><script>window.top.location.href="' + APP_URL + '";</script></head>' +
+        '<body style="font-family:sans-serif;text-align:center;padding:40px;">' +
+        '<p>リダイレクト中...</p>' +
+        '<p><a href="' + APP_URL + '" target="_top">自動でリダイレクトされない場合はこちら</a></p>' +
+        '</body></html>'
+      ).setTitle('リダイレクト中');
+    }
+
+    // アクセス権限チェック
+    if (!checkUserAccess()) {
+      return createAccessDeniedPage();
+    }
+
+    // 通常表示
+    return HtmlService.createHtmlOutputFromFile('Index')
+      .setTitle('簡単日報君')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } catch (err) {
+    Logger.log('doGet予期しないエラー: ' + (err && err.message ? err.message : err));
     return HtmlService.createHtmlOutput(
-      '<html><head><script>window.top.location.href="' + APP_URL + '";</script></head>' +
-      '<body style="font-family:sans-serif;text-align:center;padding:40px;">' +
-      '<p>リダイレクト中...</p>' +
-      '<p><a href="' + APP_URL + '" target="_top">自動でリダイレクトされない場合はこちら</a></p>' +
-      '</body></html>'
-    ).setTitle('リダイレクト中');
+      '<div style="font-family:sans-serif;text-align:center;padding:40px;">'
+      + '<h2 style="color:#e74c3c;">予期しないエラーが発生しました</h2>'
+      + '<p style="color:#666;">ページを再読み込みするか、<a href="' + APP_URL + '" style="color:#00a0e9;">ログイン画面</a>に戻ってください。</p>'
+      + '</div>'
+    ).setTitle('エラー - 簡単日報君');
   }
-
-  // アクセス権限チェック
-  if (!checkUserAccess()) {
-    return createAccessDeniedPage();
-  }
-
-  // 通常表示
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('簡単日報君')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 // ============================================
@@ -655,48 +665,103 @@ function getSlackAuthorizeUrl() {
 // Slack OAuth（実ユーザー投稿）内部実装
 // ============================================
 
+/**
+ * OAuthコールバック用のエラーページを生成
+ * @param {string} message - エラーメッセージ
+ * @param {string} [guidance] - ユーザーへのガイド
+ * @returns {HtmlOutput}
+ */
+function createOAuthErrorPage_(message, guidance) {
+  var guidanceHtml = guidance ? '<p style="color:#666;font-size:14px;margin:15px 0;">' + guidance + '</p>' : '';
+  return HtmlService.createHtmlOutput(
+    '<div style="font-family:sans-serif;text-align:center;padding:40px;">'
+    + '<h2 style="color:#e74c3c;">' + escapeHtml_(message) + '</h2>'
+    + guidanceHtml
+    + '<br><a href="' + APP_URL + '" style="color:#00a0e9;font-weight:bold;text-decoration:none;">アプリに戻る</a>'
+    + '</div>'
+  ).setTitle('Slack連携（失敗）');
+}
+
 function handleSlackOAuthCallback_(e) {
   try {
     const cfg = getSlackClientConfig_();
     if (!cfg.clientId || !cfg.clientSecret) {
-      return HtmlService.createHtmlOutput(
-        'Slack連携に失敗しました。管理者設定（Client ID/Secret）が不足しています。'
-        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
-      ).setTitle('Slack連携（失敗）');
+      Logger.log('OAuth失敗: Client ID/Secret未設定');
+      return createOAuthErrorPage_(
+        'Slack連携に失敗しました',
+        '管理者設定（Client ID/Secret）が不足しています。管理者にお問い合わせください。'
+      );
     }
 
     const code = String(e.parameter.code || '');
     const state = String(e.parameter.state || '');
+
+    if (!code) {
+      Logger.log('OAuth失敗: codeパラメータが空');
+      return createOAuthErrorPage_(
+        'Slack連携に失敗しました',
+        '認可コードが取得できませんでした。「Slack連携（認可）」からやり直してください。'
+      );
+    }
+
     if (!verifySlackOAuthState_(state)) {
-      return HtmlService.createHtmlOutput(
-        'Slack連携に失敗しました。state検証に失敗しました。もう一度「Slack連携（認可）」からやり直してください。'
-        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
-      ).setTitle('Slack連携（失敗）');
+      Logger.log('OAuth失敗: state検証失敗 (state=' + state + ')');
+      return createOAuthErrorPage_(
+        'Slack連携に失敗しました（セッション期限切れ）',
+        '認証セッションが期限切れ（10分以内）か、ページを再読み込みしました。アプリに戻って「Slack連携（認可）」をもう一度クリックしてください。'
+      );
     }
 
     // 固定のOAuthプロキシURLを使用（認可時と同じURLを使用する必要がある）
     const redirectUri = getSlackRedirectUri_();
 
-    const tokenRes = UrlFetchApp.fetch('https://slack.com/api/oauth.v2.access', {
-      method: 'post',
-      contentType: 'application/x-www-form-urlencoded',
-      payload: {
-        client_id: cfg.clientId,
-        client_secret: cfg.clientSecret,
-        code: code,
-        redirect_uri: redirectUri
-      },
-      muteHttpExceptions: true
-    });
+    var tokenRes;
+    try {
+      tokenRes = UrlFetchApp.fetch('https://slack.com/api/oauth.v2.access', {
+        method: 'post',
+        contentType: 'application/x-www-form-urlencoded',
+        payload: {
+          client_id: cfg.clientId,
+          client_secret: cfg.clientSecret,
+          code: code,
+          redirect_uri: redirectUri
+        },
+        muteHttpExceptions: true
+      });
+    } catch (fetchErr) {
+      Logger.log('OAuthトークン交換ネットワークエラー: ' + fetchErr.message);
+      return createOAuthErrorPage_(
+        'Slackへの接続に失敗しました',
+        'ネットワークエラーが発生しました。しばらく時間をおいてから再度お試しください。'
+      );
+    }
+
+    var httpStatus = tokenRes.getResponseCode();
+    if (httpStatus >= 500) {
+      Logger.log('OAuthトークン交換: Slackサーバーエラー HTTP ' + httpStatus);
+      return createOAuthErrorPage_(
+        'Slackサーバーが一時的に利用できません',
+        'Slack側の障害の可能性があります。しばらく時間をおいてから再度お試しください。'
+      );
+    }
 
     const body = tokenRes.getContentText();
     const json = safeJsonParse_(body);
     if (!json || !json.ok) {
       const err = json && json.error ? String(json.error) : 'unknown_error';
-      return HtmlService.createHtmlOutput(
-        'Slack連携に失敗しました。エラー：' + err
-        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
-      ).setTitle('Slack連携（失敗）');
+      Logger.log('OAuthトークン交換失敗: ' + err);
+
+      // エラー別の分かりやすいメッセージ
+      var oauthErrorMessages = {
+        'code_already_used': 'この認可コードは既に使用済みです。ページを再読み込みした可能性があります。アプリに戻って「Slack連携（認可）」をもう一度クリックしてください。',
+        'invalid_code': '認可コードが無効です。「Slack連携（認可）」をやり直してください。',
+        'invalid_client_id': '管理者設定（Client ID）が不正です。管理者にお問い合わせください。',
+        'bad_client_secret': '管理者設定（Client Secret）が不正です。管理者にお問い合わせください。',
+        'bad_redirect_uri': 'リダイレクトURIが不正です。管理者にお問い合わせください。',
+        'oauth_authorization_url_mismatch': '認可URLが一致しません。管理者にお問い合わせください。'
+      };
+      var guidance = oauthErrorMessages[err] || 'Slack連携に失敗しました（' + escapeHtml_(err) + '）。「Slack連携（認可）」をやり直してください。';
+      return createOAuthErrorPage_('Slack連携に失敗しました', guidance);
     }
 
     // OAuth v2のユーザートークン
@@ -709,24 +774,28 @@ function handleSlackOAuthCallback_(e) {
                ', botToken prefix=' + (botToken ? botToken.substring(0, 5) : 'なし'));
 
     if (!userToken) {
-      return HtmlService.createHtmlOutput(
-        'Slack連携に失敗しました。ユーザートークンが取得できませんでした。'
-        + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
-      ).setTitle('Slack連携（失敗）');
+      return createOAuthErrorPage_(
+        'Slack連携に失敗しました',
+        'ユーザートークンが取得できませんでした。「Slack連携（認可）」をやり直してください。'
+      );
     }
 
     saveSlackUserToken_(userToken, slackUserId, teamId);
 
     var tokenPrefix = userToken.substring(0, 5);
     return HtmlService.createHtmlOutput(
-      'Slack連携が完了しました。（トークン種別: ' + tokenPrefix + '）'
-      + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
+      '<div style="font-family:sans-serif;text-align:center;padding:40px;">'
+      + '<h2 style="color:#27ae60;">Slack連携が完了しました</h2>'
+      + '<p style="color:#666;">トークン種別: ' + escapeHtml_(tokenPrefix) + '</p>'
+      + '<br><a href="' + APP_URL + '" style="color:#00a0e9;font-weight:bold;text-decoration:none;">アプリに戻る</a>'
+      + '</div>'
     ).setTitle('Slack連携（完了）');
   } catch (err) {
-    return HtmlService.createHtmlOutput(
-      'Slack連携に失敗しました。予期しないエラー：' + String(err && err.message ? err.message : err)
-      + '<br><br><a href="' + getServiceUrl_() + '">アプリに戻る</a>'
-    ).setTitle('Slack連携（失敗）');
+    Logger.log('OAuthコールバック予期しないエラー: ' + (err && err.message ? err.message : err));
+    return createOAuthErrorPage_(
+      'Slack連携に失敗しました',
+      '予期しないエラーが発生しました。しばらく時間をおいてから「Slack連携（認可）」をやり直してください。'
+    );
   }
 }
 
@@ -785,16 +854,46 @@ function verifySlackOAuthState_(state) {
 }
 
 function slackApiPost_(url, bearerToken, payloadObj) {
-  const res = UrlFetchApp.fetch(url, {
+  if (!bearerToken) {
+    Logger.log('slackApiPost_: bearerTokenが空');
+    return { ok: false, error: 'not_authed' };
+  }
+
+  var payloadStr;
+  try {
+    payloadStr = JSON.stringify(payloadObj);
+  } catch (jsonErr) {
+    Logger.log('slackApiPost_: payloadのJSON変換失敗: ' + jsonErr.message);
+    return { ok: false, error: 'invalid_payload' };
+  }
+
+  var res = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json; charset=utf-8',
     headers: {
       Authorization: 'Bearer ' + bearerToken
     },
-    payload: JSON.stringify(payloadObj),
+    payload: payloadStr,
     muteHttpExceptions: true
   });
-  return safeJsonParse_(res.getContentText());
+
+  var httpStatus = res.getResponseCode();
+  if (httpStatus >= 500) {
+    Logger.log('slackApiPost_: Slackサーバーエラー HTTP ' + httpStatus);
+    return { ok: false, error: 'service_unavailable' };
+  }
+  if (httpStatus === 429) {
+    Logger.log('slackApiPost_: レートリミット HTTP 429');
+    return { ok: false, error: 'ratelimited' };
+  }
+
+  var body = res.getContentText();
+  var parsed = safeJsonParse_(body);
+  if (!parsed) {
+    Logger.log('slackApiPost_: レスポンスJSONパース失敗 (HTTP ' + httpStatus + ')');
+    return { ok: false, error: 'invalid_response' };
+  }
+  return parsed;
 }
 
 function safeJsonParse_(text) {
@@ -1012,10 +1111,63 @@ function getSlackWebhookUrl_() {
  * @param {string} reportData.nextTasks - 次すること
  * @returns {string} 成功/失敗メッセージ
  */
+/**
+ * Slack APIエラーをユーザー向けメッセージに変換
+ * @param {string} errorCode - Slack APIエラーコード
+ * @returns {{message: string, shouldClearToken: boolean, shouldRetry: boolean}}
+ */
+function getSlackErrorInfo_(errorCode) {
+  var errorMap = {
+    // トークン関連（再認可必要）
+    'token_revoked':    { message: 'エラー：Slack連携が解除されています。「Slack連携（認可）」から再連携してください。', shouldClearToken: true, shouldRetry: false },
+    'token_expired':    { message: 'エラー：Slack連携の有効期限が切れました。「Slack連携（認可）」から再連携してください。', shouldClearToken: true, shouldRetry: false },
+    'invalid_auth':     { message: 'エラー：Slack認証が無効です。「Slack連携（認可）」から再連携してください。', shouldClearToken: true, shouldRetry: false },
+    'not_authed':       { message: 'エラー：Slack認証がありません。「Slack連携（認可）」から連携してください。', shouldClearToken: true, shouldRetry: false },
+    'account_inactive': { message: 'エラー：Slackアカウントが無効です。アカウント状態を確認してください。', shouldClearToken: true, shouldRetry: false },
+    // チャンネル関連（管理者対応必要）
+    'channel_not_found': { message: 'エラー：投稿先のSlackチャンネルが見つかりません。管理者にお問い合わせください。', shouldClearToken: false, shouldRetry: false },
+    'is_archived':      { message: 'エラー：投稿先のSlackチャンネルがアーカイブされています。管理者にお問い合わせください。', shouldClearToken: false, shouldRetry: false },
+    'not_in_channel':   { message: 'エラー：チャンネルに参加していません。Slackで対象チャンネルに参加してから再度お試しください。', shouldClearToken: false, shouldRetry: false },
+    // 権限関連
+    'missing_scope':    { message: 'エラー：Slack権限が不足しています。「Slack連携（認可）」から再連携してください。', shouldClearToken: true, shouldRetry: false },
+    'ekm_access_denied':{ message: 'エラー：アクセスが制限されています。管理者にお問い合わせください。', shouldClearToken: false, shouldRetry: false },
+    // メッセージ関連
+    'msg_too_long':     { message: 'エラー：日報の文字数が多すぎます。内容を短くしてから再度お試しください。', shouldClearToken: false, shouldRetry: false },
+    'no_text':          { message: 'エラー：送信内容が空です。日報を入力してから送信してください。', shouldClearToken: false, shouldRetry: false },
+    // レートリミット
+    'ratelimited':      { message: 'エラー：Slackの送信制限に達しました。少し時間をおいて（1分程度）から再度お試しください。', shouldClearToken: false, shouldRetry: true },
+    // サーバーエラー
+    'internal_error':   { message: 'エラー：Slack側でエラーが発生しました。しばらく時間をおいてから再度お試しください。', shouldClearToken: false, shouldRetry: true },
+    'service_unavailable': { message: 'エラー：Slackが一時的に利用できません。しばらく時間をおいてから再度お試しください。', shouldClearToken: false, shouldRetry: true },
+    'request_timeout':  { message: 'エラー：Slackへの接続がタイムアウトしました。再度お試しください。', shouldClearToken: false, shouldRetry: true }
+  };
+  
+  var info = errorMap[errorCode];
+  if (info) return info;
+  return { message: 'エラー：Slackへの送信に失敗しました（' + errorCode + '）。再度お試しください。', shouldClearToken: false, shouldRetry: true };
+}
+
+/**
+ * 無効なSlackトークンをクリア（再認可を促す）
+ */
+function clearSlackUserToken_() {
+  var props = PropertiesService.getUserProperties();
+  props.deleteProperty(USER_PROPERTY_SLACK_USER_TOKEN);
+  props.deleteProperty(USER_PROPERTY_SLACK_USER_ID);
+  props.deleteProperty(USER_PROPERTY_SLACK_TEAM_ID);
+  Logger.log('無効なSlackトークンをクリアしました');
+}
+
 function sendToSlackV2(reportData) {
   Logger.log('Slack送信開始（V2）');
 
   try {
+    // 入力バリデーション
+    if (!reportData) {
+      Logger.log('Slack送信失敗：reportDataがnull');
+      return 'エラー：送信データがありません。ページを再読み込みしてからやり直してください。';
+    }
+
     var userToken = getSlackUserToken_();
     var channelId = getSlackChannelId_();
 
@@ -1037,11 +1189,49 @@ function sendToSlackV2(reportData) {
     }
 
     var slackMessage = formatSlackMessageV2(reportData);
-    var apiRes = slackApiPost_('https://slack.com/api/chat.postMessage', userToken, {
-      channel: channelId,
-      text: slackMessage,
-      as_user: true
-    });
+
+    // メッセージ長さチェック（Slack上限4000040000文字）
+    if (slackMessage.length > 39000) {
+      Logger.log('Slack送信失敗：メッセージが長すぎる (' + slackMessage.length + '文字)');
+      return 'エラー：日報の文字数が多すぎます（' + slackMessage.length + '文字）。内容を短くしてから再度お試しください。';
+    }
+
+    // Slack API呼び出し（リトライ付き）
+    var apiRes = null;
+    var lastError = '';
+    var maxRetries = 2;
+    for (var attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        apiRes = slackApiPost_('https://slack.com/api/chat.postMessage', userToken, {
+          channel: channelId,
+          text: slackMessage,
+          as_user: true
+        });
+      } catch (fetchErr) {
+        Logger.log('Slack APIネットワークエラー (attempt ' + (attempt + 1) + '): ' + fetchErr.message);
+        lastError = fetchErr.message;
+        if (attempt < maxRetries) {
+          Utilities.sleep(1000 * (attempt + 1));
+          continue;
+        }
+        return 'エラー：Slackへの接続に失敗しました。ネットワークを確認して再度お試しください。';
+      }
+
+      if (apiRes && apiRes.ok) {
+        break;
+      }
+
+      // リトライ可能なエラーの場合のみリトライ
+      var errCode = (apiRes && apiRes.error) ? apiRes.error : 'unknown_error';
+      var errInfo = getSlackErrorInfo_(errCode);
+      if (errInfo.shouldRetry && attempt < maxRetries) {
+        Logger.log('Slack APIリトライ (attempt ' + (attempt + 1) + '): ' + errCode);
+        Utilities.sleep(1000 * (attempt + 1));
+        continue;
+      }
+      break;
+    }
+
     Logger.log('chat.postMessage 応答: ' + JSON.stringify(apiRes));
 
     if (apiRes && apiRes.ok) {
@@ -1053,15 +1243,18 @@ function sendToSlackV2(reportData) {
     var errorMsg = (apiRes && apiRes.error) ? apiRes.error : '不明なエラー';
     Logger.log('chat.postMessage 失敗: ' + errorMsg);
 
-    if (errorMsg === 'token_revoked' || errorMsg === 'invalid_auth' || errorMsg === 'token_expired') {
-      return 'エラー：Slack連携の有効期限が切れています。再度「Slack連携（認可）」から連携してください。';
+    var errorInfo = getSlackErrorInfo_(errorMsg);
+
+    // 無効トークンの自動クリア
+    if (errorInfo.shouldClearToken) {
+      clearSlackUserToken_();
     }
 
-    return 'エラー：Slackへの送信に失敗しました。（' + errorMsg + '）';
+    return errorInfo.message;
 
   } catch (error) {
     Logger.log('sendToSlackV2エラー：' + error.message);
-    return 'エラー：予期しないエラーが発生しました。詳細：' + error.message;
+    return 'エラー：予期しないエラーが発生しました。しばらく待ってから再度お試しください。';
   }
 }
 

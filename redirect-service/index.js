@@ -1,6 +1,9 @@
 const http = require('http');
 const url = require('url');
 
+// リクエストタイムアウト（30秒）
+const REQUEST_TIMEOUT_MS = 30000;
+
 // セキュリティヘッダー（BUG-001修正）
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -145,8 +148,63 @@ const loginPageHTML = `
 </html>
 `;
 
+/**
+ * エラーレスポンスを返す共通関数
+ * @param {http.ServerResponse} res
+ * @param {number} statusCode
+ * @param {string} message
+ */
+function sendErrorResponse(res, statusCode, message) {
+  try {
+    if (!res.headersSent) {
+      res.writeHead(statusCode, {
+        ...SECURITY_HEADERS,
+        'Content-Type': 'text/html; charset=utf-8'
+      });
+      res.end(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>エラー</title>
+        <style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f5f5f5;}
+        .card{background:white;padding:40px;border-radius:20px;box-shadow:0 4px 20px rgba(0,0,0,0.1);text-align:center;max-width:400px;}
+        h1{color:#e74c3c;font-size:20px;}p{color:#666;margin:15px 0;}
+        a{color:#00a0e9;text-decoration:none;font-weight:bold;}</style></head>
+        <body><div class="card"><h1>エラーが発生しました</h1>
+        <p>${message}</p>
+        <p><a href="/">ログイン画面に戻る</a></p></div></body></html>`);
+    }
+  } catch (e) {
+    console.error('sendErrorResponse failed:', e.message);
+  }
+}
+
 const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url, true);
+  // リクエストタイムアウト設定
+  req.setTimeout(REQUEST_TIMEOUT_MS);
+  res.setTimeout(REQUEST_TIMEOUT_MS);
+
+  // リクエストレベルのエラーハンドリング
+  req.on('error', (err) => {
+    console.error('Request error:', err.message);
+    sendErrorResponse(res, 400, 'リクエストの処理中にエラーが発生しました。');
+  });
+
+  res.on('error', (err) => {
+    console.error('Response error:', err.message);
+  });
+
+  // タイムアウトハンドリング
+  req.on('timeout', () => {
+    console.error('Request timeout for:', req.url);
+    sendErrorResponse(res, 408, 'リクエストがタイムアウトしました。再度お試しください。');
+  });
+
+  let parsedUrl;
+  try {
+    parsedUrl = url.parse(req.url, true);
+  } catch (parseError) {
+    console.error('URL parse error:', parseError.message);
+    sendErrorResponse(res, 400, '不正なURLです。');
+    return;
+  }
+
   const pathname = parsedUrl.pathname;
   
   // ルートパスの場合
@@ -198,6 +256,51 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// サーバーレベルのエラーハンドリング
+server.on('error', (err) => {
+  console.error('Server error:', err.message);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use`);
+    process.exit(1);
+  }
+});
+
+// クライアント接続エラー
+server.on('clientError', (err, socket) => {
+  console.error('Client error:', err.message);
+  if (socket.writable) {
+    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+  }
+});
+
+// プロセスレベルのエラーハンドリング（クラッシュ防止）
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err.message, err.stack);
+  // サーバーは継続稼働（Railway自動再起動があるが、可能な限り生き残る）
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
+});
+
+// グレースフルシャットダウン
+function gracefulShutdown(signal) {
+  console.log(`${signal} received. Graceful shutdown...`);
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+  // 10秒以内にclose完了しなければ強制終了
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 server.listen(PORT, () => {
   console.log(`Redirect server running on port ${PORT}`);
 });
