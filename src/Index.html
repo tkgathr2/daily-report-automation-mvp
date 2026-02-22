@@ -3931,6 +3931,89 @@
       loadToolSettings();
       loadEventsForSelectedDate();
     });
+
+    // ============================================
+    // エラー観測基盤（クライアントサイド）
+    // ============================================
+    (function() {
+      var errorSendQueue = [];
+      var isSending = false;
+
+      function generateClientErrorId() {
+        var chars = '0123456789abcdef';
+        var id = '';
+        for (var i = 0; i < 16; i++) {
+          id += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return id;
+      }
+
+      function truncateClientStack(stack) {
+        if (!stack) return '';
+        var lines = String(stack).split('\n');
+        return lines.slice(0, 10).join('\n');
+      }
+
+      function sendClientError(errorData) {
+        errorSendQueue.push(errorData);
+        if (isSending) return;
+        isSending = true;
+        processQueue();
+      }
+
+      function processQueue() {
+        if (errorSendQueue.length === 0) {
+          isSending = false;
+          return;
+        }
+        var data = errorSendQueue.shift();
+        try {
+          google.script.run
+            .withSuccessHandler(function() { processQueue(); })
+            .withFailureHandler(function() { processQueue(); })
+            .logClientError(data);
+        } catch (e) {
+          console.error('エラー送信失敗:', e);
+          processQueue();
+        }
+      }
+
+      // window.onerror: 同期エラーキャッチ
+      window.onerror = function(message, source, lineno, colno, error) {
+        try {
+          sendClientError({
+            timestamp: new Date().toISOString(),
+            requestId: generateClientErrorId(),
+            errorId: generateClientErrorId(),
+            action: 'window.onerror',
+            url: String(source || location.href).substring(0, 200),
+            message: String(message || 'unknown error').substring(0, 500),
+            stack: truncateClientStack(error && error.stack ? error.stack : ''),
+            context: { lineno: lineno, colno: colno }
+          });
+        } catch (ignore) {}
+        return false; // デフォルトのエラーハンドリングを維持
+      };
+
+      // unhandledrejection: Promise未処理エラーキャッチ
+      window.addEventListener('unhandledrejection', function(event) {
+        try {
+          var reason = event.reason || {};
+          var message = reason.message || String(reason);
+          var stack = reason.stack || '';
+          sendClientError({
+            timestamp: new Date().toISOString(),
+            requestId: generateClientErrorId(),
+            errorId: generateClientErrorId(),
+            action: 'unhandledrejection',
+            url: String(location.href).substring(0, 200),
+            message: String(message).substring(0, 500),
+            stack: truncateClientStack(stack),
+            context: {}
+          });
+        } catch (ignore) {}
+      });
+    })();
   </script>
 </body>
 </html>

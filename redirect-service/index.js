@@ -1,5 +1,138 @@
 const http = require('http');
+const https = require('https');
 const url = require('url');
+const crypto = require('crypto');
+
+// ============================================
+// エラー観測基盤（Error Observability）
+// ============================================
+const KNOWHOW_MEMORIZE_URL = 'https://knowhow.up.railway.app/api/devin/memorize';
+const ERROR_PROJECT_KEY = 'daily-report-automation-mvp';
+const ERROR_TOOL_NAME = 'daily-report';
+const ERROR_NOTIFY_ENABLED = process.env.ERROR_NOTIFY_ENABLED === 'true';
+
+/**
+ * ランダムID生成
+ * @returns {string} 16桁のランダムHex文字列
+ */
+function generateErrorId() {
+  return crypto.randomBytes(8).toString('hex');
+}
+
+/**
+ * スタックトレースを先頭10行に短縮
+ * @param {string} stack
+ * @returns {string}
+ */
+function truncateStack(stack) {
+  if (!stack) return '';
+  return String(stack).split('\n').slice(0, 10).join('\n');
+}
+
+/**
+ * 秘匿情報をマスクする
+ * @param {string} text
+ * @returns {string}
+ */
+function maskSecrets(text) {
+  if (!text) return '';
+  let s = String(text);
+  s = s.replace(/xox[pboa]-[0-9A-Za-z\-]+/g, 'xox*-****');
+  s = s.replace(/code=[^&\s]+/g, 'code=****');
+  s = s.replace(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g, '****@****.***');
+  s = s.replace(/client_secret=[^&\s]+/g, 'client_secret=****');
+  s = s.replace(/Bearer\s+[^\s]+/g, 'Bearer ****');
+  return s;
+}
+
+/**
+ * ErrorEventオブジェクトを生成する
+ * @param {Error|string} err
+ * @param {Object} context - {component, action, url, extra}
+ * @returns {Object}
+ */
+function buildErrorEvent(err, context) {
+  const ctx = context || {};
+  const message = err && err.message ? maskSecrets(err.message) : maskSecrets(String(err || 'unknown error'));
+  const stack = err && err.stack ? truncateStack(maskSecrets(err.stack)) : '';
+  return {
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'production',
+    app: ERROR_PROJECT_KEY,
+    component: ctx.component || 'railway-redirect',
+    requestId: generateErrorId(),
+    errorId: generateErrorId(),
+    userEmail: '',
+    action: ctx.action || 'unknown',
+    url: maskSecrets(ctx.url || ''),
+    message: message,
+    stack: stack,
+    context: ctx.extra || {}
+  };
+}
+
+/**
+ * ノウハウキングにエラーを記録する（非同期・fire-and-forget）
+ * @param {Object} errorEvent
+ */
+function sendKnowhowMemorize(errorEvent) {
+  try {
+    const payload = JSON.stringify({
+      project_key: ERROR_PROJECT_KEY,
+      raw_log: JSON.stringify(errorEvent),
+      tool: ERROR_TOOL_NAME,
+      status: 'error',
+      environment: errorEvent.env || 'production',
+      tags: ['error', 'daily-report', errorEvent.component || 'unknown']
+    });
+    const parsedUrl = new URL(KNOWHOW_MEMORIZE_URL);
+    const options = {
+      hostname: parsedUrl.hostname,
+      port: 443,
+      path: parsedUrl.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload)
+      },
+      timeout: 5000
+    };
+    const req = https.request(options, (res) => {
+      res.resume(); // drain response
+      console.log('エラー記録完了: errorId=' + errorEvent.errorId + ' status=' + res.statusCode);
+    });
+    req.on('error', (e) => {
+      console.error('ノウハウキング記録失敗:', e.message);
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      console.error('ノウハウキング記録タイムアウト');
+    });
+    req.write(payload);
+    req.end();
+  } catch (e) {
+    console.error('sendKnowhowMemorize例外:', e.message);
+  }
+}
+
+/**
+ * エラーを観測基盤に記録する（統合関数）
+ * @param {Error|string} err
+ * @param {Object} context - {component, action, url, extra}
+ */
+function recordError(err, context) {
+  try {
+    const errorEvent = buildErrorEvent(err, context);
+    sendKnowhowMemorize(errorEvent);
+    // ERROR_NOTIFY_ENABLED=true の場合のみSlack通知（将来実装）
+    // 現在はRailwayからのSlack通知は未実装（GAS側で実装済み）
+    if (ERROR_NOTIFY_ENABLED) {
+      console.log('Slack通知有効（Railway側は将来実装）: errorId=' + errorEvent.errorId);
+    }
+  } catch (e) {
+    console.error('recordError自体が失敗:', e.message);
+  }
+}
 
 // リクエストタイムアウト（30秒）
 const REQUEST_TIMEOUT_MS = 30000;
@@ -277,11 +410,13 @@ server.on('clientError', (err, socket) => {
 // プロセスレベルのエラーハンドリング（クラッシュ防止）
 process.on('uncaughtException', (err) => {
   console.error('Uncaught exception:', err.message, err.stack);
+  recordError(err, { component: 'railway-redirect', action: 'uncaughtException' });
   // サーバーは継続稼働（Railway自動再起動があるが、可能な限り生き残る）
 });
 
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled rejection:', reason);
+  recordError(reason, { component: 'railway-redirect', action: 'unhandledRejection' });
 });
 
 // グレースフルシャットダウン
