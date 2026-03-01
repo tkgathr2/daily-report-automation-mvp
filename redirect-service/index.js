@@ -137,6 +137,66 @@ function recordError(err, context) {
 // リクエストタイムアウト（30秒）
 const REQUEST_TIMEOUT_MS = 30000;
 
+// セッション維持期間（90日 = 約3ヶ月）
+const SESSION_MAX_AGE_DAYS = 90;
+const SESSION_COOKIE_NAME = 'nippou_session';
+
+/**
+ * リクエストからCookieを解析する
+ * @param {http.IncomingMessage} req
+ * @returns {Object} cookie名→値のマップ
+ */
+function parseCookies(req) {
+  const cookies = {};
+  const header = req.headers.cookie || '';
+  header.split(';').forEach(pair => {
+    const [name, ...rest] = pair.trim().split('=');
+    if (name) {
+      cookies[name.trim()] = decodeURIComponent(rest.join('=').trim());
+    }
+  });
+  return cookies;
+}
+
+/**
+ * セッションCookieのSet-Headerを生成する
+ * @param {number} maxAgeDays - 有効期間（日数）。0でCookie削除
+ * @returns {string} Set-Cookie ヘッダー値
+ */
+function buildSessionCookie(maxAgeDays) {
+  const maxAge = maxAgeDays * 24 * 60 * 60;
+  const parts = [
+    SESSION_COOKIE_NAME + '=1',
+    'Path=/',
+    'Max-Age=' + maxAge,
+    'HttpOnly',
+    'SameSite=Lax'
+  ];
+  // 本番（HTTPS）環境ではSecure属性を付与
+  if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
+    parts.push('Secure');
+  }
+  return parts.join('; ');
+}
+
+/**
+ * セッションCookieを削除するSet-Headerを生成する
+ * @returns {string} Set-Cookie ヘッダー値（即時期限切れ）
+ */
+function buildClearSessionCookie() {
+  const parts = [
+    SESSION_COOKIE_NAME + '=',
+    'Path=/',
+    'Max-Age=0',
+    'HttpOnly',
+    'SameSite=Lax'
+  ];
+  if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
+    parts.push('Secure');
+  }
+  return parts.join('; ');
+}
+
 // セキュリティヘッダー（BUG-001修正）
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -267,7 +327,7 @@ const loginPageHTML = `
     </div>
     <h1>簡単日報くん</h1>
     <p class="description">ログインしてください</p>
-    <a href="${TARGET_URL}?from=nippou" class="login-btn">
+    <a href="/login" class="login-btn">
       <svg class="google-icon" viewBox="0 0 24 24">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -347,6 +407,8 @@ const server = http.createServer((req, res) => {
 
   const pathname = parsedUrl.pathname;
   
+  const cookies = parseCookies(req);
+
   // ルートパスの場合
   if (pathname === '/' || pathname === '') {
     const queryString = parsedUrl.search || '';
@@ -360,14 +422,44 @@ const server = http.createServer((req, res) => {
       console.log('Root with query params, redirecting to:', redirectUrl);
       res.writeHead(302, { ...SECURITY_HEADERS, 'Location': redirectUrl });
       res.end();
+    } else if (cookies[SESSION_COOKIE_NAME]) {
+      // セッションCookieがある場合: ログインページをスキップしてGASへ直接リダイレクト
+      console.log('Session cookie found, auto-redirecting to GAS');
+      res.writeHead(302, {
+        ...SECURITY_HEADERS,
+        'Set-Cookie': buildSessionCookie(SESSION_MAX_AGE_DAYS), // Cookie更新（期限延長）
+        'Location': TARGET_URL + '?from=nippou'
+      });
+      res.end();
     } else {
+      // セッションCookieなし: ログインページを表示
       res.writeHead(200, {
         ...SECURITY_HEADERS,
         'Content-Type': 'text/html; charset=utf-8'
       });
       res.end(loginPageHTML);
     }
-  } 
+  }
+  // /login パス: ログインボタンクリック時 → Cookie設定してGASへリダイレクト
+  else if (pathname === '/login') {
+    console.log('Login clicked, setting session cookie and redirecting to GAS');
+    res.writeHead(302, {
+      ...SECURITY_HEADERS,
+      'Set-Cookie': buildSessionCookie(SESSION_MAX_AGE_DAYS),
+      'Location': TARGET_URL + '?from=nippou'
+    });
+    res.end();
+  }
+  // /logout パス: Cookie削除してログインページへ
+  else if (pathname === '/logout') {
+    console.log('Logout requested, clearing session cookie');
+    res.writeHead(302, {
+      ...SECURITY_HEADERS,
+      'Set-Cookie': buildClearSessionCookie(),
+      'Location': '/'
+    });
+    res.end();
+  }
   // OAuth コールバック: SlackからのOAuthコールバックをGASにリダイレクト
   else if (pathname === OAUTH_CALLBACK_PATH) {
     // BUG-LP-004/005修正: codeパラメータがない場合はエラーページを表示
