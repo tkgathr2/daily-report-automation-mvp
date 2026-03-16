@@ -2,21 +2,20 @@
  * backlog_report.gs
  *
  * 簡単日報君 Backlog連携モジュール
- * 本日 actualHours が更新された課題を抽出し、日報用テキストを生成する。
+ * 本日完了した課題を抽出し、日報用テキストを生成する。
  *
  * 公開関数: getBacklogReport()
- * 返り値: string（日報に挿入するBacklog作業実績テキスト）
+ * 返り値: string（日報に挿入するBacklog完了課題テキスト）
  *
  * 必要な ScriptProperties:
  * - BACKLOG_SPACE_BASE_URL
  * - BACKLOG_API_KEY
- * - BACKLOG_ACTIVITY_ACTUAL_HOURS_FIELD（フェーズ0検証後に確定）
- * - BACKLOG_ACTIVITY_TYPES（フェーズ0検証後に確定）
- * - BACKLOG_ACTIVITY_FETCH_COUNT
- * - BACKLOG_DETAIL_MODE
- * - BACKLOG_ENABLE_CURRENT_ACTUAL_HOURS
  *
- * @version 1.0
+ * オプション ScriptProperties:
+ * - BACKLOG_ACTIVITY_TYPES（デフォルト: '1,2,3,14'）
+ * - BACKLOG_ACTIVITY_FETCH_COUNT（デフォルト: '100'）
+ *
+ * @version 2.0
  * @author Devin AI
  */
 
@@ -26,6 +25,7 @@
 var BACKLOG_MAX_PAGES = 5;
 var BACKLOG_MAX_ISSUES = 50;
 var BACKLOG_TIMEZONE = 'Asia/Tokyo';
+var BACKLOG_STATUS_COMPLETED = 4;
 
 // ============================================
 // 設定読み込み
@@ -48,14 +48,11 @@ function getBacklogConfig_() {
   return {
     baseUrl: baseUrl,
     apiKey: apiKey,
-    actualHoursField: props.getProperty('BACKLOG_ACTIVITY_ACTUAL_HOURS_FIELD') || 'actualHours',
-    activityTypes: (props.getProperty('BACKLOG_ACTIVITY_TYPES') || '2,14')
+    activityTypes: (props.getProperty('BACKLOG_ACTIVITY_TYPES') || '1,2,3,14')
       .split(',')
       .map(function(s) { return s.trim(); })
       .filter(Boolean),
     fetchCount: Number(props.getProperty('BACKLOG_ACTIVITY_FETCH_COUNT') || '100'),
-    detailMode: props.getProperty('BACKLOG_DETAIL_MODE') || 'simple',
-    enableCurrentActualHours: (props.getProperty('BACKLOG_ENABLE_CURRENT_ACTUAL_HOURS') || 'false') === 'true',
     timezone: BACKLOG_TIMEZONE
   };
 }
@@ -109,26 +106,6 @@ function backlogIsTodayJst_(isoString, timezone) {
 }
 
 // ============================================
-// 時間表示変換
-// ============================================
-
-/**
- * 時間数値を日本語表示に変換
- * @param {number} value - 時間（小数）
- * @returns {string} 日本語表示（例: "1時間30分"）、0の場合は空文字
- */
-function backlogFormatHours_(value) {
-  var totalMinutes = Math.round(Number(value) * 60);
-  var hours = Math.floor(totalMinutes / 60);
-  var minutes = totalMinutes % 60;
-
-  if (hours === 0 && minutes === 0) return '';
-  if (hours > 0 && minutes > 0) return hours + '時間' + minutes + '分';
-  if (hours > 0 && minutes === 0) return hours + '時間';
-  return minutes + '分';
-}
-
-// ============================================
 // ユーザー情報取得
 // ============================================
 
@@ -167,7 +144,6 @@ function getBacklogTodayActivities_(config, userId) {
       + '&order=desc'
       + '&' + query;
 
-    // 2ページ目以降はmaxIdで前ページ末尾より古いアクティビティを取得
     if (maxId !== null) {
       url += '&maxId=' + maxId;
     }
@@ -176,20 +152,17 @@ function getBacklogTodayActivities_(config, userId) {
 
     if (activities.length === 0) break;
 
-    // 本日分のみフィルタして追加
     for (var i = 0; i < activities.length; i++) {
       if (backlogIsTodayJst_(activities[i].created, config.timezone)) {
         allActivities.push(activities[i]);
       }
     }
 
-    // 末尾activityがJST本日かチェック
     var lastActivity = activities[activities.length - 1];
     if (!backlogIsTodayJst_(lastActivity.created, config.timezone)) {
       break;
     }
 
-    // 次ページ用にmaxIdを更新（末尾のid - 1 でそれより古いものを取得）
     maxId = lastActivity.id - 1;
 
     if (page === BACKLOG_MAX_PAGES - 1) {
@@ -201,17 +174,17 @@ function getBacklogTodayActivities_(config, userId) {
 }
 
 // ============================================
-// actualHours change 抽出
+// 完了課題の抽出
 // ============================================
 
 /**
- * アクティビティからactualHours変更を抽出
- * @param {Array} activities - アクティビティ一覧
- * @param {string} actualHoursField - actualHoursのfield名
- * @returns {Array} actualHours変更一覧
+ * アクティビティからステータスが完了（4）に変更された課題を抽出する
+ * 同一課題の重複を排除し、課題ごとに1エントリにまとめる
+ * @param {Array} activities - 本日のアクティビティ一覧
+ * @returns {Object} issueKey -> {issueKeyId, projectKey, summary, created} のマップ
  */
-function extractActualHoursChanges_(activities, actualHoursField) {
-  var changes = [];
+function extractCompletedIssues_(activities) {
+  var issueMap = {};
 
   for (var i = 0; i < activities.length; i++) {
     var a = activities[i];
@@ -219,128 +192,55 @@ function extractActualHoursChanges_(activities, actualHoursField) {
 
     for (var j = 0; j < a.content.changes.length; j++) {
       var change = a.content.changes[j];
-      if (change.field === actualHoursField) {
-        changes.push({
-          activityId: a.id,
-          activityType: a.type,
-          created: a.created,
-          issueId: a.content.id,
-          issueKeyId: a.content.key_id,
-          projectId: a.project ? a.project.id : null,
-          projectKey: a.project ? a.project.projectKey : null,
-          oldValue: change.old_value,
-          newValue: change.new_value
-        });
+      if (change.field === 'status' && String(change.new_value) === String(BACKLOG_STATUS_COMPLETED)) {
+        var keyId = a.content.key_id;
+        var projectKey = a.project ? a.project.projectKey : '';
+        var key = projectKey && keyId ? projectKey + '-' + keyId : String(keyId || a.content.id);
+
+        if (!issueMap[key]) {
+          issueMap[key] = {
+            issueKeyId: keyId,
+            issueId: a.content.id,
+            projectKey: projectKey,
+            issueKey: key,
+            summary: a.content.summary || '',
+            created: a.created
+          };
+        }
       }
     }
-  }
-
-  return changes;
-}
-
-// ============================================
-// 差分集計
-// ============================================
-
-/**
- * 差分値を正規化する
- * @param {*} value - old_value または new_value
- * @returns {number} 正規化された数値
- */
-function normalizeHoursValue_(value) {
-  if (value === null || value === undefined || value === '') {
-    return 0;
-  }
-  var num = Number(value);
-  return isNaN(num) ? 0 : num;
-}
-
-/**
- * actualHours変更を課題ごとに集計する
- * @param {Array} changes - extractActualHoursChanges_ の返り値
- * @returns {Object} issueKeyId -> {issueId, projectKey, totalDiff, changes} のマップ
- */
-function aggregateByIssue_(changes) {
-  // created昇順（古い順）にソート
-  changes.sort(function(a, b) {
-    return new Date(a.created).getTime() - new Date(b.created).getTime();
-  });
-
-  var issueMap = {};
-
-  for (var i = 0; i < changes.length; i++) {
-    var c = changes[i];
-    var key = c.issueKeyId || c.issueId;
-
-    var oldVal = normalizeHoursValue_(c.oldValue);
-    var newVal = normalizeHoursValue_(c.newValue);
-
-    // new_value が null の場合は警告ログ
-    if (c.newValue === null || c.newValue === undefined || c.newValue === '') {
-      Logger.log('ACTUAL_HOURS_RESET_DETECTED: issueKeyId=' + key + ' old=' + c.oldValue + ' new=' + c.newValue);
-    }
-
-    var diff = newVal - oldVal;
-
-    if (!issueMap[key]) {
-      issueMap[key] = {
-        issueId: c.issueId,
-        issueKeyId: c.issueKeyId,
-        projectKey: c.projectKey,
-        totalDiff: 0,
-        changes: []
-      };
-    }
-
-    issueMap[key].totalDiff += diff;
-    issueMap[key].changes.push({
-      oldValue: oldVal,
-      newValue: newVal,
-      diff: diff,
-      created: c.created
-    });
   }
 
   return issueMap;
 }
 
 // ============================================
-// issue詳細取得
+// issue詳細取得（summaryが空の場合の補完）
 // ============================================
 
 /**
- * 課題詳細を取得してissueMapに補完する
+ * summaryが空の課題の詳細を取得して補完する
  * @param {Object} config - Backlog設定
- * @param {Object} issueMap - aggregateByIssue_ の返り値
+ * @param {Object} issueMap - extractCompletedIssues_ の返り値
  * @returns {Object} 補完されたissueMap
  */
-function fetchIssueDetails_(config, issueMap) {
+function fetchIssueSummaries_(config, issueMap) {
   var keys = Object.keys(issueMap);
   var fetchedCount = 0;
 
   for (var i = 0; i < keys.length; i++) {
+    var entry = issueMap[keys[i]];
+
+    if (entry.summary) continue;
+
     if (fetchedCount >= BACKLOG_MAX_ISSUES) {
       Logger.log('BACKLOG_ISSUE_DETAIL_LIMIT_REACHED: 50課題超のため打ち切り');
       break;
     }
 
-    var key = keys[i];
-    var entry = issueMap[key];
-
-    // issueKeyを組み立て（projectKey-issueKeyId）
-    var issueKey = entry.projectKey && entry.issueKeyId
-      ? entry.projectKey + '-' + entry.issueKeyId
-      : null;
-
-    if (!issueKey && entry.issueId) {
-      // issueKeyが組み立てられない場合はissueIdで取得
-      issueKey = String(entry.issueId);
-    }
-
+    var issueKey = entry.issueKey;
     if (!issueKey) {
       entry.summary = '(課題名不明)';
-      entry.issueKey = key;
-      entry.currentActualHours = null;
       continue;
     }
 
@@ -351,13 +251,10 @@ function fetchIssueDetails_(config, issueMap) {
       );
       entry.summary = issue.summary || '(課題名不明)';
       entry.issueKey = issue.issueKey || issueKey;
-      entry.currentActualHours = issue.actualHours;
       fetchedCount++;
     } catch (e) {
       Logger.log('BACKLOG_ISSUE_FETCH_FAILED: issueKey=' + issueKey + ' error=' + e.message);
       entry.summary = '(課題名不明)';
-      entry.issueKey = issueKey;
-      entry.currentActualHours = null;
       fetchedCount++;
     }
   }
@@ -372,48 +269,27 @@ function fetchIssueDetails_(config, issueMap) {
 /**
  * issueMapから日報用テキストを生成する
  * @param {Object} config - Backlog設定
- * @param {Object} issueMap - fetchIssueDetails_ 後のissueMap
+ * @param {Object} issueMap - 完了課題のマップ
  * @returns {string} 日報テキスト
  */
 function formatBacklogReport_(config, issueMap) {
   var keys = Object.keys(issueMap);
   var lines = [];
-  var totalHours = 0;
 
   for (var i = 0; i < keys.length; i++) {
     var entry = issueMap[keys[i]];
-
-    // 最終 todayAddedHours が 0以下 または 表示変換後に 0分 なら除外
-    if (entry.totalDiff <= 0) continue;
-    var formattedDiff = backlogFormatHours_(entry.totalDiff);
-    if (!formattedDiff) continue;
-
-    totalHours += entry.totalDiff;
-
     var issueUrl = config.baseUrl + '/view/' + entry.issueKey;
-    var line = '- ' + entry.issueKey + ' ' + entry.summary + ' (' + formattedDiff + ')';
-
-    // 現在の累計実績時間（有効時のみ）
-    if (config.enableCurrentActualHours && entry.currentActualHours !== null && entry.currentActualHours !== undefined) {
-      var currentFormatted = backlogFormatHours_(entry.currentActualHours);
-      if (currentFormatted) {
-        line += ' [累計: ' + currentFormatted + ']';
-      }
-    }
-
+    var line = '- ' + entry.issueKey + ' ' + entry.summary;
     line += '\n  ' + issueUrl;
     lines.push(line);
   }
 
   if (lines.length === 0) {
-    return 'Backlog作業実績\n本日の実績時間更新はありません';
+    return 'Backlog完了課題\n本日完了した課題はありません';
   }
 
-  var totalFormatted = backlogFormatHours_(totalHours);
-  var header = 'Backlog作業実績';
-  var footer = '合計: ' + (totalFormatted || '0分');
-
-  return header + '\n' + lines.join('\n') + '\n' + footer;
+  var header = 'Backlog完了課題（' + lines.length + '件）';
+  return header + '\n' + lines.join('\n');
 }
 
 // ============================================
@@ -421,15 +297,11 @@ function formatBacklogReport_(config, issueMap) {
 // ============================================
 
 /**
- * Backlog作業実績レポートを生成する
+ * Backlog完了課題レポートを生成する
  *
- * 既存の日報生成メイン関数から呼び出す。
- * 接続候補:
- * - getAllToolHistoryV3() 内で他ツール（Slack/Gmail/Notion）と同様に呼び出す
- * - sendToSlackV2() の todayTasks にBacklog実績を追加する
- * - Index.html のフロントエンドから google.script.run.getBacklogReport() で呼び出す
+ * getAllToolHistoryV3() 内で他ツール（Slack/Gmail/Notion）と同様に呼び出す。
  *
- * @returns {string} Backlog作業実績テキスト
+ * @returns {string} Backlog完了課題テキスト
  */
 function getBacklogReport() {
   try {
@@ -439,27 +311,21 @@ function getBacklogReport() {
 
     Logger.log('Backlog: 本日のアクティビティ取得完了 count=' + activities.length);
 
-    // actualHours change の抽出
-    var changes = extractActualHoursChanges_(activities, config.actualHoursField);
-    Logger.log('Backlog: actualHours変更件数=' + changes.length);
+    var issueMap = extractCompletedIssues_(activities);
+    var completedCount = Object.keys(issueMap).length;
+    Logger.log('Backlog: 完了課題数=' + completedCount);
 
-    if (changes.length === 0) {
-      return 'Backlog作業実績\n本日の実績時間更新はありません';
+    if (completedCount === 0) {
+      return 'Backlog完了課題\n本日完了した課題はありません';
     }
 
-    // 差分集計（created昇順ソート → 課題ごと集計 → マイナス修正反映）
-    var issueMap = aggregateByIssue_(changes);
+    issueMap = fetchIssueSummaries_(config, issueMap);
 
-    // issue詳細取得（issueKey / summary / currentActualHours 補完）
-    issueMap = fetchIssueDetails_(config, issueMap);
-
-    // 表示整形
     return formatBacklogReport_(config, issueMap);
 
   } catch (err) {
     Logger.log('getBacklogReport error: ' + String(err));
 
-    // エラー観測基盤に記録（既存のrecordError_が利用可能な場合）
     try {
       if (typeof recordError_ === 'function') {
         recordError_(err, { component: 'gas-server', action: 'getBacklogReport' });
@@ -468,8 +334,8 @@ function getBacklogReport() {
 
     var msg = String(err);
     if (msg.indexOf('429') >= 0 || msg.indexOf('RATE_LIMIT') >= 0) {
-      return 'Backlog作業実績\nBacklog取得エラー（レート制限）';
+      return 'Backlog完了課題\nBacklog取得エラー（レート制限）';
     }
-    return 'Backlog作業実績\nBacklog取得エラー';
+    return 'Backlog完了課題\nBacklog取得エラー';
   }
 }

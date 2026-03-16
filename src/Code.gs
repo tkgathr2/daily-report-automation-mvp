@@ -1840,7 +1840,7 @@ function getAllToolHistoryV3(dateString) {
     }
   }
 
-  // Backlog作業実績（常に今日）
+  // Backlog完了課題（常に今日）
   result.backlog = { text: '', error: '' };
   if (settings.backlog) {
     try {

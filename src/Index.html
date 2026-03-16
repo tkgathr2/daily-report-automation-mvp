@@ -1863,7 +1863,7 @@
         <div class="history-empty">「履歴を取得」をクリックすると<br>Notion履歴が表示されます</div>
       </div>
       <div id="backlogPanel" class="history-panel">
-        <div class="history-empty">「履歴を取得」をクリックすると<br>Backlog作業実績が表示されます</div>
+        <div class="history-empty">「履歴を取得」をクリックすると<br>Backlog完了課題が表示されます</div>
       </div>
     </div>
     <div class="history-sidebar-footer">
@@ -3051,7 +3051,7 @@
         }
       }
 
-      // Backlog作業実績を追加（自動挿入）
+      // Backlog完了課題を追加（自動挿入）
       if (result.backlog && result.backlog.text) {
         var backlogTextLines = result.backlog.text.split('\n');
         for (var bl = 0; bl < backlogTextLines.length; bl++) {
@@ -3214,7 +3214,7 @@
       historyItemsCache.gmail = (result.gmail && result.gmail.items) ? result.gmail.items : [];
       historyItemsCache.notion = (result.notion && result.notion.items) ? result.notion.items : [];
       
-      // Backlog作業実績テキストを行単位のitemsに変換
+      // Backlog完了課題テキストを行単位のitemsに変換
       historyItemsCache.backlog = [];
       if (result.backlog && result.backlog.text) {
         var backlogLines = result.backlog.text.split('\n');
