@@ -1616,6 +1616,10 @@
                 <input type="checkbox" id="settingNotion" checked style="width: 16px; height: 16px;">
                 <span style="color: #000; font-weight: bold;">Notion</span>
               </label>
+              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
+                <input type="checkbox" id="settingBacklog" style="width: 16px; height: 16px;">
+                <span style="color: #42CE9F; font-weight: bold;">Backlog</span>
+              </label>
               <button class="btn btn-secondary" onclick="saveToolSettingsUI()" style="padding: 5px 12px; font-size: 11px;">設定を保存</button>
             </div>
           </div>
@@ -1842,6 +1846,11 @@
         <span>Notion</span>
         <span id="notionCount" class="history-tab-count">0</span>
       </button>
+      <button class="history-tab" data-tab="backlog" onclick="switchHistoryTab('backlog')">
+        <span class="history-tab-icon">📊</span>
+        <span>Backlog</span>
+        <span id="backlogCount" class="history-tab-count">0</span>
+      </button>
     </div>
     <div class="history-sidebar-content">
       <div id="slackPanel" class="history-panel active">
@@ -1852,6 +1861,9 @@
       </div>
       <div id="notionPanel" class="history-panel">
         <div class="history-empty">「履歴を取得」をクリックすると<br>Notion履歴が表示されます</div>
+      </div>
+      <div id="backlogPanel" class="history-panel">
+        <div class="history-empty">「履歴を取得」をクリックすると<br>Backlog作業実績が表示されます</div>
       </div>
     </div>
     <div class="history-sidebar-footer">
@@ -2783,6 +2795,7 @@
           document.getElementById('settingGmail').checked = settings.gmail !== false;
           document.getElementById('settingGmailReceived').checked = !!settings.gmailReceived;
           document.getElementById('settingNotion').checked = settings.notion !== false;
+          document.getElementById('settingBacklog').checked = !!settings.backlog;
           // Notion連携状態を確認
           checkNotionLinkStatus();
         })
@@ -2797,7 +2810,8 @@
         slack: document.getElementById('settingSlack').checked,
         gmail: document.getElementById('settingGmail').checked,
         gmailReceived: document.getElementById('settingGmailReceived').checked,
-        notion: document.getElementById('settingNotion').checked
+        notion: document.getElementById('settingNotion').checked,
+        backlog: document.getElementById('settingBacklog').checked
       };
       
       google.script.run
@@ -3036,8 +3050,19 @@
           lines.push('<span style="color: #000; font-weight: bold;">[Notion]</span> ' + escapeHtml(nItem.content));
         }
       }
+
+      // Backlog作業実績を追加（自動挿入）
+      if (result.backlog && result.backlog.text) {
+        var backlogTextLines = result.backlog.text.split('\n');
+        for (var bl = 0; bl < backlogTextLines.length; bl++) {
+          var btLine = backlogTextLines[bl].trim();
+          if (btLine) {
+            lines.push('<span style="color: #42CE9F; font-weight: bold;">[Backlog]</span> ' + escapeHtml(btLine));
+          }
+        }
+      }
       
-      // WYSIWYGエディタにカレンダー予定とSlack/Notion履歴を設定（Gmailはサイドバーから選択）
+      // WYSIWYGエディタにカレンダー予定とSlack/Notion/Backlog履歴を設定（Gmailはサイドバーから選択）
       document.getElementById('todayTasks').innerHTML = lines.join('<br>');
       
       // Gmail履歴をサイドバーに表示（ピッカー方式）
@@ -3145,7 +3170,8 @@
     var historyItemsCache = {
       slack: [],
       gmail: [],
-      notion: []
+      notion: [],
+      backlog: []
     };
     var currentHistoryTab = 'slack';
 
@@ -3188,13 +3214,27 @@
       historyItemsCache.gmail = (result.gmail && result.gmail.items) ? result.gmail.items : [];
       historyItemsCache.notion = (result.notion && result.notion.items) ? result.notion.items : [];
       
+      // Backlog作業実績テキストを行単位のitemsに変換
+      historyItemsCache.backlog = [];
+      if (result.backlog && result.backlog.text) {
+        var backlogLines = result.backlog.text.split('\n');
+        for (var bi = 0; bi < backlogLines.length; bi++) {
+          var bLine = backlogLines[bi].trim();
+          if (bLine) {
+            historyItemsCache.backlog.push({ time: '', content: bLine });
+          }
+        }
+      }
+      
       document.getElementById('slackCount').textContent = historyItemsCache.slack.length;
       document.getElementById('gmailCount').textContent = historyItemsCache.gmail.length;
       document.getElementById('notionCount').textContent = historyItemsCache.notion.length;
+      document.getElementById('backlogCount').textContent = historyItemsCache.backlog.length;
       
       renderHistoryPanel('slack', historyItemsCache.slack, '#4A154B');
       renderHistoryPanel('gmail', historyItemsCache.gmail, '#EA4335');
       renderHistoryPanel('notion', historyItemsCache.notion, '#000000');
+      renderHistoryPanel('backlog', historyItemsCache.backlog, '#42CE9F');
       
       var sidebar = document.getElementById('historySidebar');
       var isMobile = window.innerWidth <= 900;
@@ -3232,7 +3272,8 @@
       var labels = {
         slack: 'Slack',
         gmail: 'Gmail',
-        notion: 'Notion'
+        notion: 'Notion',
+        backlog: 'Backlog'
       };
       return labels[toolType] || toolType;
     }
@@ -3241,7 +3282,8 @@
       var colors = {
         slack: '#4A154B',
         gmail: '#EA4335',
-        notion: '#000000'
+        notion: '#000000',
+        backlog: '#42CE9F'
       };
       return colors[toolType] || '#666';
     }

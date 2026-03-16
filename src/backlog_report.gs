@@ -155,7 +155,7 @@ function getBacklogMyself_(config) {
  */
 function getBacklogTodayActivities_(config, userId) {
   var allActivities = [];
-  var offset = 0;
+  var maxId = null;
   var query = config.activityTypes.map(function(v) {
     return 'activityTypeId[]=' + encodeURIComponent(v);
   }).join('&');
@@ -165,17 +165,11 @@ function getBacklogTodayActivities_(config, userId) {
       + '?apiKey=' + encodeURIComponent(config.apiKey)
       + '&count=' + config.fetchCount
       + '&order=desc'
-      + '&minId=&maxId='
       + '&' + query;
 
-    if (offset > 0) {
-      // Backlog activities APIはoffsetではなくmaxIdでページングする場合があるが、
-      // 仕様書ではoffsetベースが指定されているのでoffsetを使用
-      url = config.baseUrl + '/api/v2/users/' + userId + '/activities'
-        + '?apiKey=' + encodeURIComponent(config.apiKey)
-        + '&count=' + config.fetchCount
-        + '&order=desc'
-        + '&' + query;
+    // 2ページ目以降はmaxIdで前ページ末尾より古いアクティビティを取得
+    if (maxId !== null) {
+      url += '&maxId=' + maxId;
     }
 
     var activities = backlogApiGet_(url);
@@ -192,14 +186,12 @@ function getBacklogTodayActivities_(config, userId) {
     // 末尾activityがJST本日かチェック
     var lastActivity = activities[activities.length - 1];
     if (!backlogIsTodayJst_(lastActivity.created, config.timezone)) {
-      // 末尾が前日以前なら終了
       break;
     }
 
-    // 次ページ用にoffsetを更新
-    offset += activities.length;
+    // 次ページ用にmaxIdを更新（末尾のid - 1 でそれより古いものを取得）
+    maxId = lastActivity.id - 1;
 
-    // ページ上限チェック
     if (page === BACKLOG_MAX_PAGES - 1) {
       Logger.log('BACKLOG_ACTIVITY_PAGE_LIMIT_REACHED: 5ページ取得しても末尾が本日');
     }
