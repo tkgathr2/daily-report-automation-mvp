@@ -1509,7 +1509,7 @@ function getToolSettings() {
       .getProperty(USER_PROPERTY_TOOL_SETTINGS);
 
     if (!dataStr) {
-      return { slack: true, gmail: true, gmailReceived: false, notion: true };
+      return { slack: true, gmail: true, gmailReceived: false, notion: true, backlog: false };
     }
 
     const parsed = JSON.parse(dataStr);
@@ -1517,17 +1517,18 @@ function getToolSettings() {
       slack: parsed.slack !== false,
       gmail: parsed.gmail !== false,
       gmailReceived: !!parsed.gmailReceived,
-      notion: parsed.notion !== false
+      notion: parsed.notion !== false,
+      backlog: !!parsed.backlog
     };
   } catch (e) {
     Logger.log('getToolSettings error: ' + e.message);
-    return { slack: true, gmail: true, gmailReceived: false, notion: true };
+    return { slack: true, gmail: true, gmailReceived: false, notion: true, backlog: false };
   }
 }
 
 /**
  * ツール設定を保存
- * @param {Object} settings - {slack, gmail, gmailReceived, notion}
+ * @param {Object} settings - {slack, gmail, gmailReceived, notion, backlog}
  * @returns {boolean}
  */
 function saveToolSettings(settings) {
@@ -1782,6 +1783,7 @@ function getAllToolHistoryV3(dateString) {
     slack: { items: [], error: '' },
     gmail: { items: [], error: '' },
     notion: { items: [], error: '' },
+    backlog: { text: '', error: '' },
     errors: []
   };
 
@@ -1835,6 +1837,19 @@ function getAllToolHistoryV3(dateString) {
     } catch (e) {
       Logger.log('Notion取得エラー: ' + e.message);
       result.errors.push('[Notion] ' + e.message);
+    }
+  }
+
+  // Backlog作業実績（常に今日）
+  result.backlog = { text: '', error: '' };
+  if (settings.backlog) {
+    try {
+      var backlogText = getBacklogReport();
+      result.backlog = { text: backlogText, error: '' };
+    } catch (e) {
+      Logger.log('Backlog取得エラー: ' + e.message);
+      result.backlog = { text: '', error: e.message };
+      result.errors.push('[Backlog] ' + e.message);
     }
   }
 
