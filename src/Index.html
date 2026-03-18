@@ -1199,6 +1199,48 @@
     }
 
     /* ============================================
+       ピル型トグルUI
+       ============================================ */
+    .tool-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid #e0e0e0;
+      background: #fff;
+      color: #999;
+      user-select: none;
+    }
+
+    .tool-pill:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .tool-pill.active {
+      border-color: var(--pill-color);
+      background: var(--pill-bg);
+      color: var(--pill-color);
+    }
+
+    .tool-pill .tool-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ccc;
+      transition: background 0.2s ease;
+    }
+
+    .tool-pill.active .tool-dot {
+      background: var(--pill-color);
+    }
+
+    /* ============================================
        レスポンシブ対応
        ============================================ */
     @media (max-width: 900px) {
@@ -1359,24 +1401,19 @@
         min-height: 44px;
       }
 
-      /* ツール設定のモバイル対応 */
-      .tool-settings {
-        padding: 12px !important;
+      /* ピル型トグルのモバイル対応 */
+      .tool-pills {
+        gap: 4px !important;
       }
 
-      .tool-settings > div {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 12px !important;
+      .tool-pill {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
       }
 
-      .tool-settings label {
-        font-size: 14px !important;
-      }
-
-      .tool-settings input[type="checkbox"] {
-        width: 20px !important;
-        height: 20px !important;
+      .tool-pill .tool-dot {
+        width: 5px !important;
+        height: 5px !important;
       }
 
       /* 更新のお知らせのモバイル対応 */
@@ -1595,39 +1632,11 @@
       <span>読み込み中...</span>
     </div>
 
-    <!-- 取得ツール設定（非表示） -->
-    <div class="section tool-settings" style="display: none !important; background-color: #f8f9fa; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-        <div style="font-weight: bold; font-size: 13px; color: #495057;">取得ツール設定</div>
-        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
-              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
-                <input type="checkbox" id="settingSlack" checked style="width: 16px; height: 16px;">
-                <span style="color: #4A154B; font-weight: bold;">Slack</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
-                <input type="checkbox" id="settingGmail" checked style="width: 16px; height: 16px;">
-                <span style="color: #EA4335; font-weight: bold;">Gmail</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
-                <input type="checkbox" id="settingGmailReceived" style="width: 16px; height: 16px;">
-                <span style="color: #EA4335; font-weight: bold;">Gmail受信</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
-                <input type="checkbox" id="settingNotion" checked style="width: 16px; height: 16px;">
-                <span style="color: #000; font-weight: bold;">Notion</span>
-              </label>
-              <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px;">
-                <input type="checkbox" id="settingBacklog" style="width: 16px; height: 16px;">
-                <span style="color: #42CE9F; font-weight: bold;">Backlog</span>
-              </label>
-              <button class="btn btn-secondary" onclick="saveToolSettingsUI()" style="padding: 5px 12px; font-size: 11px;">設定を保存</button>
-            </div>
-          </div>
-          <div id="notionSetupHint" style="margin-top: 10px; padding: 8px 12px; background: #fff3cd; border-radius: 4px; font-size: 12px; display: none;">
-            <strong>Notion連携:</strong> <a href="https://www.notion.so/my-integrations" target="_blank" style="color: #0066cc;">Notion Integrations</a>でトークンを作成し、下のボタンから設定してください。
-            <button onclick="showNotionTokenDialog()" style="margin-left: 10px; padding: 3px 8px; font-size: 11px; cursor: pointer;">トークン設定</button>
-          </div>
-        </div>
+    <!-- Notion連携ヒント（非表示） -->
+    <div id="notionSetupHint" style="padding: 8px 12px; background: #fff3cd; border-radius: 4px; font-size: 12px; display: none; margin-bottom: 10px;">
+      <strong>Notion連携:</strong> <a href="https://www.notion.so/my-integrations" target="_blank" style="color: #0066cc;">Notion Integrations</a>でトークンを作成し、下のボタンから設定してください。
+      <button onclick="showNotionTokenDialog()" style="margin-left: 10px; padding: 3px 8px; font-size: 11px; cursor: pointer;">トークン設定</button>
+    </div>
 
     <!-- 日報ヘッダー -->
     <div id="reportHeader" class="report-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -1648,9 +1657,30 @@
     <div class="section textarea-container">
       <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <span>【今日やったこと】</span>
-        <!-- 履歴を取得ボタン（非表示） -->
-        <div style="display: none; align-items: center; gap: 6px;">
-          <button id="loadCalendarBtn" onclick="loadEventsForSelectedDate()" style="background: #27ae60; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">履歴を取得</button>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <div class="tool-pills" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <div class="tool-pill active" data-tool="slack" data-setting="settingSlack" onclick="togglePill(this)" style="--pill-color: #4A154B; --pill-bg: #f8f0f8;">
+              <span class="tool-dot"></span>
+              <span>Slack</span>
+            </div>
+            <div class="tool-pill active" data-tool="gmail" data-setting="settingGmail" onclick="togglePill(this)" style="--pill-color: #EA4335; --pill-bg: #fef0ef;">
+              <span class="tool-dot"></span>
+              <span>Gmail</span>
+            </div>
+            <div class="tool-pill" data-tool="gmail-received" data-setting="settingGmailReceived" onclick="togglePill(this)" style="--pill-color: #FBBC05; --pill-bg: #fef9ee;">
+              <span class="tool-dot"></span>
+              <span>Gmail受信</span>
+            </div>
+            <div class="tool-pill active" data-tool="notion" data-setting="settingNotion" onclick="togglePill(this)" style="--pill-color: #000000; --pill-bg: #f0f0f0;">
+              <span class="tool-dot"></span>
+              <span>Notion</span>
+            </div>
+            <div class="tool-pill" data-tool="backlog" data-setting="settingBacklog" onclick="togglePill(this)" style="--pill-color: #42CE9F; --pill-bg: #eefbf6;">
+              <span class="tool-dot"></span>
+              <span>Backlog</span>
+            </div>
+          </div>
+          <button id="loadCalendarBtn" onclick="loadEventsForSelectedDate()" style="background: #27ae60; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;">取得</button>
         </div>
       </div>
       <div class="textarea-with-toolbar">
@@ -2786,16 +2816,45 @@
     }
 
     // ============================================
-    // V3: ツール設定
+    // V3: ツール設定（ピル型トグルUI）
     // ============================================
+    function getPillBySettingId(settingId) {
+      return document.querySelector('.tool-pill[data-setting="' + settingId + '"]');
+    }
+
+    function isPillActive(settingId) {
+      var pill = getPillBySettingId(settingId);
+      return pill ? pill.classList.contains('active') : false;
+    }
+
+    function setPillActive(settingId, active) {
+      var pill = getPillBySettingId(settingId);
+      if (pill) {
+        if (active) {
+          pill.classList.add('active');
+        } else {
+          pill.classList.remove('active');
+        }
+      }
+    }
+
+    function togglePill(el) {
+      el.classList.toggle('active');
+      saveToolSettingsUI();
+      // Notion連携状態を確認
+      if (el.dataset.setting === 'settingNotion') {
+        checkNotionLinkStatus();
+      }
+    }
+
     function loadToolSettings() {
       google.script.run
         .withSuccessHandler(function(settings) {
-          document.getElementById('settingSlack').checked = settings.slack !== false;
-          document.getElementById('settingGmail').checked = settings.gmail !== false;
-          document.getElementById('settingGmailReceived').checked = !!settings.gmailReceived;
-          document.getElementById('settingNotion').checked = settings.notion !== false;
-          document.getElementById('settingBacklog').checked = !!settings.backlog;
+          setPillActive('settingSlack', settings.slack !== false);
+          setPillActive('settingGmail', settings.gmail !== false);
+          setPillActive('settingGmailReceived', !!settings.gmailReceived);
+          setPillActive('settingNotion', settings.notion !== false);
+          setPillActive('settingBacklog', !!settings.backlog);
           // Notion連携状態を確認
           checkNotionLinkStatus();
         })
@@ -2807,23 +2866,21 @@
 
     function saveToolSettingsUI() {
       var settings = {
-        slack: document.getElementById('settingSlack').checked,
-        gmail: document.getElementById('settingGmail').checked,
-        gmailReceived: document.getElementById('settingGmailReceived').checked,
-        notion: document.getElementById('settingNotion').checked,
-        backlog: document.getElementById('settingBacklog').checked
+        slack: isPillActive('settingSlack'),
+        gmail: isPillActive('settingGmail'),
+        gmailReceived: isPillActive('settingGmailReceived'),
+        notion: isPillActive('settingNotion'),
+        backlog: isPillActive('settingBacklog')
       };
       
       google.script.run
         .withSuccessHandler(function(result) {
-          if (result) {
-            showMessage('設定を保存しました。', false);
-          } else {
-            showMessage('設定の保存に失敗しました。', true);
+          if (!result) {
+            console.error('saveToolSettings failed');
           }
         })
         .withFailureHandler(function(error) {
-          showMessage('エラー: ' + error.message, true);
+          console.error('saveToolSettings error:', error.message);
         })
         .saveToolSettings(settings);
     }
@@ -2835,8 +2892,8 @@
       google.script.run
         .withSuccessHandler(function(linked) {
           var hint = document.getElementById('notionSetupHint');
-          var checkbox = document.getElementById('settingNotion');
-          if (checkbox.checked && !linked) {
+          var notionActive = isPillActive('settingNotion');
+          if (notionActive && !linked) {
             hint.style.display = 'block';
           } else {
             hint.style.display = 'none';
