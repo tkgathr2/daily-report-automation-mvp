@@ -2864,6 +2864,7 @@
         })
         .withFailureHandler(function(error) {
           console.error('loadToolSettings error:', error);
+          toolSettingsLoaded = true;
         })
         .getToolSettings();
     }
