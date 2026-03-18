@@ -1567,7 +1567,7 @@ function getSlackHistory() {
 
     // 今日の日付でフィルタリングしてAPI応答を高速化
     const todayStr = Utilities.formatDate(now, TIMEZONE, 'yyyy-MM-dd');
-    const query = 'from:me after:' + todayStr;
+    const query = 'from:me on:' + todayStr;
     const params = {
       query: query,
       sort: 'timestamp',
