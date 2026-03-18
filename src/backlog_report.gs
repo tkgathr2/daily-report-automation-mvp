@@ -46,7 +46,7 @@ function getBacklogConfig_() {
     throw new Error('BACKLOG_SPACE_BASE_URL が未設定です。管理者に設定を依頼してください。');
   }
   if (!apiKey) {
-    throw new Error('Backlog APIキーが未設定です。設定画面からAPIキーを登録してください。');
+    throw new Error('BACKLOG_API_KEY_MISSING');
   }
 
   return {
@@ -337,9 +337,15 @@ function getBacklogReport() {
     } catch (ignore) {}
 
     var msg = String(err);
-    if (msg.indexOf('429') >= 0 || msg.indexOf('RATE_LIMIT') >= 0) {
-      return 'Backlog完了課題\nBacklog取得エラー（レート制限）';
+    if (msg.indexOf('BACKLOG_API_KEY_MISSING') >= 0) {
+      return 'BACKLOG_ERROR:API_KEY_MISSING';
     }
-    return 'Backlog完了課題\nBacklog取得エラー';
+    if (msg.indexOf('429') >= 0 || msg.indexOf('RATE_LIMIT') >= 0) {
+      return 'BACKLOG_ERROR:RATE_LIMIT';
+    }
+    if (msg.indexOf('Authentication failure') >= 0 || msg.indexOf('status=401') >= 0) {
+      return 'BACKLOG_ERROR:AUTH_FAILURE';
+    }
+    return 'BACKLOG_ERROR:UNKNOWN';
   }
 }
