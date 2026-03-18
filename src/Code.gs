@@ -1565,9 +1565,10 @@ function getSlackHistory() {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
-    // 今日の日付でフィルタリングしてAPI応答を高速化
-    const todayStr = Utilities.formatDate(now, TIMEZONE, 'yyyy-MM-dd');
-    const query = 'from:me on:' + todayStr;
+    // 昨日の日付でafter:フィルタ（after:は指定日を除外するため、昨日を指定すると今日のメッセージが取得される）
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = Utilities.formatDate(yesterday, TIMEZONE, 'yyyy-MM-dd');
+    const query = 'from:me after:' + yesterdayStr;
     const params = {
       query: query,
       sort: 'timestamp',
