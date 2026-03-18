@@ -39,10 +39,14 @@ function getBacklogConfig_() {
   var props = PropertiesService.getScriptProperties();
 
   var baseUrl = props.getProperty('BACKLOG_SPACE_BASE_URL');
-  var apiKey = props.getProperty('BACKLOG_API_KEY');
+  // ユーザー別APIキーを優先取得（getUserBacklogApiKey はCode.gsで定義）
+  var apiKey = getUserBacklogApiKey();
 
-  if (!baseUrl || !apiKey) {
-    throw new Error('BACKLOG_SPACE_BASE_URL または BACKLOG_API_KEY が未設定です');
+  if (!baseUrl) {
+    throw new Error('BACKLOG_SPACE_BASE_URL が未設定です。管理者に設定を依頼してください。');
+  }
+  if (!apiKey) {
+    throw new Error('Backlog APIキーが未設定です。設定画面からAPIキーを登録してください。');
   }
 
   return {
