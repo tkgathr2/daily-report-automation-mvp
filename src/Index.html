@@ -3101,11 +3101,20 @@
       
       // Backlog完了課題を追加（自動挿入）
       if (result.backlog && result.backlog.text) {
-        var backlogTextLines = result.backlog.text.split('\n');
-        for (var bl = 0; bl < backlogTextLines.length; bl++) {
-          var btLine = backlogTextLines[bl].trim();
-          if (btLine) {
-            lines.push('<span style="color: #42CE9F; font-weight: bold;">[Backlog]</span> ' + escapeHtml(btLine));
+        var bText = result.backlog.text;
+        // エラーコードを検出して設定リンク付きメッセージを表示
+        if (bText.indexOf('BACKLOG_ERROR:') === 0) {
+          var backlogErrorHtml = getBacklogErrorHtml(bText);
+          if (backlogErrorHtml) {
+            lines.push(backlogErrorHtml);
+          }
+        } else {
+          var backlogTextLines = bText.split('\n');
+          for (var bl = 0; bl < backlogTextLines.length; bl++) {
+            var btLine = backlogTextLines[bl].trim();
+            if (btLine) {
+              lines.push('<span style="color: #42CE9F; font-weight: bold;">[Backlog]</span> ' + escapeHtml(btLine));
+            }
           }
         }
       }
@@ -3260,7 +3269,7 @@
       historyItemsCache.gmail = (result.gmail && result.gmail.items) ? result.gmail.items : [];
       // Backlog完了課題テキストを行単位のitemsに変換
       historyItemsCache.backlog = [];
-      if (result.backlog && result.backlog.text) {
+      if (result.backlog && result.backlog.text && result.backlog.text.indexOf('BACKLOG_ERROR:') !== 0) {
         var backlogLines = result.backlog.text.split('\n');
         for (var bi = 0; bi < backlogLines.length; bi++) {
           var bLine = backlogLines[bi].trim();
@@ -3534,6 +3543,26 @@
       localStorage.setItem(getUserStorageKey(NAME_STORAGE_KEY), name);
       applyRegisteredName(name);
       closeNameEditModal();
+    }
+
+    // ============================================
+    // Backlog エラーメッセージ生成
+    // ============================================
+    function getBacklogErrorHtml(errorCode) {
+      var linkStyle = 'color: #42CE9F; text-decoration: underline; cursor: pointer; font-weight: bold;';
+      var errorStyle = 'color: #e74c3c; font-weight: bold;';
+      var settingsLink = '<a onclick="showBacklogKeyModal()" style="' + linkStyle + '">⚙ Backlog APIキー設定</a>';
+      
+      if (errorCode === 'BACKLOG_ERROR:API_KEY_MISSING') {
+        return '<span style="' + errorStyle + '">[Backlog] APIキーが未設定です。</span> ' + settingsLink + ' から登録してください。';
+      }
+      if (errorCode === 'BACKLOG_ERROR:AUTH_FAILURE') {
+        return '<span style="' + errorStyle + '">[Backlog] APIキーが無効です。</span> ' + settingsLink + ' から正しいキーを再登録してください。';
+      }
+      if (errorCode === 'BACKLOG_ERROR:RATE_LIMIT') {
+        return '<span style="' + errorStyle + '">[Backlog] レート制限中です。</span> しばらく待ってから再取得してください。';
+      }
+      return '<span style="' + errorStyle + '">[Backlog] 取得エラーが発生しました。</span> ' + settingsLink + ' を確認してください。';
     }
 
     // ============================================
