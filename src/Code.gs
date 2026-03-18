@@ -1565,12 +1565,14 @@ function getSlackHistory() {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
     const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
-    const query = 'from:me';
+    // 今日の日付でフィルタリングしてAPI応答を高速化
+    const todayStr = Utilities.formatDate(now, TIMEZONE, 'yyyy-MM-dd');
+    const query = 'from:me after:' + todayStr;
     const params = {
       query: query,
       sort: 'timestamp',
       sort_dir: 'asc',
-      count: MAX_ITEMS_PER_TOOL
+      count: 20
     };
 
     const url = 'https://slack.com/api/search.messages?' + toQueryString_(params);
@@ -1637,9 +1639,9 @@ function getGmailHistory(includeReceived) {
     const dateStr = Utilities.formatDate(today, TIMEZONE, 'yyyy/MM/dd');
     const items = [];
 
-    // 送信メール
+    // 送信メール（最大20件に制限して高速化）
     const sentQuery = 'in:sent after:' + dateStr;
-    const sentThreads = GmailApp.search(sentQuery, 0, MAX_ITEMS_PER_TOOL);
+    const sentThreads = GmailApp.search(sentQuery, 0, 20);
 
     for (let i = 0; i < sentThreads.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
       const messages = sentThreads[i].getMessages();
@@ -1658,7 +1660,7 @@ function getGmailHistory(includeReceived) {
     // 受信メール（設定がONの場合のみ）
     if (includeReceived) {
       const receivedQuery = 'in:inbox after:' + dateStr + ' -in:sent';
-      const receivedThreads = GmailApp.search(receivedQuery, 0, MAX_ITEMS_PER_TOOL);
+      const receivedThreads = GmailApp.search(receivedQuery, 0, 20);
 
       for (let j = 0; j < receivedThreads.length && items.length < MAX_ITEMS_PER_TOOL; j++) {
         const rMessages = receivedThreads[j].getMessages();

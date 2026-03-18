@@ -1594,6 +1594,7 @@
       </div>
       <div class="news-list" style="max-height: 260px; overflow-y: auto; padding-right: 4px;">
         <ul style="margin: 0; padding-left: 18px; opacity: 0.95; list-style: none;">
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/03/18</span>ログインが90日間不要になりました（一度ログインすればOK）</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/03/18</span>日報に残業時間を入力できるようになりました</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/03/18</span>Notion連携を廃止しました</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/03/16</span>Backlogの完了課題を自動で日報に取り込めるようになりました</li>
@@ -1612,7 +1613,6 @@
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/08</span>テンプレート・引き継ぎ機能を追加しました</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/08</span>Gmail送受信の履歴を自動取得できるようになりました</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/08</span>Slackの投稿履歴を自動取得できるようになりました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/07</span>日付を選んで過去の予定も取得できるようになりました</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/07</span>Googleカレンダーの予定を自動で日報に取り込めるようになりました</li>
         </ul>
       </div>
@@ -2049,7 +2049,7 @@
     // ============================================
     // GAS呼び出しタイムアウト・リトライユーティリティ
     // ============================================
-    var GAS_TIMEOUT_MS = 30000; // 30秒タイムアウト
+    var GAS_TIMEOUT_MS = 60000; // 60秒タイムアウト（全ツール履歴取得に対応）
     var GAS_SEND_TIMEOUT_MS = 60000; // Slack送信は60秒（リトライ含む）
     var _loadingTimeoutId = null;
 
@@ -2900,7 +2900,7 @@
       if (btnGet) btnGet.disabled = true;
       var btnRefresh = document.getElementById('btnRefreshEvents');
       if (btnRefresh) btnRefresh.disabled = true;
-      startLoadingWithTimeout(GAS_TIMEOUT_MS, '予定取得がタイムアウトしました。再度お試しください。');
+      startLoadingWithTimeout(GAS_TIMEOUT_MS, '予定取得がタイムアウトしました。再度お試しください。（ツール設定を減らすと速くなります）');
 
       // V3: 全ツール履歴を統合取得
       google.script.run
