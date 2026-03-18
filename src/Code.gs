@@ -37,7 +37,6 @@ const DATE_FORMAT_V2 = 'yyyy年MM月dd日';
 
 // V3追加定数
 const USER_PROPERTY_TOOL_SETTINGS = 'TOOL_SETTINGS';
-const PROPERTY_NOTION_TOKEN = 'NOTION_INTEGRATION_TOKEN';
 const MAX_ITEMS_PER_TOOL = 50;
 
 // アプリURL（フッター用）
@@ -1330,6 +1329,7 @@ function getSlackWebhookUrl_() {
  * @param {string} reportData.notices - わかった事・問題・共有事項
  * @param {string} reportData.salesPoints - 売上・利益・経費削減に関わるポイント
  * @param {string} reportData.nextTasks - 次すること
+ * @param {string} [reportData.overtime] - 残業時間（例: "1時間30分"）
  * @returns {string} 成功/失敗メッセージ
  */
 /**
@@ -1486,13 +1486,20 @@ function sendToSlackV2(reportData) {
  * @returns {string} Slack投稿本文
  */
 function formatSlackMessageV2(reportData) {
-  return reportData.header + '\n\n' +
+  var msg = reportData.header + '\n\n' +
     '【今日やったこと】\n' + reportData.todayTasks + '\n\n' +
     '【わかった事・問題・共有事項】\n' + reportData.notices + '\n\n' +
     '【売上・利益・経費削減に関わるポイント】\n' + reportData.salesPoints + '\n\n' +
-    '【次すること】\n' + reportData.nextTasks + '\n\n' +
-    '---\n' +
+    '【次すること】\n' + reportData.nextTasks + '\n\n';
+
+  if (reportData.overtime) {
+    msg += '【残業時間】\n' + reportData.overtime + '\n\n';
+  }
+
+  msg += '---\n' +
     'Powered by <' + APP_URL + '|簡単日報君>';
+
+  return msg;
 }
 
 // ============================================
@@ -1501,7 +1508,7 @@ function formatSlackMessageV2(reportData) {
 
 /**
  * ツール設定を取得
- * @returns {Object} {slack: boolean, gmail: boolean, gmailReceived: boolean, notion: boolean}
+ * @returns {Object} {slack: boolean, gmail: boolean, gmailReceived: boolean, backlog: boolean}
  */
 function getToolSettings() {
   try {
@@ -1509,7 +1516,7 @@ function getToolSettings() {
       .getProperty(USER_PROPERTY_TOOL_SETTINGS);
 
     if (!dataStr) {
-      return { slack: true, gmail: true, gmailReceived: false, notion: true, backlog: false };
+      return { slack: true, gmail: true, gmailReceived: false, backlog: false };
     }
 
     const parsed = JSON.parse(dataStr);
@@ -1517,18 +1524,17 @@ function getToolSettings() {
       slack: parsed.slack !== false,
       gmail: parsed.gmail !== false,
       gmailReceived: !!parsed.gmailReceived,
-      notion: parsed.notion !== false,
       backlog: !!parsed.backlog
     };
   } catch (e) {
     Logger.log('getToolSettings error: ' + e.message);
-    return { slack: true, gmail: true, gmailReceived: false, notion: true, backlog: false };
+    return { slack: true, gmail: true, gmailReceived: false, backlog: false };
   }
 }
 
 /**
  * ツール設定を保存
- * @param {Object} settings - {slack, gmail, gmailReceived, notion, backlog}
+ * @param {Object} settings - {slack, gmail, gmailReceived, backlog}
  * @returns {boolean}
  */
 function saveToolSettings(settings) {
@@ -1683,97 +1689,9 @@ function getGmailHistory(includeReceived) {
 }
 
 /**
- * Notion履歴を取得
- * @returns {Object} {success, items, error}
- */
-function getNotionHistory() {
-  Logger.log('Notion履歴取得開始');
-
-  try {
-    const token = PropertiesService.getScriptProperties()
-      .getProperty(PROPERTY_NOTION_TOKEN);
-
-    if (!token) {
-      return { success: false, items: [], error: 'Notion連携が設定されていません。' };
-    }
-
-    const today = new Date();
-    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-
-    const url = 'https://api.notion.com/v1/search';
-    const payload = {
-      filter: { property: 'object', value: 'page' },
-      sort: { direction: 'descending', timestamp: 'last_edited_time' },
-      page_size: MAX_ITEMS_PER_TOOL
-    };
-
-    const res = UrlFetchApp.fetch(url, {
-      method: 'post',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json',
-        'Notion-Version': '2022-06-28'
-      },
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    });
-
-    const json = safeJsonParse_(res.getContentText());
-
-    if (!json || json.object === 'error') {
-      const err = json && json.message ? String(json.message) : 'unknown_error';
-      Logger.log('Notion履歴取得失敗: ' + err);
-      return { success: false, items: [], error: 'Notion履歴を取得できませんでした。' };
-    }
-
-    const items = [];
-    const results = json.results || [];
-
-    for (let i = 0; i < results.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
-      const page = results[i];
-      const lastEditedTime = new Date(page.last_edited_time);
-
-      if (lastEditedTime >= todayStart && lastEditedTime <= todayEnd) {
-        let title = '無題';
-        if (page.properties) {
-          // title プロパティ名の候補を順に探す
-          const titleProps = ['title', 'Title', 'Name', 'name'];
-          for (let p = 0; p < titleProps.length; p++) {
-            const prop = page.properties[titleProps[p]];
-            if (prop && prop.title && prop.title.length > 0 && prop.title[0].plain_text) {
-              title = prop.title[0].plain_text;
-              break;
-            }
-          }
-        }
-
-        if (title.length > 30) title = title.substring(0, 30) + '...';
-
-        const createdTime = new Date(page.created_time);
-        const action = (createdTime >= todayStart) ? '作成' : '編集';
-
-        items.push({
-          type: 'notion',
-          time: Utilities.formatDate(lastEditedTime, TIMEZONE, TIME_FORMAT),
-          content: action + ': 「' + title + '」'
-        });
-      }
-    }
-
-    Logger.log('Notion履歴取得完了: ' + items.length + '件');
-    return { success: true, items: items, error: '' };
-
-  } catch (e) {
-    Logger.log('getNotionHistory error: ' + e.message);
-    return { success: false, items: [], error: 'Notion履歴を取得できませんでした。' };
-  }
-}
-
-/**
  * 全ツール履歴を一括取得（V3）
  * @param {string} dateString - カレンダー用日付（YYYY-MM-DD）、nullで今日
- * @returns {Object} {calendar, slack, gmail, notion, errors}
+ * @returns {Object} {calendar, slack, gmail, backlog, errors}
  */
 function getAllToolHistoryV3(dateString) {
   Logger.log('全ツール履歴取得開始（V3）');
@@ -1782,7 +1700,6 @@ function getAllToolHistoryV3(dateString) {
     calendar: '',
     slack: { items: [], error: '' },
     gmail: { items: [], error: '' },
-    notion: { items: [], error: '' },
     backlog: { text: '', error: '' },
     errors: []
   };
@@ -1826,20 +1743,6 @@ function getAllToolHistoryV3(dateString) {
     }
   }
 
-  // Notion履歴（常に今日）
-  if (settings.notion) {
-    try {
-      const notionResult = getNotionHistory();
-      result.notion = { items: notionResult.items, error: notionResult.error };
-      if (!notionResult.success && notionResult.error) {
-        result.errors.push('[Notion] ' + notionResult.error);
-      }
-    } catch (e) {
-      Logger.log('Notion取得エラー: ' + e.message);
-      result.errors.push('[Notion] ' + e.message);
-    }
-  }
-
   // Backlog完了課題（常に今日）
   result.backlog = { text: '', error: '' };
   if (settings.backlog) {
@@ -1855,39 +1758,4 @@ function getAllToolHistoryV3(dateString) {
 
   Logger.log('全ツール履歴取得完了（V3）');
   return result;
-}
-
-/**
- * Notion連携状態を確認
- * @returns {boolean} Token設定済みならtrue
- */
-function isNotionLinked() {
-  try {
-    var token = PropertiesService.getScriptProperties()
-      .getProperty(PROPERTY_NOTION_TOKEN);
-    return !!token;
-  } catch (e) {
-    Logger.log('isNotionLinked error: ' + e.message);
-    return false;
-  }
-}
-
-/**
- * Notion Integration Tokenを保存
- * @param {string} token - Notion Integration Token
- * @returns {boolean} 保存成功/失敗
- */
-function saveNotionToken(token) {
-  try {
-    if (!token || !token.trim()) {
-      return false;
-    }
-    PropertiesService.getScriptProperties()
-      .setProperty(PROPERTY_NOTION_TOKEN, token.trim());
-    Logger.log('saveNotionToken: 保存完了');
-    return true;
-  } catch (e) {
-    Logger.log('saveNotionToken error: ' + e.message);
-    return false;
-  }
 }

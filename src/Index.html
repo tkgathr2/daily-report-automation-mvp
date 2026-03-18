@@ -1063,10 +1063,6 @@
       border-left-color: #EA4335;
     }
 
-    .history-item.notion-item:hover {
-      border-left-color: #000;
-    }
-
     .history-item.added {
       opacity: 0.5;
       border-left-color: #28a745 !important;
@@ -1101,10 +1097,6 @@
 
     .history-item-badge.gmail-received {
       background: #4285F4;
-    }
-
-    .history-item-badge.notion {
-      background: #000;
     }
 
     .history-item-content {
@@ -1619,7 +1611,7 @@
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/11</span>iPhoneでSlackリンクが動作しない問題を修正</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/10</span>フローティング履歴サイドバーのエラーハンドリング強化</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/09</span>フローティングサイドバーを初期展開表示に変更</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/09</span>フローティング履歴サイドバーを追加（Slack/Gmail/Notion対応）</li>
+          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/09</span>フローティング履歴サイドバーを追加（Slack/Gmail対応）</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/08</span>V2+V3 実装完了（テンプレート・引き継ぎ・ツール履歴・日付選択）</li>
           <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/07</span>カレンダー日付選択機能を追加</li>
         </ul>
@@ -1630,12 +1622,6 @@
     <div id="loading" class="loading">
       <span class="loading-spinner"></span>
       <span>読み込み中...</span>
-    </div>
-
-    <!-- Notion連携ヒント（非表示） -->
-    <div id="notionSetupHint" style="padding: 8px 12px; background: #fff3cd; border-radius: 4px; font-size: 12px; display: none; margin-bottom: 10px;">
-      <strong>Notion連携:</strong> <a href="https://www.notion.so/my-integrations" target="_blank" style="color: #0066cc;">Notion Integrations</a>でトークンを作成し、下のボタンから設定してください。
-      <button onclick="showNotionTokenDialog()" style="margin-left: 10px; padding: 3px 8px; font-size: 11px; cursor: pointer;">トークン設定</button>
     </div>
 
     <!-- 日報ヘッダー -->
@@ -1670,10 +1656,6 @@
             <div class="tool-pill" data-tool="gmail-received" data-setting="settingGmailReceived" onclick="togglePill(this)" style="--pill-color: #FBBC05; --pill-bg: #fef9ee;">
               <span class="tool-dot"></span>
               <span>Gmail受信</span>
-            </div>
-            <div class="tool-pill active" data-tool="notion" data-setting="settingNotion" onclick="togglePill(this)" style="--pill-color: #000000; --pill-bg: #f0f0f0;">
-              <span class="tool-dot"></span>
-              <span>Notion</span>
             </div>
             <div class="tool-pill" data-tool="backlog" data-setting="settingBacklog" onclick="togglePill(this)" style="--pill-color: #42CE9F; --pill-bg: #eefbf6;">
               <span class="tool-dot"></span>
@@ -1822,6 +1804,37 @@
       </button>
     </div>
 
+    <!-- 残業時間入力 -->
+    <div class="section">
+      <div class="section-title">残業時間</div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <select id="overtimeHours" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 60px;">
+          <option value="0">0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <span style="font-size: 14px; color: #555;">時間</span>
+        <select id="overtimeMinutes" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; min-width: 60px;">
+          <option value="0">0</option>
+          <option value="5">5</option>
+          <option value="10">10</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+          <option value="25">25</option>
+          <option value="30">30</option>
+          <option value="35">35</option>
+          <option value="40">40</option>
+          <option value="45">45</option>
+          <option value="50">50</option>
+          <option value="55">55</option>
+        </select>
+        <span style="font-size: 14px; color: #555;">分</span>
+      </div>
+    </div>
+
     <!-- Slack送信フォーム -->
     <div class="section slack-form">
       <div class="section-title">Slack送信</div>
@@ -1871,11 +1884,6 @@
         <span>Gmail</span>
         <span id="gmailCount" class="history-tab-count">0</span>
       </button>
-      <button class="history-tab" data-tab="notion" onclick="switchHistoryTab('notion')">
-        <span class="history-tab-icon">📝</span>
-        <span>Notion</span>
-        <span id="notionCount" class="history-tab-count">0</span>
-      </button>
       <button class="history-tab" data-tab="backlog" onclick="switchHistoryTab('backlog')">
         <span class="history-tab-icon">📊</span>
         <span>Backlog</span>
@@ -1888,9 +1896,6 @@
       </div>
       <div id="gmailPanel" class="history-panel">
         <div class="history-empty">「履歴を取得」をクリックすると<br>Gmail履歴が表示されます</div>
-      </div>
-      <div id="notionPanel" class="history-panel">
-        <div class="history-empty">「履歴を取得」をクリックすると<br>Notion履歴が表示されます</div>
       </div>
       <div id="backlogPanel" class="history-panel">
         <div class="history-empty">「履歴を取得」をクリックすると<br>Backlog完了課題が表示されます</div>
@@ -2844,10 +2849,6 @@
       if (!toolSettingsLoaded) return;
       el.classList.toggle('active');
       saveToolSettingsUI();
-      // Notion連携状態を確認
-      if (el.dataset.setting === 'settingNotion') {
-        checkNotionLinkStatus();
-      }
     }
 
     function loadToolSettings() {
@@ -2856,11 +2857,8 @@
           setPillActive('settingSlack', settings.slack !== false);
           setPillActive('settingGmail', settings.gmail !== false);
           setPillActive('settingGmailReceived', !!settings.gmailReceived);
-          setPillActive('settingNotion', settings.notion !== false);
           setPillActive('settingBacklog', !!settings.backlog);
           toolSettingsLoaded = true;
-          // Notion連携状態を確認
-          checkNotionLinkStatus();
         })
         .withFailureHandler(function(error) {
           console.error('loadToolSettings error:', error);
@@ -2874,7 +2872,6 @@
         slack: isPillActive('settingSlack'),
         gmail: isPillActive('settingGmail'),
         gmailReceived: isPillActive('settingGmailReceived'),
-        notion: isPillActive('settingNotion'),
         backlog: isPillActive('settingBacklog')
       };
       
@@ -2890,45 +2887,6 @@
         .saveToolSettings(settings);
     }
     
-    // ============================================
-    // Notion連携
-    // ============================================
-    function checkNotionLinkStatus() {
-      google.script.run
-        .withSuccessHandler(function(linked) {
-          var hint = document.getElementById('notionSetupHint');
-          var notionActive = isPillActive('settingNotion');
-          if (notionActive && !linked) {
-            hint.style.display = 'block';
-          } else {
-            hint.style.display = 'none';
-          }
-        })
-        .withFailureHandler(function(error) {
-          console.error('checkNotionLinkStatus error:', error);
-        })
-        .isNotionLinked();
-    }
-    
-    function showNotionTokenDialog() {
-      var token = prompt('Notion Integration Tokenを入力してください:\n\nhttps://www.notion.so/my-integrations で作成したトークンを貼り付けてください。');
-      if (token === null) return;
-      
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result) {
-            showMessage('Notionトークンを保存しました。', false);
-            checkNotionLinkStatus();
-          } else {
-            showMessage('Notionトークンの保存に失敗しました。', true);
-          }
-        })
-        .withFailureHandler(function(error) {
-          showMessage('エラー: ' + error.message, true);
-        })
-        .saveNotionToken(token);
-    }
-
     // ============================================
     // 予定取得（V3: Gmail履歴も取得）
     // ============================================
@@ -3105,14 +3063,6 @@
         }
       }
       
-      // Notion履歴を追加（自動挿入）
-      if (result.notion && result.notion.items) {
-        for (var n = 0; n < result.notion.items.length; n++) {
-          var nItem = result.notion.items[n];
-          lines.push('<span style="color: #000; font-weight: bold;">[Notion]</span> ' + escapeHtml(nItem.content));
-        }
-      }
-
       // Backlog完了課題を追加（自動挿入）
       if (result.backlog && result.backlog.text) {
         var backlogTextLines = result.backlog.text.split('\n');
@@ -3124,7 +3074,7 @@
         }
       }
       
-      // WYSIWYGエディタにカレンダー予定とSlack/Notion/Backlog履歴を設定（Gmailはサイドバーから選択）
+      // WYSIWYGエディタにカレンダー予定とSlack/Backlog履歴を設定（Gmailはサイドバーから選択）
       document.getElementById('todayTasks').innerHTML = lines.join('<br>');
       
       // Gmail履歴をサイドバーに表示（ピッカー方式）
@@ -3156,7 +3106,6 @@
       } else {
         var gmailCount = result.gmail && result.gmail.items ? result.gmail.items.length : 0;
         var slackCount = result.slack && result.slack.items ? result.slack.items.length : 0;
-        var notionCount = result.notion && result.notion.items ? result.notion.items.length : 0;
         showMessage('予定を取得しました', false);
       }
     }
@@ -3232,7 +3181,6 @@
     var historyItemsCache = {
       slack: [],
       gmail: [],
-      notion: [],
       backlog: []
     };
     var currentHistoryTab = 'slack';
@@ -3274,8 +3222,6 @@
     function renderHistorySidebar(result) {
       historyItemsCache.slack = (result.slack && result.slack.items) ? result.slack.items : [];
       historyItemsCache.gmail = (result.gmail && result.gmail.items) ? result.gmail.items : [];
-      historyItemsCache.notion = (result.notion && result.notion.items) ? result.notion.items : [];
-      
       // Backlog完了課題テキストを行単位のitemsに変換
       historyItemsCache.backlog = [];
       if (result.backlog && result.backlog.text) {
@@ -3290,12 +3236,10 @@
       
       document.getElementById('slackCount').textContent = historyItemsCache.slack.length;
       document.getElementById('gmailCount').textContent = historyItemsCache.gmail.length;
-      document.getElementById('notionCount').textContent = historyItemsCache.notion.length;
       document.getElementById('backlogCount').textContent = historyItemsCache.backlog.length;
       
       renderHistoryPanel('slack', historyItemsCache.slack, '#4A154B');
       renderHistoryPanel('gmail', historyItemsCache.gmail, '#EA4335');
-      renderHistoryPanel('notion', historyItemsCache.notion, '#000000');
       renderHistoryPanel('backlog', historyItemsCache.backlog, '#42CE9F');
       
       var sidebar = document.getElementById('historySidebar');
@@ -3334,7 +3278,6 @@
       var labels = {
         slack: 'Slack',
         gmail: 'Gmail',
-        notion: 'Notion',
         backlog: 'Backlog'
       };
       return labels[toolType] || toolType;
@@ -3344,7 +3287,6 @@
       var colors = {
         slack: '#4A154B',
         gmail: '#EA4335',
-        notion: '#000000',
         backlog: '#42CE9F'
       };
       return colors[toolType] || '#666';
@@ -3757,13 +3699,28 @@
         var header = '【' + date + '　' + userName + '　日報】';
 
         // 日報データを作成（WYSIWYGエディタからSlackフォーマットで取得）
+        // 残業時間を取得
+        var overtimeHours = parseInt(document.getElementById('overtimeHours').value) || 0;
+        var overtimeMinutes = parseInt(document.getElementById('overtimeMinutes').value) || 0;
+        var overtimeText = '';
+        if (overtimeHours > 0 || overtimeMinutes > 0) {
+          if (overtimeHours > 0 && overtimeMinutes > 0) {
+            overtimeText = overtimeHours + '時間' + overtimeMinutes + '分';
+          } else if (overtimeHours > 0) {
+            overtimeText = overtimeHours + '時間';
+          } else {
+            overtimeText = overtimeMinutes + '分';
+          }
+        }
+
         var reportData = {
           header: header,
-          userName: userName,  // Slack投稿者名として使用
+          userName: userName,
           todayTasks: getWysiwygValue('todayTasks'),
           notices: getWysiwygValue('notices'),
           salesPoints: getWysiwygValue('salesPoints'),
-          nextTasks: getWysiwygValue('nextTasks')
+          nextTasks: getWysiwygValue('nextTasks'),
+          overtime: overtimeText
         };
 
         console.log('Sending to Slack...');
