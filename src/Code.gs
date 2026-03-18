@@ -23,6 +23,7 @@ const USER_PROPERTY_SLACK_USER_ID = 'SLACK_USER_ID';
 const USER_PROPERTY_SLACK_TEAM_ID = 'SLACK_TEAM_ID';
 const USER_PROPERTY_SLACK_OAUTH_STATE = 'SLACK_OAUTH_STATE';
 const USER_PROPERTY_SLACK_OAUTH_STATE_TS = 'SLACK_OAUTH_STATE_TS';
+const USER_PROPERTY_BACKLOG_API_KEY = 'USER_BACKLOG_API_KEY';
 
 // タイムゾーン
 const TIMEZONE = 'Asia/Tokyo';
@@ -1538,6 +1539,58 @@ function getToolSettings() {
 }
 
 /**
+ * ユーザー別Backlog APIキーを保存
+ * @param {string} apiKey - Backlog APIキー
+ * @returns {boolean}
+ */
+function saveUserBacklogApiKey(apiKey) {
+  try {
+    var props = PropertiesService.getUserProperties();
+    if (apiKey && apiKey.trim()) {
+      props.setProperty(USER_PROPERTY_BACKLOG_API_KEY, apiKey.trim());
+    } else {
+      props.deleteProperty(USER_PROPERTY_BACKLOG_API_KEY);
+    }
+    return true;
+  } catch (e) {
+    Logger.log('saveUserBacklogApiKey error: ' + e.message);
+    return false;
+  }
+}
+
+/**
+ * ユーザー別Backlog APIキーを取得（UserProperties優先、なければScriptProperties）
+ * @returns {string} APIキー（未設定なら空文字）
+ */
+function getUserBacklogApiKey() {
+  try {
+    var userKey = PropertiesService.getUserProperties().getProperty(USER_PROPERTY_BACKLOG_API_KEY);
+    if (userKey) return userKey;
+    // フォールバック: ScriptPropertiesの共有キー（後方互換）
+    return PropertiesService.getScriptProperties().getProperty('BACKLOG_API_KEY') || '';
+  } catch (e) {
+    Logger.log('getUserBacklogApiKey error: ' + e.message);
+    return '';
+  }
+}
+
+/**
+ * ユーザーのBacklog APIキー設定状態を返す
+ * @returns {Object} {hasKey: boolean, isUserKey: boolean}
+ */
+function getBacklogKeyStatus() {
+  try {
+    var userKey = PropertiesService.getUserProperties().getProperty(USER_PROPERTY_BACKLOG_API_KEY);
+    if (userKey) return { hasKey: true, isUserKey: true };
+    var sharedKey = PropertiesService.getScriptProperties().getProperty('BACKLOG_API_KEY');
+    if (sharedKey) return { hasKey: true, isUserKey: false };
+    return { hasKey: false, isUserKey: false };
+  } catch (e) {
+    return { hasKey: false, isUserKey: false };
+  }
+}
+
+/**
  * ツール設定を保存
  * @param {Object} settings - {slack, gmail, gmailReceived, backlog}
  * @returns {boolean}
@@ -1679,7 +1732,11 @@ function getSlackHistory() {
 
   } catch (e) {
     Logger.log('getSlackHistory error: ' + e.message);
-    return { success: false, items: [], rawTexts: [], error: 'Slack履歴を取得できませんでした。' };
+    var errMsg = 'Slack履歴を取得できませんでした。';
+    if (e.message === 'SLACK_MISSING_SCOPE') {
+      errMsg = 'Slackの権限が不足しています。「Slack連携（認可）」から再連携してください。';
+    }
+    return { success: false, items: [], rawTexts: [], error: errMsg };
   }
 }
 
@@ -1712,7 +1769,13 @@ function fetchSlackMessages_(userToken, query, todayStart, todayEnd, direction) 
   const rawTexts = [];
 
   if (!json || !json.ok) {
-    Logger.log('Slack検索失敗（' + direction + '）: ' + (json && json.error ? json.error : 'unknown'));
+    var slackErr = json && json.error ? json.error : 'unknown';
+    Logger.log('Slack検索失敗（' + direction + '）: ' + slackErr);
+    if (slackErr === 'missing_scope') {
+      // スコープ不足: トークンをクリアして再認証を促す
+      clearSlackUserToken_();
+      throw new Error('SLACK_MISSING_SCOPE');
+    }
     return { items: items, rawTexts: rawTexts };
   }
 
