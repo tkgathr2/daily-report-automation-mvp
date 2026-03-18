@@ -2025,17 +2025,38 @@
 
   <!-- Backlog APIキー設定モーダル -->
   <div id="backlogKeyModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center;">
-    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-      <h2 style="margin: 0 0 8px 0; font-size: 20px; color: #2c3e50; text-align: center;">Backlog APIキー設定</h2>
-      <p style="margin: 0 0 4px 0; font-size: 13px; color: #666; text-align: center;">各ユーザーが自分のAPIキーを登録してください</p>
-      <p id="backlogKeyStatusText" style="margin: 0 0 16px 0; font-size: 12px; color: #999; text-align: center;"></p>
-      <input type="text" id="backlogKeyInput" placeholder="Backlog APIキーを入力" style="width: 100%; padding: 12px; font-size: 14px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; margin-bottom: 8px; font-family: monospace;">
-      <p style="margin: 0 0 16px 0; font-size: 11px; color: #999;">取得方法: Backlog → 個人設定 → API → 新しいAPIキーの発行</p>
-      <div style="display: flex; gap: 10px;">
-        <button onclick="closeBacklogKeyModal()" style="flex: 1; padding: 12px; background: #95a5a6; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">キャンセル</button>
-        <button onclick="saveBacklogKey()" style="flex: 1; padding: 12px; background: #42CE9F; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;">保存</button>
+    <div style="background: white; border-radius: 16px; padding: 28px; max-width: 420px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+      <h2 style="margin: 0 0 6px 0; font-size: 20px; color: #2c3e50; text-align: center;">Backlog APIキー設定</h2>
+      <p id="backlogKeyStatusText" style="margin: 0 0 20px 0; font-size: 13px; text-align: center;"></p>
+
+      <!-- ステップ1: リンクを押してAPIキーページを開く -->
+      <div style="background: #f0faf6; border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span style="background: #42CE9F; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">1</span>
+          <span style="font-size: 14px; font-weight: 600; color: #2c3e50;">下のボタンからAPIキーを発行</span>
+        </div>
+        <a id="backlogApiPageLink" href="#" target="_blank" style="display: block; width: 100%; padding: 12px; background: #42CE9F; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; box-sizing: border-box;">Backlog APIキー発行ページを開く →</a>
       </div>
-      <button onclick="clearBacklogKey()" style="display: block; width: 100%; margin-top: 10px; padding: 8px; background: none; border: none; color: #e74c3c; font-size: 12px; cursor: pointer;">キーを削除</button>
+
+      <!-- ステップ2: コピーして貼り付け -->
+      <div style="background: #f8f9fa; border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span style="background: #667eea; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; flex-shrink: 0;">2</span>
+          <span style="font-size: 14px; font-weight: 600; color: #2c3e50;">発行したキーを貼り付け</span>
+        </div>
+        <input type="text" id="backlogKeyInput" placeholder="ここにAPIキーを貼り付け" style="width: 100%; padding: 12px; font-size: 14px; border: 2px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: monospace; background: white;">
+      </div>
+
+      <!-- ステップ3: 保存 -->
+      <button onclick="saveBacklogKey()" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #42CE9F 0%, #36b589 100%); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <span style="background: white; color: #42CE9F; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; flex-shrink: 0;">3</span>
+        保存する
+      </button>
+
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <button onclick="closeBacklogKeyModal()" style="padding: 8px 16px; background: none; border: 1px solid #ddd; border-radius: 8px; color: #666; font-size: 13px; cursor: pointer;">閉じる</button>
+        <button onclick="clearBacklogKey()" style="padding: 8px 16px; background: none; border: none; color: #e74c3c; font-size: 12px; cursor: pointer;">キーを削除</button>
+      </div>
     </div>
   </div>
 
@@ -3549,20 +3570,20 @@
     // Backlog エラーメッセージ生成
     // ============================================
     function getBacklogErrorHtml(errorCode) {
-      var linkStyle = 'color: #42CE9F; text-decoration: underline; cursor: pointer; font-weight: bold;';
+      var btnStyle = 'display: inline-block; margin-top: 6px; padding: 8px 16px; background: #42CE9F; color: white; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; text-decoration: none;';
       var errorStyle = 'color: #e74c3c; font-weight: bold;';
-      var settingsLink = '<a onclick="showBacklogKeyModal()" style="' + linkStyle + '">⚙ Backlog APIキー設定</a>';
+      var settingsBtn = '<a onclick="showBacklogKeyModal()" style="' + btnStyle + '">⚙ APIキーを設定する</a>';
       
       if (errorCode === 'BACKLOG_ERROR:API_KEY_MISSING') {
-        return '<span style="' + errorStyle + '">[Backlog] APIキーが未設定です。</span> ' + settingsLink + ' から登録してください。';
+        return '<span style="' + errorStyle + '">[Backlog] APIキーが未設定です</span><br>' + settingsBtn;
       }
       if (errorCode === 'BACKLOG_ERROR:AUTH_FAILURE') {
-        return '<span style="' + errorStyle + '">[Backlog] APIキーが無効です。</span> ' + settingsLink + ' から正しいキーを再登録してください。';
+        return '<span style="' + errorStyle + '">[Backlog] APIキーが無効です</span><br>' + settingsBtn;
       }
       if (errorCode === 'BACKLOG_ERROR:RATE_LIMIT') {
         return '<span style="' + errorStyle + '">[Backlog] レート制限中です。</span> しばらく待ってから再取得してください。';
       }
-      return '<span style="' + errorStyle + '">[Backlog] 取得エラーが発生しました。</span> ' + settingsLink + ' を確認してください。';
+      return '<span style="' + errorStyle + '">[Backlog] 取得エラー</span><br>' + settingsBtn;
     }
 
     // ============================================
@@ -3576,6 +3597,12 @@
       document.getElementById('backlogKeyStatusText').textContent = '読み込み中...';
       document.getElementById('backlogKeyInput').value = '';
       
+      // リンクを初期状態（無効）にする
+      var linkEl = document.getElementById('backlogApiPageLink');
+      linkEl.href = '#';
+      linkEl.style.opacity = '0.5';
+      linkEl.style.pointerEvents = 'none';
+      
       google.script.run
         .withSuccessHandler(function(status) {
           var statusEl = document.getElementById('backlogKeyStatusText');
@@ -3588,6 +3615,13 @@
           } else {
             statusEl.textContent = '未設定（APIキーを登録してください）';
             statusEl.style.color = '#e74c3c';
+          }
+          
+          // Backlog APIキー発行ページへの直リンクを設定
+          if (status.spaceUrl) {
+            linkEl.href = status.spaceUrl + '/EditApiSettings.action';
+            linkEl.style.opacity = '1';
+            linkEl.style.pointerEvents = 'auto';
           }
         })
         .withFailureHandler(function() {

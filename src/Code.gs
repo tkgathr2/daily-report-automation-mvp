@@ -1580,13 +1580,15 @@ function getUserBacklogApiKey() {
  */
 function getBacklogKeyStatus() {
   try {
+    var props = PropertiesService.getScriptProperties();
+    var spaceUrl = props.getProperty('BACKLOG_SPACE_BASE_URL') || '';
     var userKey = PropertiesService.getUserProperties().getProperty(USER_PROPERTY_BACKLOG_API_KEY);
-    if (userKey) return { hasKey: true, isUserKey: true };
-    var sharedKey = PropertiesService.getScriptProperties().getProperty('BACKLOG_API_KEY');
-    if (sharedKey) return { hasKey: true, isUserKey: false };
-    return { hasKey: false, isUserKey: false };
+    if (userKey) return { hasKey: true, isUserKey: true, spaceUrl: spaceUrl };
+    var sharedKey = props.getProperty('BACKLOG_API_KEY');
+    if (sharedKey) return { hasKey: true, isUserKey: false, spaceUrl: spaceUrl };
+    return { hasKey: false, isUserKey: false, spaceUrl: spaceUrl };
   } catch (e) {
-    return { hasKey: false, isUserKey: false };
+    return { hasKey: false, isUserKey: false, spaceUrl: '' };
   }
 }
 
