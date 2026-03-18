@@ -2818,6 +2818,8 @@
     // ============================================
     // V3: ツール設定（ピル型トグルUI）
     // ============================================
+    var toolSettingsLoaded = false;
+
     function getPillBySettingId(settingId) {
       return document.querySelector('.tool-pill[data-setting="' + settingId + '"]');
     }
@@ -2839,6 +2841,7 @@
     }
 
     function togglePill(el) {
+      if (!toolSettingsLoaded) return;
       el.classList.toggle('active');
       saveToolSettingsUI();
       // Notion連携状態を確認
@@ -2855,6 +2858,7 @@
           setPillActive('settingGmailReceived', !!settings.gmailReceived);
           setPillActive('settingNotion', settings.notion !== false);
           setPillActive('settingBacklog', !!settings.backlog);
+          toolSettingsLoaded = true;
           // Notion連携状態を確認
           checkNotionLinkStatus();
         })
