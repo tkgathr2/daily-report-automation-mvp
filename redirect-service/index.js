@@ -267,7 +267,7 @@ const loginPageHTML = `
     </div>
     <h1>簡単日報くん</h1>
     <p class="description">ログインしてください</p>
-    <a href="${TARGET_URL}?from=nippou" class="login-btn">
+    <a href="/login" class="login-btn">
       <svg class="google-icon" viewBox="0 0 24 24">
         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -306,6 +306,16 @@ function sendErrorResponse(res, statusCode, message) {
   } catch (e) {
     console.error('sendErrorResponse failed:', e.message);
   }
+}
+
+/**
+ * リクエストからセッションCookieの存在を確認する
+ * @param {http.IncomingMessage} req
+ * @returns {boolean} nippou_session Cookieが存在すればtrue
+ */
+function hasSessionCookie(req) {
+  const cookieHeader = req.headers.cookie || '';
+  return cookieHeader.split(';').some(c => c.trim().startsWith('nippou_session='));
 }
 
 const server = http.createServer((req, res) => {
@@ -360,6 +370,11 @@ const server = http.createServer((req, res) => {
       console.log('Root with query params, redirecting to:', redirectUrl);
       res.writeHead(302, { ...SECURITY_HEADERS, 'Location': redirectUrl });
       res.end();
+    } else if (hasSessionCookie(req)) {
+      // 90日間ログイン維持: セッションCookieがあればログイン画面をスキップ
+      console.log('Session cookie found, auto-redirecting to GAS');
+      res.writeHead(302, { ...SECURITY_HEADERS, 'Location': TARGET_URL + '?from=nippou' });
+      res.end();
     } else {
       res.writeHead(200, {
         ...SECURITY_HEADERS,
@@ -367,6 +382,17 @@ const server = http.createServer((req, res) => {
       });
       res.end(loginPageHTML);
     }
+  }
+  // /login: ログインボタン押下時にセッションCookieを設定してGASへリダイレクト
+  else if (pathname === '/login') {
+    const maxAge = 90 * 24 * 60 * 60; // 90日（秒）
+    console.log('Login route: setting 90-day session cookie');
+    res.writeHead(302, {
+      ...SECURITY_HEADERS,
+      'Set-Cookie': 'nippou_session=1; Path=/; Max-Age=' + maxAge + '; SameSite=Lax; Secure; HttpOnly',
+      'Location': TARGET_URL + '?from=nippou'
+    });
+    res.end();
   } 
   // OAuth コールバック: SlackからのOAuthコールバックをGASにリダイレクト
   else if (pathname === OAUTH_CALLBACK_PATH) {
