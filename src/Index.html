@@ -3134,7 +3134,10 @@
           for (var bl = 0; bl < backlogTextLines.length; bl++) {
             var btLine = backlogTextLines[bl].trim();
             if (btLine) {
-              lines.push('<span style="color: #42CE9F; font-weight: bold;">[Backlog]</span> ' + escapeHtml(btLine));
+              // URLをクリック可能なリンクに変換
+              var escaped = escapeHtml(btLine);
+              escaped = escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: #42CE9F; text-decoration: underline;">$1</a>');
+              lines.push('<span style="color: #42CE9F; font-weight: bold;">[Backlog]</span> ' + escaped);
             }
           }
         }
@@ -3332,7 +3335,9 @@
         var item = items[i];
         html += '<div class="history-item" data-tool="' + toolType + '" data-index="' + i + '" style="border-left-color: ' + color + ';">';
         html += '  <div class="history-item-time">' + escapeHtml(item.time || '') + '</div>';
-        html += '  <div class="history-item-content">' + escapeHtml(item.content || '') + '</div>';
+        var contentHtml = escapeHtml(item.content || '');
+        contentHtml = contentHtml.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: ' + color + '; text-decoration: underline;">$1</a>');
+        html += '  <div class="history-item-content">' + contentHtml + '</div>';
         html += '  <div class="history-item-add"><button onclick="addHistoryItemToTasks(\'' + toolType + '\', ' + i + ')">+ 追加</button></div>';
         html += '</div>';
       }
@@ -3373,7 +3378,9 @@
       var currentContent = todayTasks.innerHTML;
       var label = getToolLabel(toolType);
       var color = getToolColor(toolType);
-      var newLine = '<span style="color: ' + color + '; font-weight: bold;">[' + label + ']</span> ' + escapeHtml(item.content);
+      var escapedContent = escapeHtml(item.content);
+      escapedContent = escapedContent.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: ' + color + '; text-decoration: underline;">$1</a>');
+      var newLine = '<span style="color: ' + color + '; font-weight: bold;">[' + label + ']</span> ' + escapedContent;
       
       if (currentContent.trim()) {
         todayTasks.innerHTML = currentContent + '<br>' + newLine;
