@@ -1531,7 +1531,7 @@ function formatSlackMessageV2(reportData) {
 
 /**
  * ツール設定を取得
- * @returns {Object} {slack: boolean, gmail: boolean, gmailReceived: boolean, backlog: boolean}
+ * @returns {Object} {slackSent: boolean, slackReceived: boolean, gmail: boolean, gmailReceived: boolean, backlog: boolean}
  */
 function getToolSettings() {
   try {
@@ -1539,19 +1539,23 @@ function getToolSettings() {
       .getProperty(USER_PROPERTY_TOOL_SETTINGS);
 
     if (!dataStr) {
-      return { slack: true, gmail: true, gmailReceived: false, backlog: false };
+      return { slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false };
     }
 
     const parsed = JSON.parse(dataStr);
+    // 後方互換: 旧slack設定はslackSentに変換
+    var slackSent = parsed.slackSent !== undefined ? !!parsed.slackSent : (parsed.slack !== false);
+    var slackReceived = !!parsed.slackReceived;
     return {
-      slack: parsed.slack !== false,
+      slackSent: slackSent,
+      slackReceived: slackReceived,
       gmail: parsed.gmail !== false,
       gmailReceived: !!parsed.gmailReceived,
       backlog: !!parsed.backlog
     };
   } catch (e) {
     Logger.log('getToolSettings error: ' + e.message);
-    return { slack: true, gmail: true, gmailReceived: false, backlog: false };
+    return { slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false };
   }
 }
 
@@ -1707,12 +1711,13 @@ function generateTaskSummary_(rawTexts, toolName) {
 }
 
 /**
- * Slack履歴を取得（search:readスコープ必要）
- * 送信（from:me）と受信（to:me）の両方を取得し、AI要約用の生データも返す
+ * Slack履歴を取得
+ * @param {boolean} includeSent - 送信メッセージを含めるか
+ * @param {boolean} includeReceived - 受信メッセージを含めるか
  * @returns {Object} {success, items, rawTexts, error}
  */
-function getSlackHistory() {
-  Logger.log('Slack履歴取得開始');
+function getSlackHistory(includeSent, includeReceived) {
+  Logger.log('Slack履歴取得開始（送信:' + includeSent + ', 受信:' + includeReceived + '）');
 
   try {
     const userToken = getSlackUserToken_();
@@ -1732,21 +1737,25 @@ function getSlackHistory() {
     const rawTexts = [];
 
     // 送信メッセージ（from:me）
-    const sentQuery = 'from:me after:' + yesterdayStr;
-    const sentItems = fetchSlackMessages_(userToken, sentQuery, todayStart, todayEnd, '送信');
-    items.push.apply(items, sentItems.items);
-    rawTexts.push.apply(rawTexts, sentItems.rawTexts);
+    if (includeSent) {
+      const sentQuery = 'from:me after:' + yesterdayStr;
+      const sentItems = fetchSlackMessages_(userToken, sentQuery, todayStart, todayEnd, '送信');
+      items.push.apply(items, sentItems.items);
+      rawTexts.push.apply(rawTexts, sentItems.rawTexts);
+    }
 
     // 受信メッセージ（to:me = メンションやDM）
-    const receivedQuery = 'to:me after:' + yesterdayStr;
-    const receivedItems = fetchSlackMessages_(userToken, receivedQuery, todayStart, todayEnd, '受信');
-    items.push.apply(items, receivedItems.items);
-    rawTexts.push.apply(rawTexts, receivedItems.rawTexts);
+    if (includeReceived) {
+      const receivedQuery = 'to:me after:' + yesterdayStr;
+      const receivedItems = fetchSlackMessages_(userToken, receivedQuery, todayStart, todayEnd, '受信');
+      items.push.apply(items, receivedItems.items);
+      rawTexts.push.apply(rawTexts, receivedItems.rawTexts);
+    }
 
     // 時刻順にソート
     items.sort(function(a, b) { return a.time.localeCompare(b.time); });
 
-    Logger.log('Slack履歴取得完了: ' + items.length + '件（送信+受信）');
+    Logger.log('Slack履歴取得完了: ' + items.length + '件');
     return { success: true, items: items, rawTexts: rawTexts, error: '' };
 
   } catch (e) {
@@ -1840,11 +1849,12 @@ function fetchSlackMessages_(userToken, query, todayStart, todayEnd, direction) 
 
 /**
  * Gmail履歴を取得（AI要約用の生データも返す）
+ * @param {boolean} includeSent - 送信メールを含めるか
  * @param {boolean} includeReceived - 受信メールも含めるか
  * @returns {Object} {success, items, rawTexts, error}
  */
-function getGmailHistory(includeReceived) {
-  Logger.log('Gmail履歴取得開始');
+function getGmailHistory(includeSent, includeReceived) {
+  Logger.log('Gmail履歴取得開始（送信:' + includeSent + ', 受信:' + includeReceived + '）');
 
   try {
     const today = new Date();
@@ -1855,6 +1865,7 @@ function getGmailHistory(includeReceived) {
     const rawTexts = [];
 
     // 送信メール（最大20件に制限して高速化）
+    if (includeSent) {
     const sentQuery = 'in:sent after:' + dateStr;
     const sentThreads = GmailApp.search(sentQuery, 0, 20);
 
@@ -1884,6 +1895,8 @@ function getGmailHistory(includeReceived) {
         text: '件名: ' + subject + ' / 本文: ' + body.substring(0, 300)
       });
     }
+
+    } // end includeSent
 
     // 受信メール（設定がONの場合のみ）
     if (includeReceived) {
@@ -1960,11 +1973,11 @@ function getAllToolHistoryV3(dateString) {
     result.errors.push('[カレンダー] ' + e.message);
   }
 
-  // Slack履歴（常に今日）
+  // Slack履歴（常に今日）— 送信・受信を個別制御
   var slackRawTexts = [];
-  if (settings.slack) {
+  if (settings.slackSent || settings.slackReceived) {
     try {
-      const slackResult = getSlackHistory();
+      const slackResult = getSlackHistory(settings.slackSent, settings.slackReceived);
       result.slack = { items: slackResult.items, error: slackResult.error, summary: '' };
       slackRawTexts = slackResult.rawTexts || [];
       if (!slackResult.success && slackResult.error) {
@@ -1976,11 +1989,11 @@ function getAllToolHistoryV3(dateString) {
     }
   }
 
-  // Gmail履歴（常に今日）
+  // Gmail履歴（常に今日）— 送信・受信を個別制御
   var gmailRawTexts = [];
-  if (settings.gmail) {
+  if (settings.gmail || settings.gmailReceived) {
     try {
-      const gmailResult = getGmailHistory(settings.gmailReceived);
+      const gmailResult = getGmailHistory(settings.gmail, settings.gmailReceived);
       result.gmail = { items: gmailResult.items, error: gmailResult.error, summary: '' };
       gmailRawTexts = gmailResult.rawTexts || [];
       if (!gmailResult.success && gmailResult.error) {
