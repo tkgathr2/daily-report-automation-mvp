@@ -863,6 +863,23 @@ function getSlackLinkStatus() {
 }
 
 /**
+ * Gmail再認証URLを返す（GASのOAuthスコープ再認可）
+ * @returns {string|null} 再認証が必要な場合はURL、不要ならnull
+ */
+function getGmailReauthorizeUrl() {
+  try {
+    // GmailAppにアクセスしてみて権限を確認
+    GmailApp.search('in:sent', 0, 1);
+    return null; // 権限あり
+  } catch (e) {
+    Logger.log('Gmail権限エラー: ' + e.message);
+    var authInfo = ScriptApp.getAuthorizationInfo(ScriptApp.AuthMode.FULL);
+    var authUrl = authInfo.getAuthorizationUrl();
+    return authUrl || null;
+  }
+}
+
+/**
  * Slack OAuth認可URLを返す（ユーザーごと）
  * @returns {string} 認可URL
  */
