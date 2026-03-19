@@ -4044,9 +4044,46 @@
       }
     }
 
+    function buildErrorHtml(text) {
+      var html = '<div style="margin-bottom: 8px;">' + escapeHtml(text) + '</div>';
+      var buttons = [];
+      if (text.indexOf('[Slack]') !== -1) {
+        buttons.push('<button onclick="connectSlack()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #4A154B; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;">&#9889; Slack連携する</button>');
+      }
+      if (text.indexOf('[Gmail]') !== -1) {
+        buttons.push('<button onclick="reauthorizeGmail()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #EA4335; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;">&#9993; Gmail再認証する</button>');
+      }
+      if (buttons.length > 0) {
+        html += '<div style="display: flex; gap: 8px; flex-wrap: wrap;">' + buttons.join('') + '</div>';
+      }
+      return html;
+    }
+
+    function reauthorizeGmail() {
+      showMessage('Gmail再認証を開始します...', false);
+      google.script.run
+        .withSuccessHandler(function(url) {
+          if (url) {
+            window.top.location.href = url;
+          } else {
+            showMessage('Gmail権限は正常です。再度「取得」をお試しください。', false);
+          }
+        })
+        .withFailureHandler(function(error) {
+          var errMsg = (error && error.message) ? error.message : '不明なエラー';
+          showMessage('Gmail再認証エラー: ' + errMsg, true);
+        })
+        .getGmailReauthorizeUrl();
+    }
+
     function showMessage(text, isError) {
       const messageElement = document.getElementById('message');
-      messageElement.textContent = text;
+      var hasActionButton = isError && (text.indexOf('[Slack]') !== -1 || text.indexOf('[Gmail]') !== -1);
+      if (hasActionButton) {
+        messageElement.innerHTML = buildErrorHtml(text);
+      } else {
+        messageElement.textContent = text;
+      }
       messageElement.className = 'message show ' + (isError ? 'error' : 'success');
 
       // エラーの場合は「読み込み中」エリアにも表示
@@ -4055,7 +4092,11 @@
         var loadingErr = document.getElementById('loadingError');
         var spinnerRow = document.getElementById('loadingSpinnerRow');
         if (loadingElement && loadingErr) {
-          loadingErr.textContent = text;
+          if (hasActionButton) {
+            loadingErr.innerHTML = buildErrorHtml(text);
+          } else {
+            loadingErr.textContent = text;
+          }
           loadingErr.style.display = 'block';
           loadingElement.classList.add('show');
           if (spinnerRow) spinnerRow.style.display = 'none';
@@ -4072,12 +4113,13 @@
     function hideMessage() {
       const messageElement = document.getElementById('message');
       messageElement.classList.remove('show');
+      messageElement.innerHTML = '';
       // ローディングエリアのエラーも非表示
       var loadingElement = document.getElementById('loading');
       var loadingErr = document.getElementById('loadingError');
       if (loadingElement && loadingErr) {
         loadingErr.style.display = 'none';
-        loadingErr.textContent = '';
+        loadingErr.innerHTML = '';
         loadingElement.classList.remove('show');
       }
     }
