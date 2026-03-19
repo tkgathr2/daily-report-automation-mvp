@@ -3112,7 +3112,7 @@
         }
       }
       
-      // Gmail履歴を追加（AI要約があればエディタに自動挿入）
+      // Gmail履歴を追加（AI要約があればそちらを使用、なければ生データ）
       if (result.gmail && result.gmail.summary) {
         var gmailSummaryLines = result.gmail.summary.split('\n');
         for (var gl = 0; gl < gmailSummaryLines.length; gl++) {
@@ -3120,6 +3120,11 @@
           if (glLine) {
             lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(glLine));
           }
+        }
+      } else if (result.gmail && result.gmail.items) {
+        for (var gm = 0; gm < result.gmail.items.length; gm++) {
+          var gItem = result.gmail.items[gm];
+          lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(gItem.content));
         }
       }
       
