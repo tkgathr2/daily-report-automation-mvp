@@ -1778,7 +1778,13 @@ function fetchSlackMessages_(userToken, query, todayStart, todayEnd, direction) 
       clearSlackUserToken_();
       throw new Error('SLACK_MISSING_SCOPE');
     }
-    return { items: items, rawTexts: rawTexts };
+    // 認証エラーの場合はトークンをクリアして再認証を促す
+    if (slackErr === 'token_revoked' || slackErr === 'invalid_auth' || slackErr === 'account_inactive' || slackErr === 'token_expired') {
+      clearSlackUserToken_();
+      throw new Error('Slackの認証が無効です。「Slack連携（認可）」から再連携してください。（エラー: ' + slackErr + '）');
+    }
+    // その他のエラーもスローして呼び出し元に伝える
+    throw new Error('Slack API エラー: ' + slackErr);
   }
 
   const messages = json.messages && json.messages.matches ? json.messages.matches : [];
@@ -1822,7 +1828,9 @@ function getGmailHistory(includeReceived) {
 
   try {
     const today = new Date();
-    const dateStr = Utilities.formatDate(today, TIMEZONE, 'yyyy/MM/dd');
+    // after:は指定日を除外するため、昨日を指定して今日のメールを取得
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const dateStr = Utilities.formatDate(yesterday, TIMEZONE, 'yyyy/MM/dd');
     const items = [];
     const rawTexts = [];
 
@@ -1859,7 +1867,7 @@ function getGmailHistory(includeReceived) {
 
     // 受信メール（設定がONの場合のみ）
     if (includeReceived) {
-      const receivedQuery = 'in:inbox after:' + dateStr + ' -in:sent';
+      const receivedQuery = 'in:inbox after:' + dateStr + ' -in:sent';  // dateStrは昨日なので今日のメールが含まれる
       const receivedThreads = GmailApp.search(receivedQuery, 0, 20);
 
       for (let j = 0; j < receivedThreads.length && items.length < MAX_ITEMS_PER_TOOL; j++) {
