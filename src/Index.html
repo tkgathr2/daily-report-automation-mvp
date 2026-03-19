@@ -1620,8 +1620,11 @@
 
     <!-- ローディング表示 -->
     <div id="loading" class="loading">
-      <span class="loading-spinner"></span>
-      <span>読み込み中...</span>
+      <div id="loadingSpinnerRow">
+        <span class="loading-spinner"></span>
+        <span>読み込み中...</span>
+      </div>
+      <div id="loadingError" style="display: none; margin-top: 8px; padding: 10px 14px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; border-radius: 6px; font-size: 13px; text-align: left;"></div>
     </div>
 
     <!-- 日報ヘッダー -->
@@ -4022,8 +4025,21 @@
       if (loadingElement) {
         if (show) {
           loadingElement.classList.add('show');
+          // ローディング開始時はエラーをクリアしてスピナーを表示
+          var spinnerRow = document.getElementById('loadingSpinnerRow');
+          var loadingErr = document.getElementById('loadingError');
+          if (spinnerRow) spinnerRow.style.display = '';
+          if (loadingErr) { loadingErr.style.display = 'none'; loadingErr.textContent = ''; }
         } else {
-          loadingElement.classList.remove('show');
+          // エラーが表示されている場合はloading要素を残す
+          var loadingErr = document.getElementById('loadingError');
+          if (loadingErr && loadingErr.style.display !== 'none' && loadingErr.textContent) {
+            // スピナーだけ非表示にし、エラーは残す
+            var spinnerRow = document.getElementById('loadingSpinnerRow');
+            if (spinnerRow) spinnerRow.style.display = 'none';
+          } else {
+            loadingElement.classList.remove('show');
+          }
         }
       }
     }
@@ -4032,6 +4048,19 @@
       const messageElement = document.getElementById('message');
       messageElement.textContent = text;
       messageElement.className = 'message show ' + (isError ? 'error' : 'success');
+
+      // エラーの場合は「読み込み中」エリアにも表示
+      if (isError) {
+        var loadingElement = document.getElementById('loading');
+        var loadingErr = document.getElementById('loadingError');
+        var spinnerRow = document.getElementById('loadingSpinnerRow');
+        if (loadingElement && loadingErr) {
+          loadingErr.textContent = text;
+          loadingErr.style.display = 'block';
+          loadingElement.classList.add('show');
+          if (spinnerRow) spinnerRow.style.display = 'none';
+        }
+      }
 
       if (!isError) {
         setTimeout(function() {
@@ -4043,6 +4072,14 @@
     function hideMessage() {
       const messageElement = document.getElementById('message');
       messageElement.classList.remove('show');
+      // ローディングエリアのエラーも非表示
+      var loadingElement = document.getElementById('loading');
+      var loadingErr = document.getElementById('loadingError');
+      if (loadingElement && loadingErr) {
+        loadingErr.style.display = 'none';
+        loadingErr.textContent = '';
+        loadingElement.classList.remove('show');
+      }
     }
 
     // ============================================
