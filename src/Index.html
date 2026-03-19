@@ -3120,7 +3120,7 @@
         }
       }
       
-      // Backlog完了課題を追加（自動挿入）
+      // Backlog完了課題を追加（自動挿入）— 完了課題がない場合は非表示
       if (result.backlog && result.backlog.text) {
         var bText = result.backlog.text;
         // エラーコードを検出して設定リンク付きメッセージを表示
@@ -3129,7 +3129,8 @@
           if (backlogErrorHtml) {
             lines.push(backlogErrorHtml);
           }
-        } else {
+        } else if (bText.indexOf('本日完了した課題はありません') === -1) {
+          // 「本日完了した課題はありません」の場合は非表示
           var backlogTextLines = bText.split('\n');
           for (var bl = 0; bl < backlogTextLines.length; bl++) {
             var btLine = backlogTextLines[bl].trim();
