@@ -283,8 +283,8 @@ function formatBacklogReport_(config, issueMap) {
   for (var i = 0; i < keys.length; i++) {
     var entry = issueMap[keys[i]];
     var issueUrl = config.baseUrl + '/view/' + entry.issueKey;
-    var line = '- ' + entry.issueKey + ' ' + entry.summary;
-    line += '\n  ' + issueUrl;
+    // 課題名にURLリンクを埋め込む（フロントエンドでHTMLリンクに変換、Slack投稿時にクリック可能）
+    var line = '- <' + issueUrl + '|' + entry.issueKey + ' ' + entry.summary + '>';
     lines.push(line);
   }
 
@@ -292,8 +292,7 @@ function formatBacklogReport_(config, issueMap) {
     return 'Backlog完了課題\n本日完了した課題はありません';
   }
 
-  var header = 'Backlog完了課題（' + lines.length + '件）';
-  return header + '\n' + lines.join('\n');
+  return lines.join('\n');
 }
 
 // ============================================
