@@ -1737,6 +1737,9 @@ function getSlackHistory() {
     var errMsg = 'Slack履歴を取得できませんでした。';
     if (e.message === 'SLACK_MISSING_SCOPE') {
       errMsg = 'Slackの権限が不足しています。「Slack連携（認可）」から再連携してください。';
+    } else if (e.message && e.message !== errMsg) {
+      // fetchSlackMessages_からの詳細エラーメッセージをそのまま伝える
+      errMsg = e.message;
     }
     return { success: false, items: [], rawTexts: [], error: errMsg };
   }
