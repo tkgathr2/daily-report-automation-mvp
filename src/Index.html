@@ -1649,13 +1649,17 @@
         <span>【今日やったこと】</span>
         <div style="display: flex; align-items: center; gap: 6px;">
           <div class="tool-pills" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-            <div class="tool-pill active" data-tool="slack" data-setting="settingSlack" onclick="togglePill(this)" style="--pill-color: #4A154B; --pill-bg: #f8f0f8;">
+            <div class="tool-pill active" data-tool="slack-sent" data-setting="settingSlackSent" onclick="togglePill(this)" style="--pill-color: #4A154B; --pill-bg: #f8f0f8;">
               <span class="tool-dot"></span>
-              <span>Slack</span>
+              <span>Slack送信</span>
+            </div>
+            <div class="tool-pill" data-tool="slack-received" data-setting="settingSlackReceived" onclick="togglePill(this)" style="--pill-color: #611f69; --pill-bg: #f3e8f5;">
+              <span class="tool-dot"></span>
+              <span>Slack受信</span>
             </div>
             <div class="tool-pill active" data-tool="gmail" data-setting="settingGmail" onclick="togglePill(this)" style="--pill-color: #EA4335; --pill-bg: #fef0ef;">
               <span class="tool-dot"></span>
-              <span>Gmail</span>
+              <span>Gmail送信</span>
             </div>
             <div class="tool-pill" data-tool="gmail-received" data-setting="settingGmailReceived" onclick="togglePill(this)" style="--pill-color: #FBBC05; --pill-bg: #fef9ee;">
               <span class="tool-dot"></span>
@@ -2895,7 +2899,8 @@
     function loadToolSettings() {
       google.script.run
         .withSuccessHandler(function(settings) {
-          setPillActive('settingSlack', settings.slack !== false);
+          setPillActive('settingSlackSent', settings.slackSent !== false);
+          setPillActive('settingSlackReceived', !!settings.slackReceived);
           setPillActive('settingGmail', settings.gmail !== false);
           setPillActive('settingGmailReceived', !!settings.gmailReceived);
           setPillActive('settingBacklog', !!settings.backlog);
@@ -2910,7 +2915,8 @@
 
     function saveToolSettingsUI() {
       var settings = {
-        slack: isPillActive('settingSlack'),
+        slackSent: isPillActive('settingSlackSent'),
+        slackReceived: isPillActive('settingSlackReceived'),
         gmail: isPillActive('settingGmail'),
         gmailReceived: isPillActive('settingGmailReceived'),
         backlog: isPillActive('settingBacklog')
