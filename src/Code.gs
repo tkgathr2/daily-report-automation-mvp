@@ -896,7 +896,7 @@ function getSlackAuthorizeUrl() {
   const params = {
     client_id: cfg.clientId,
     redirect_uri: redirectUri,
-    user_scope: 'chat:write,search:read,channels:history,groups:history,im:history,mpim:history',
+    user_scope: 'chat:write,search:read',
     state: state
   };
 
@@ -1649,7 +1649,7 @@ function summarizeWithGemini_(prompt) {
       }],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 2048
+        maxOutputTokens: 1024
       }
     };
 
@@ -1685,40 +1685,26 @@ function generateTaskSummary_(rawTexts, toolName) {
     return '- [' + item.direction + '] ' + (item.channel ? item.channel + ': ' : '') + item.text;
   }).join('\n');
 
-  var prompt = 'あなたは日報作成アシスタントです。以下の' + toolName + 'の送受信履歴を分析し、「今日やったこと」として日報に書ける内容を作成してください。\n\n'
-    + '【出力フォーマット】（必ずこの形式で出力してください）\n'
-    + 'タスク名（何の件か分かる具体的な名前、20〜40文字）\n'
-    + '  → その仕事の内容・結果・成果を1〜2文で説明\n\n'
-    + '【出力例】\n'
-    + '○○社との打ち合わせ対応\n'
-    + '  → 来週のデモ日程について合意し、資料送付を約束した\n\n'
-    + 'エラー調査と修正方針の共有\n'
-    + '  → XX機能のエラー原因を特定し、修正方針をチームにSlackで共有した\n\n'
+  var prompt = 'あなたは日報作成アシスタントです。以下の' + toolName + 'の送受信履歴を分析し、「今日やったこと」として日報に書けるタスク一覧を作成してください。\n\n'
     + '【ルール】\n'
-    + '- タスク名は「何の件か」が分かる具体的な名前にする（「〜の対応」「〜の確認」「〜の共有」等）\n'
-    + '- 「→」の説明は実際に何をしたか・どうなったかを具体的に書く\n'
+    + '- 各タスクは1行で簡潔に（20文字以内推奨）\n'
+    + '- 「〜の対応」「〜の確認」「〜の共有」など、業務タスクとして表現\n'
     + '- 重複する内容はまとめる\n'
-    + '- 挨拶・雑談・定型文（「お世話になっております」等）は除外\n'
-    + '- タスク名の前に箇条書き記号は不要\n'
-    + '- 最大5件まで\n\n'
+    + '- 挨拶や雑談は除外\n'
+    + '- 箇条書きの記号は不要（テキストのみ）\n'
+    + '- 最大10件まで\n\n'
     + '【' + toolName + '履歴】\n' + dataLines;
 
   var summary = summarizeWithGemini_(prompt);
   if (!summary) return '';
 
-  // 先頭の箇条書き記号のみ除去（「→」付きの説明行は保持）
+  // 箇条書き記号を除去して整形
   var lines = summary.split('\n');
   var cleaned = [];
   for (var i = 0; i < lines.length; i++) {
-    var line = lines[i];
-    // 「→」で始まる行（説明行）はトリムのみ
-    if (/^\s*→/.test(line)) {
-      var trimmed = line.trim();
-      if (trimmed) cleaned.push(trimmed);
-    } else {
-      // タスク名行は先頭の箇条書き記号を除去
-      var cleaned_line = line.replace(/^[\s]*[-・●▪▸►*]\s*/, '').trim();
-      if (cleaned_line) cleaned.push(cleaned_line);
+    var line = lines[i].replace(/^[\s]*[-・●▪▸►*]\s*/, '').trim();
+    if (line && line.length > 0) {
+      cleaned.push(line);
     }
   }
   return cleaned.join('\n');
@@ -1794,52 +1780,12 @@ function getSlackHistory(includeSent, includeReceived) {
  * @param {string} direction - '送信' or '受信'
  * @returns {Object} {items, rawTexts}
  */
-/**
- * Slackスレッド返信を取得するヘルパー
- * conversations.replies APIを使用してスレッドの返信を取得
- * @param {string} userToken - Slackユーザートークン
- * @param {string} channelId - チャンネルID
- * @param {string} ts - 親メッセージのタイムスタンプ
- * @returns {Array} 返信テキストの配列（最大5件、失敗時は空配列）
- */
-function fetchSlackThread_(userToken, channelId, ts) {
-  try {
-    var params = {
-      channel: channelId,
-      ts: ts,
-      limit: 6  // 親メッセージ含めて6件取得（返信は最大5件）
-    };
-    var url = 'https://slack.com/api/conversations.replies?' + toQueryString_(params);
-    var res = UrlFetchApp.fetch(url, {
-      method: 'get',
-      headers: { 'Authorization': 'Bearer ' + userToken },
-      muteHttpExceptions: true
-    });
-    var json = safeJsonParse_(res.getContentText());
-    if (!json || !json.ok) {
-      Logger.log('conversations.replies失敗: ' + (json && json.error ? json.error : 'unknown'));
-      return [];
-    }
-    var replies = [];
-    var messages = json.messages || [];
-    // インデックス1以降が返信（0は親メッセージ）
-    for (var i = 1; i < messages.length; i++) {
-      var replyText = (messages[i].text || '').substring(0, 200);
-      if (replyText) replies.push(replyText);
-    }
-    return replies;
-  } catch (e) {
-    Logger.log('fetchSlackThread_ error: ' + e.message);
-    return [];
-  }
-}
-
 function fetchSlackMessages_(userToken, query, todayStart, todayEnd, direction) {
   const params = {
     query: query,
     sort: 'timestamp',
     sort_dir: 'asc',
-    count: 10  // スレッド取得のため件数を絞る
+    count: 20
   };
 
   const url = 'https://slack.com/api/search.messages?' + toQueryString_(params);
@@ -1871,7 +1817,6 @@ function fetchSlackMessages_(userToken, query, todayStart, todayEnd, direction) 
   }
 
   const messages = json.messages && json.messages.matches ? json.messages.matches : [];
-  var threadFetchCount = 0;  // スレッド取得件数の上限管理
 
   for (var i = 0; i < messages.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
     var msg = messages[i];
@@ -1880,7 +1825,6 @@ function fetchSlackMessages_(userToken, query, todayStart, todayEnd, direction) 
 
     if (msgDate >= todayStart && msgDate <= todayEnd) {
       var channelName = msg.channel && msg.channel.name ? msg.channel.name : 'DM';
-      var channelId = msg.channel && msg.channel.id ? msg.channel.id : null;
       var fullText = msg.text || '';
       var displayText = fullText.length > 30 ? fullText.substring(0, 30) + '...' : fullText;
 
@@ -1891,23 +1835,11 @@ function fetchSlackMessages_(userToken, query, todayStart, todayEnd, direction) 
         content: '[' + direction + '] ' + prefix + ': 「' + displayText + '」'
       });
 
-      // AI要約用に全文テキストを構築（スレッド返信も含める）
-      var rawTextContent = fullText.substring(0, 1500);
-
-      // スレッド返信を取得（最大5件のメッセージのみ）
-      var replyCount = msg.reply_count || 0;
-      if (replyCount > 0 && channelId && threadFetchCount < 5) {
-        var replies = fetchSlackThread_(userToken, channelId, msg.ts);
-        if (replies.length > 0) {
-          rawTextContent += '\n【スレッド返信】\n' + replies.map(function(r) { return '- ' + r; }).join('\n');
-        }
-        threadFetchCount++;
-      }
-
+      // AI要約用に全文テキストを保存
       rawTexts.push({
         direction: direction,
         channel: prefix,
-        text: rawTextContent
+        text: fullText.substring(0, 500)
       });
     }
   }
@@ -1956,23 +1888,11 @@ function getGmailHistory(includeSent, includeReceived) {
         content: '送信: 「' + displaySubject + '」'
       });
 
-      // AI要約用: 件名+本文（1500文字）+ スレッド内の他メッセージ（最大3件）
-      var rawText = '件名: ' + subject + '\n本文: ' + body.substring(0, 1500);
-      if (messages.length > 1) {
-        var replyParts = [];
-        var maxReply = Math.min(messages.length - 1, 3);
-        for (var ri = 0; ri < maxReply; ri++) {
-          var replyMsg = messages[ri];
-          var replyBody = (replyMsg.getPlainBody() || '').substring(0, 500);
-          if (replyBody) replyParts.push('返信' + (ri + 1) + ': ' + replyBody);
-        }
-        if (replyParts.length > 0) rawText += '\n' + replyParts.join('\n');
-      }
-
+      // AI要約用に件名+本文を保存
       rawTexts.push({
         direction: '送信',
         channel: to.length > 30 ? to.substring(0, 30) + '...' : to,
-        text: rawText
+        text: '件名: ' + subject + ' / 本文: ' + body.substring(0, 300)
       });
     }
 
@@ -2007,23 +1927,10 @@ function getGmailHistory(includeSent, includeReceived) {
           content: '受信(' + displayFrom + '): 「' + displayRSubject + '」'
         });
 
-        // AI要約用: 件名+本文（1500文字）+ スレッド内の他メッセージ（最大3件）
-        var rRawText = '件名: ' + rSubject + '\n本文: ' + rBody.substring(0, 1500);
-        if (rMessages.length > 1) {
-          var rReplyParts = [];
-          var rMaxReply = Math.min(rMessages.length - 1, 3);
-          for (var rri = 0; rri < rMaxReply; rri++) {
-            var rReplyMsg = rMessages[rri];
-            var rReplyBody = (rReplyMsg.getPlainBody() || '').substring(0, 500);
-            if (rReplyBody) rReplyParts.push('返信' + (rri + 1) + ': ' + rReplyBody);
-          }
-          if (rReplyParts.length > 0) rRawText += '\n' + rReplyParts.join('\n');
-        }
-
         rawTexts.push({
           direction: '受信',
           channel: rFrom.length > 30 ? rFrom.substring(0, 30) + '...' : rFrom,
-          text: rRawText
+          text: '件名: ' + rSubject + ' / 本文: ' + rBody.substring(0, 300)
         });
       }
     }
