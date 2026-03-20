@@ -176,7 +176,7 @@ const loginPageHTML = `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>簡単日報くん - ログイン</title>
+  <title>簡単日報くん</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2300a0e9'/%3E%3Crect x='7' y='5' width='14' height='22' rx='2' fill='white'/%3E%3Cline x1='10' y1='10' x2='18' y2='10' stroke='%23ccc' stroke-width='1.2'/%3E%3Cline x1='10' y1='13.5' x2='18' y2='13.5' stroke='%23ccc' stroke-width='1.2'/%3E%3Cline x1='10' y1='17' x2='16' y2='17' stroke='%23ccc' stroke-width='1.2'/%3E%3Cg transform='translate(16,10) rotate(45)'%3E%3Crect x='-1.5' y='-10' width='3' height='14' rx='0.5' fill='%23FFB74D'/%3E%3Cpolygon points='-1.5,4 1.5,4 0,7' fill='%23FFB74D'/%3E%3Crect x='-1.5' y='-10' width='3' height='3' rx='0.5' fill='%23E57373'/%3E%3C/g%3E%3C/svg%3E">
   <style>
     * {
