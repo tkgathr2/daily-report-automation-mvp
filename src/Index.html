@@ -3107,11 +3107,7 @@
         var slackSummaryLines = result.slack.summary.split('\n');
         for (var sl = 0; sl < slackSummaryLines.length; sl++) {
           var slLine = slackSummaryLines[sl].trim();
-          if (!slLine) continue;
-          // 「→」で始まる説明行はインデント表示（ラベルなし）
-          if (/^→/.test(slLine)) {
-            lines.push('&nbsp;&nbsp;<span style="color: #666; font-size: 0.95em;">' + escapeHtml(slLine) + '</span>');
-          } else {
+          if (slLine) {
             lines.push('<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(slLine));
           }
         }
@@ -3121,17 +3117,13 @@
           lines.push('<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(sItem.content));
         }
       }
-
+      
       // Gmail履歴を追加（AI要約があればそちらを使用、なければ生データ）
       if (result.gmail && result.gmail.summary) {
         var gmailSummaryLines = result.gmail.summary.split('\n');
         for (var gl = 0; gl < gmailSummaryLines.length; gl++) {
           var glLine = gmailSummaryLines[gl].trim();
-          if (!glLine) continue;
-          // 「→」で始まる説明行はインデント表示（ラベルなし）
-          if (/^→/.test(glLine)) {
-            lines.push('&nbsp;&nbsp;<span style="color: #666; font-size: 0.95em;">' + escapeHtml(glLine) + '</span>');
-          } else {
+          if (glLine) {
             lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(glLine));
           }
         }
