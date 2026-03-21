@@ -13,6 +13,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,3 +23,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh pr merge ${{ github.event.pull_request.number }} --merge --auto
+
+      - name: Wait for PR merge and trigger GAS deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Waiting for PR #${{ github.event.pull_request.number }} to be merged..."
+          for i in $(seq 1 60); do
+            STATE=$(gh pr view ${{ github.event.pull_request.number }} --json state -q '.state')
+            if [ "$STATE" = "MERGED" ]; then
+              echo "PR merged! Triggering GAS deploy..."
+              gh workflow run deploy-gas.yml
+              echo "Deploy workflow triggered successfully."
+              exit 0
+            fi
+            echo "  Attempt $i/60: state=$STATE, waiting 5s..."
+            sleep 5
+          done
+          echo "::warning::PR not merged within 5 minutes. Deploy not triggered."
