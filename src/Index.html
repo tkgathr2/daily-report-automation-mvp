@@ -3102,13 +3102,22 @@
         }
       }
       
-      // Slack履歴を追加（AI要約があればそちらを使用、なければ生データ）
+      // Slack履歴を追加（AI要約があればグループ構造で表示、なければ生データ）
       if (result.slack && result.slack.summary) {
         var slackSummaryLines = result.slack.summary.split('\n');
         for (var sl = 0; sl < slackSummaryLines.length; sl++) {
-          var slLine = slackSummaryLines[sl].trim();
-          if (slLine) {
-            lines.push('<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(slLine));
+          var slLine = slackSummaryLines[sl];
+          if (slLine.trim() === '') {
+            // グループ間の空行
+            lines.push('');
+            continue;
+          }
+          if (slLine.trim().startsWith('・')) {
+            // 箇条書き行: インデント付きで表示
+            lines.push('<span style="color: #4A154B; padding-left: 1.5em;">\u3000' + escapeHtml(slLine.trim()) + '</span>');
+          } else {
+            // グループ見出し行: 太字で表示
+            lines.push('<span style="color: #4A154B; font-weight: bold;">[Slack] ' + escapeHtml(slLine.trim()) + '</span>');
           }
         }
       } else if (result.slack && result.slack.items) {
@@ -3118,13 +3127,22 @@
         }
       }
       
-      // Gmail履歴を追加（AI要約があればそちらを使用、なければ生データ）
+      // Gmail履歴を追加（AI要約があればグループ構造で表示、なければ生データ）
       if (result.gmail && result.gmail.summary) {
         var gmailSummaryLines = result.gmail.summary.split('\n');
         for (var gl = 0; gl < gmailSummaryLines.length; gl++) {
-          var glLine = gmailSummaryLines[gl].trim();
-          if (glLine) {
-            lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(glLine));
+          var glLine = gmailSummaryLines[gl];
+          if (glLine.trim() === '') {
+            // グループ間の空行
+            lines.push('');
+            continue;
+          }
+          if (glLine.trim().startsWith('・')) {
+            // 箇条書き行: インデント付きで表示
+            lines.push('<span style="color: #EA4335; padding-left: 1.5em;">\u3000' + escapeHtml(glLine.trim()) + '</span>');
+          } else {
+            // グループ見出し行: 太字で表示
+            lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail] ' + escapeHtml(glLine.trim()) + '</span>');
           }
         }
       } else if (result.gmail && result.gmail.items) {
