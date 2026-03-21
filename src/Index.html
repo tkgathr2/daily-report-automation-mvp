@@ -1584,25 +1584,44 @@
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
     
-    <div id="updateNotice" style="background: #fff; border: 2px solid #e74c3c; border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; font-size: 14px; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+    <div id="updateNotice" style="background: #fff; border: 2px solid #e74c3c; border-radius: 10px; padding: 20px 22px; margin-bottom: 20px; font-size: 14px; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
         <div style="display: flex; align-items: center;">
           <span style="background: #e74c3c; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px;">NEW</span>
           <strong style="font-size: 17px; color: #222;">AI日報アシスタント誕生</strong>
         </div>
         <button onclick="dismissUpdateNotice()" style="background: #f5f5f5; border: 1px solid #ddd; color: #888; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
       </div>
-      <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.7; color: #444;">取得ボタンを押すだけで、<strong>AIがSlack・Gmail・Backlogの履歴を自動で要約</strong>。プロジェクトごとに整理して、時刻付きで日報に挿入します。</p>
-      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
-        <span style="background: #ffeaea; color: #c0392b; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">AI要約</span>
-        <span style="background: #fff3e0; color: #e67e22; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">時刻自動付与</span>
-        <span style="background: #e8f5e9; color: #27ae60; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">時間ソート</span>
-        <span style="background: #e3f2fd; color: #2980b9; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">カテゴリソート</span>
-        <span style="background: #f3e5f5; color: #8e44ad; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">統一レイアウト</span>
-        <span style="background: #e0f2f1; color: #00897b; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">Backlog完了課題</span>
-      </div>
-      <div style="border-top: 1px solid #eee; padding-top: 10px; font-size: 12px; color: #999; line-height: 1.8;">
-        2026/03 ログイン90日間維持 / 残業時間入力 / Backlog連携 / ピル型トグルUI<br>
+      <p style="margin: 0 0 16px 0; font-size: 14px; line-height: 1.7; color: #444;">取得ボタンを押すだけで、<strong>AIがSlack・Gmail・Backlogの履歴を自動で要約</strong>。プロジェクトごとに整理して、時刻付きで日報に挿入します。もう手入力は不要です。</p>
+      <ul style="margin: 0 0 16px 0; padding: 0; list-style: none;">
+        <li style="margin-bottom: 10px; padding-left: 14px; border-left: 3px solid #e74c3c; line-height: 1.6;">
+          <strong style="color: #222;">AI要約機能</strong><br>
+          <span style="font-size: 13px; color: #555;">Slack・Gmailの履歴をAIが分析し、プロジェクト別に自動でグルーピング。何十件ものメッセージを数行に凝縮します。</span>
+        </li>
+        <li style="margin-bottom: 10px; padding-left: 14px; border-left: 3px solid #e67e22; line-height: 1.6;">
+          <strong style="color: #222;">時刻自動付与</strong><br>
+          <span style="font-size: 13px; color: #555;">全てのデータに「09:30~」形式の時刻を自動表示。いつ何をしたかが一目でわかります。</span>
+        </li>
+        <li style="margin-bottom: 10px; padding-left: 14px; border-left: 3px solid #27ae60; line-height: 1.6;">
+          <strong style="color: #222;">時間ソート / カテゴリソート</strong><br>
+          <span style="font-size: 13px; color: #555;">ワンクリックで全データを時間順に並べ替え。Slack・Gmail・Backlogをツール別に表示することも可能。</span>
+        </li>
+        <li style="margin-bottom: 10px; padding-left: 14px; border-left: 3px solid #2980b9; line-height: 1.6;">
+          <strong style="color: #222;">統一レイアウト</strong><br>
+          <span style="font-size: 13px; color: #555;">Slack・Gmail・Backlog全てが「HH:mm~ [ツール名] 内容」の同じフォーマットで表示。見やすく整理された日報が完成します。</span>
+        </li>
+        <li style="margin-bottom: 10px; padding-left: 14px; border-left: 3px solid #8e44ad; line-height: 1.6;">
+          <strong style="color: #222;">Backlog完了課題</strong><br>
+          <span style="font-size: 13px; color: #555;">完了した課題の完了時間・実績時間を自動取得。作業実績がそのまま日報に反映されます。</span>
+        </li>
+        <li style="margin-bottom: 0; padding-left: 14px; border-left: 3px solid #00897b; line-height: 1.6;">
+          <strong style="color: #222;">Slack送信/受信の個別制御</strong><br>
+          <span style="font-size: 13px; color: #555;">送信メッセージと受信メッセージを別々にON/OFF。必要な情報だけを取得できます。</span>
+        </li>
+      </ul>
+      <div style="border-top: 1px solid #eee; padding-top: 12px; font-size: 12px; color: #999; line-height: 1.8;">
+        <strong style="color: #777;">その他のアップデート</strong><br>
+        2026/03 ログイン90日間維持 / 残業時間入力 / Backlog連携 / ピル型トグルUI / エラー表示改善<br>
         2026/02 v4.0リリース / Slack連携強化 / Gmail自動取得 / サイドバー追加
       </div>
     </div>
