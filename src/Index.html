@@ -1584,39 +1584,38 @@
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
     
-    <div id="updateNotice" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+    <div id="updateNotice" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff4757 100%); border: none; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 6px 25px rgba(255, 107, 53, 0.5); position: relative; overflow: hidden;">
+      <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.08); border-radius: 50%;"></div>
+      <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; position: relative;">
         <div style="display: flex; align-items: center;">
-          <span style="background: #fff; color: #667eea; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 10px;">UPDATE</span>
-          <strong style="font-size: 15px;">最近のアップデート</strong>
+          <span style="background: #fff; color: #ff4757; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 900; margin-right: 10px; letter-spacing: 1px; animation: pulse 2s infinite;">MAJOR UPDATE</span>
+          <strong style="font-size: 16px; text-shadow: 0 1px 3px rgba(0,0,0,0.2);">AI日報アシスタント誕生</strong>
         </div>
         <button onclick="dismissUpdateNotice()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;">閉じる</button>
       </div>
-      <div class="news-list" style="max-height: 260px; overflow-y: auto; padding-right: 4px;">
+      <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; backdrop-filter: blur(4px);">
+        <div style="font-size: 14px; font-weight: bold; margin-bottom: 6px;">Slack・Gmail・Backlogの履歴をAIが自動で要約</div>
+        <div style="font-size: 12px; opacity: 0.9; line-height: 1.6;">取得ボタンを押すだけで、AIがあなたの1日の業務を分析。プロジェクトごとに整理して、時刻付きで日報に自動挿入します。もう手入力は不要です。</div>
+      </div>
+      <div class="news-list" style="max-height: 260px; overflow-y: auto; padding-right: 4px; position: relative;">
         <ul style="margin: 0; padding-left: 18px; opacity: 0.95; list-style: none;">
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/03/18</span>ログインが90日間不要になりました（一度ログインすればOK）</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/03/18</span>日報に残業時間を入力できるようになりました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/03/18</span>Notion連携を廃止しました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/03/16</span>Backlogの完了課題を自動で日報に取り込めるようになりました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/03/16</span>ツール設定がおしゃれなピル型ボタンに変わりました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/15</span>ブラウザタブのアイコンを新デザインに変更しました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>Slack投稿があなたの名前で送信されるようになりました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>ログイン画面のデザインを刷新しました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>Slack投稿者名が正しく表示されない問題を修正しました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/14</span>画面をすっきり整理しました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/13</span>アプリのURLが nippou.up.railway.app に統一されました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/12</span>Slack投稿にあなたのアイコンが表示されるようになりました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/12</span>簡単日報君 v4.0 をリリースしました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/11</span>iPhoneでSlack連携が動かない問題を修正しました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/11</span>Slackチャンネルの設定が自動になりました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/09</span>Slack・Gmailの履歴を一覧表示できるサイドバーを追加しました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/08</span>テンプレート・引き継ぎ機能を追加しました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/08</span>Gmail送受信の履歴を自動取得できるようになりました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/08</span>Slackの投稿履歴を自動取得できるようになりました</li>
-          <li style="margin-bottom: 6px; padding-left: 0;"><span style="opacity: 0.6; font-size: 11px; margin-right: 6px;">2026/02/07</span>Googleカレンダーの予定を自動で日報に取り込めるようになりました</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>AI要約機能</strong> - Slack/Gmailの履歴をAIがプロジェクト別に自動グルーピング</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>時刻自動付与</strong> - 全データに「09:39~」形式の時刻を自動表示</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>時間ソート</strong> - ワンクリックで全データを時間順に並べ替え</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>カテゴリソート</strong> - Slack / Gmail / Backlog をツール別に表示</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>統一レイアウト</strong> - 全ツールが同じ見やすいフォーマットに統一</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>Backlog完了課題</strong> - 完了時間・実績時間を自動取得して表示</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>Slack送信/受信の個別制御</strong> - 送信・受信を別々にON/OFF可能</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.3); padding-left: 10px;"><span style="opacity: 0.5; font-size: 11px; margin-right: 6px;">2026/03</span>ログイン90日間維持・残業時間入力・Notion連携廃止</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.3); padding-left: 10px;"><span style="opacity: 0.5; font-size: 11px; margin-right: 6px;">2026/03</span>Backlog連携・ピル型トグルUI・エラー表示改善</li>
+          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.3); padding-left: 10px;"><span style="opacity: 0.5; font-size: 11px; margin-right: 6px;">2026/02</span>v4.0リリース・Slack連携強化・Gmail自動取得・サイドバー追加</li>
         </ul>
       </div>
     </div>
+    <style>
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    </style>
 
     <!-- ローディング表示 -->
     <div id="loading" class="loading">
