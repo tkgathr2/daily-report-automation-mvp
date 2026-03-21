@@ -1798,6 +1798,7 @@
         </div>
         <div class="date-nav-container">
           <button type="button" class="btn-date-nav" onclick="changeDate(-1)">&lt; 前日</button>
+          <button type="button" class="btn-date-nav" onclick="goToToday()" style="background: #3498db; color: #fff;">今日</button>
           <button type="button" class="btn-date-nav" onclick="changeDate(1)">翌日 &gt;</button>
         </div>
         <input type="hidden" id="dateSelect">
@@ -3094,6 +3095,25 @@
 
       var sorted = calendar.concat(slack).concat(gmail).concat(backlog).concat(other);
       editor.innerHTML = sorted.join('<br>');
+    }
+
+    function goToToday() {
+      var yearSelect = document.getElementById('yearSelect');
+      var monthSelect = document.getElementById('monthSelect');
+      var daySelect = document.getElementById('daySelect');
+      
+      var now = new Date();
+      // JST基準で今日の日付を取得
+      var jstOffset = 9 * 60 * 60 * 1000;
+      var jstNow = new Date(now.getTime() + jstOffset);
+      
+      yearSelect.value = jstNow.getUTCFullYear();
+      monthSelect.value = jstNow.getUTCMonth() + 1;
+      updateDayOptions();
+      daySelect.value = jstNow.getUTCDate();
+      
+      updateHiddenDateInput();
+      loadEventsForSelectedDate();
     }
 
     function changeDate(days) {
