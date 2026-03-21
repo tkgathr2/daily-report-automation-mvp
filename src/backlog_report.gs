@@ -26,6 +26,7 @@ var BACKLOG_MAX_PAGES = 5;
 var BACKLOG_MAX_ISSUES = 50;
 var BACKLOG_TIMEZONE = 'Asia/Tokyo';
 var BACKLOG_STATUS_COMPLETED = 4;
+// TIMEZONE is defined in Code.gs (same value as BACKLOG_TIMEZONE)
 
 // ============================================
 // 設定読み込み
@@ -208,7 +209,9 @@ function extractCompletedIssues_(activities) {
             projectKey: projectKey,
             issueKey: key,
             summary: a.content.summary || '',
-            created: a.created
+            created: a.created,
+            completedTime: Utilities.formatDate(new Date(a.created), BACKLOG_TIMEZONE, 'HH:mm'),
+            actualHours: null  // fetchIssueSummaries_で補完
           };
         }
       }
@@ -235,7 +238,7 @@ function fetchIssueSummaries_(config, issueMap) {
   for (var i = 0; i < keys.length; i++) {
     var entry = issueMap[keys[i]];
 
-    if (entry.summary) continue;
+    if (entry.summary && entry.actualHours !== null) continue;
 
     if (fetchedCount >= BACKLOG_MAX_ISSUES) {
       Logger.log('BACKLOG_ISSUE_DETAIL_LIMIT_REACHED: 50課題超のため打ち切り');
@@ -255,6 +258,7 @@ function fetchIssueSummaries_(config, issueMap) {
       );
       entry.summary = issue.summary || '(課題名不明)';
       entry.issueKey = issue.issueKey || issueKey;
+      entry.actualHours = (issue.actualHours != null) ? issue.actualHours : null;
       fetchedCount++;
     } catch (e) {
       Logger.log('BACKLOG_ISSUE_FETCH_FAILED: issueKey=' + issueKey + ' error=' + e.message);
@@ -283,8 +287,20 @@ function formatBacklogReport_(config, issueMap) {
   for (var i = 0; i < keys.length; i++) {
     var entry = issueMap[keys[i]];
     var issueUrl = config.baseUrl + '/view/' + entry.issueKey;
-    // 課題名にURLリンクを埋め込む（フロントエンドでHTMLリンクに変換、Slack投稿時にクリック可能）
     var line = '- <' + issueUrl + '|' + entry.issueKey + ' ' + entry.summary + '>';
+
+    // 完了時間と実績時間を追加
+    var meta = [];
+    if (entry.completedTime) {
+      meta.push('完了: ' + entry.completedTime);
+    }
+    if (entry.actualHours != null && entry.actualHours > 0) {
+      meta.push('実績: ' + entry.actualHours + 'h');
+    }
+    if (meta.length > 0) {
+      line += '（' + meta.join(' / ') + '）';
+    }
+
     lines.push(line);
   }
 

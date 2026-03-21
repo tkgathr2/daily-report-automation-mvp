@@ -1649,7 +1649,7 @@ function summarizeWithGemini_(prompt) {
       }],
       generationConfig: {
         temperature: 0.3,
-        maxOutputTokens: 1024
+        maxOutputTokens: 2048
       }
     };
 
@@ -1685,28 +1685,59 @@ function generateTaskSummary_(rawTexts, toolName) {
     return '- [' + item.direction + '] ' + (item.channel ? item.channel + ': ' : '') + item.text;
   }).join('\n');
 
-  var prompt = 'あなたは日報作成アシスタントです。以下の' + toolName + 'の送受信履歴を分析し、「今日やったこと」として日報に書けるタスク一覧を作成してください。\n\n'
+  var prompt = 'あなたは日報作成アシスタントです。以下の' + toolName + 'の送受信履歴を分析し、プロジェクト・案件・話題ごとにグルーピングして日報用の要約を作成してください。\n\n'
+    + '【出力フォーマット】\n'
+    + 'グループ見出し（プロジェクト名やチャンネル名）\n'
+    + '・箇条書き項目1\n'
+    + '・箇条書き項目2\n'
+    + '\n'
+    + '別のグループ見出し\n'
+    + '・箇条書き項目\n\n'
     + '【ルール】\n'
-    + '- 各タスクは1行で簡潔に（20文字以内推奨）\n'
-    + '- 「〜の対応」「〜の確認」「〜の共有」など、業務タスクとして表現\n'
-    + '- 重複する内容はまとめる\n'
+    + '- 関連するメッセージを同じグループにまとめる\n'
+    + '- グループ見出しはプロジェクト名・チャンネル名・案件名など（装飾記号なし）\n'
+    + '- 各箇条書きは「・」で始め、何をしたか・結果を簡潔に書く（30文字以内推奨）\n'
+    + '- グループ間は空行で区切る\n'
     + '- 挨拶や雑談は除外\n'
-    + '- 箇条書きの記号は不要（テキストのみ）\n'
-    + '- 最大10件まで\n\n'
+    + '- 最大5グループ、各グループ最大5項目\n\n'
     + '【' + toolName + '履歴】\n' + dataLines;
 
   var summary = summarizeWithGemini_(prompt);
   if (!summary) return '';
 
-  // 箇条書き記号を除去して整形
+  // グループ構造を保持した後処理 + フォールバック
   var lines = summary.split('\n');
   var cleaned = [];
   for (var i = 0; i < lines.length; i++) {
-    var line = lines[i].replace(/^[\s]*[-・●▪▸►*]\s*/, '').trim();
-    if (line && line.length > 0) {
-      cleaned.push(line);
+    var line = lines[i].trimEnd();
+    if (line.trim().length === 0) {
+      // 空行はグループ間の区切りとして保持
+      if (cleaned.length > 0 && cleaned[cleaned.length - 1] !== '') {
+        cleaned.push('');
+      }
+      continue;
+    }
+    // 箇条書き行（・で始まる）はそのまま保持
+    if (line.trim().startsWith('・')) {
+      cleaned.push(line.trim());
+    } else {
+      // グループ見出し行: 先頭の記号を除去
+      var heading = line.replace(/^[\s]*[-●▪▸►*#]+\s*/, '').trim();
+      if (heading.length > 0) {
+        cleaned.push(heading);
+      }
     }
   }
+  // 末尾の空行を除去
+  while (cleaned.length > 0 && cleaned[cleaned.length - 1] === '') {
+    cleaned.pop();
+  }
+
+  // フォールバック: cleaned が空なら元のsummaryをそのまま返す
+  if (cleaned.length === 0) {
+    return summary;
+  }
+
   return cleaned.join('\n');
 }
 
