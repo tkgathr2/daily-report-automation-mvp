@@ -1671,7 +1671,8 @@
             </div>
           </div>
           <button id="loadCalendarBtn" onclick="loadEventsForSelectedDate()" style="background: #27ae60; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;">取得</button>
-          <button id="sortByTimeBtn" onclick="sortEditorByTime()" style="background: #3498db; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" title="全エントリを時間順にソート">時間ソート</button>
+          <button id="sortByTimeBtn" onclick="applySortOrder('time')" style="background: #95a5a6; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" title="全エントリを時間順にソート">時間ソート</button>
+          <button id="sortByCategoryBtn" onclick="applySortOrder('category')" style="background: #3498db; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" title="カテゴリ別にソート">カテゴリソート</button>
         </div>
       </div>
       <div class="textarea-with-toolbar">
@@ -2905,6 +2906,9 @@
           setPillActive('settingGmail', settings.gmail !== false);
           setPillActive('settingGmailReceived', !!settings.gmailReceived);
           setPillActive('settingBacklog', !!settings.backlog);
+          // 初期ソート順を設定から復元
+          currentSortOrder = settings.sortOrder || 'category';
+          updateSortButtonStyles();
           toolSettingsLoaded = true;
         })
         .withFailureHandler(function(error) {
@@ -2962,25 +2966,63 @@
     }
 
     // ============================================
-    // 時間ソート機能
-    // エディタ内の全行をHH:mm~プレフィックスで時間順にソート
+    // ソート機能（時間ソート / カテゴリソート）
     // ============================================
+    var currentSortOrder = 'category'; // デフォルト: カテゴリソート
+
+    function applySortOrder(order) {
+      currentSortOrder = order;
+      if (order === 'time') {
+        sortEditorByTime();
+      } else {
+        sortEditorByCategory();
+      }
+      updateSortButtonStyles();
+      // 設定を保存
+      saveSortOrderSetting(order);
+    }
+
+    function updateSortButtonStyles() {
+      var timeBtn = document.getElementById('sortByTimeBtn');
+      var catBtn = document.getElementById('sortByCategoryBtn');
+      if (timeBtn && catBtn) {
+        if (currentSortOrder === 'time') {
+          timeBtn.style.background = '#3498db';
+          catBtn.style.background = '#95a5a6';
+        } else {
+          timeBtn.style.background = '#95a5a6';
+          catBtn.style.background = '#3498db';
+        }
+      }
+    }
+
+    function saveSortOrderSetting(order) {
+      var settings = {
+        slackSent: isPillActive('settingSlackSent'),
+        slackReceived: isPillActive('settingSlackReceived'),
+        gmail: isPillActive('settingGmail'),
+        gmailReceived: isPillActive('settingGmailReceived'),
+        backlog: isPillActive('settingBacklog'),
+        sortOrder: order
+      };
+      google.script.run
+        .withFailureHandler(function(e) { console.error('saveSortOrder error:', e); })
+        .saveToolSettings(settings);
+    }
+
+    // 時間ソート: 全行をHH:mm~プレフィックスで時間順にソート
     function sortEditorByTime() {
       var editor = document.getElementById('todayTasks');
       if (!editor) return;
 
-      // エディタのHTMLを<br>で分割して行配列にする
       var html = editor.innerHTML;
       var lines = html.split(/<br\s*\/?>/i);
 
-      // 各行から時間を抽出してソート用データを作る
-      // 対応形式: "HH:mm~ [Slack/Gmail/Backlog]...", "HH:mm-HH:mm 予定名", "[Backlog] HH:mm~ ..."
       var timed = [];
       var untimed = [];
 
       for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
-        // HTMLタグを除去してテキスト部分から時間を抽出
         var textOnly = line.replace(/<[^>]+>/g, '').trim();
         // パターン1: 行頭の "HH:mm~" (Slack/Gmail/Backlog)
         var match = textOnly.match(/^(\d{2}:\d{2})~/);
@@ -3003,10 +3045,8 @@
         }
       }
 
-      // 時間のある行を時間順にソート
       timed.sort(function(a, b) { return a.time.localeCompare(b.time); });
 
-      // ソート済みの行を結合（時間ありを先に、時間なしを最後に）
       var sorted = [];
       for (var j = 0; j < timed.length; j++) {
         sorted.push(timed[j].html);
@@ -3015,6 +3055,41 @@
         sorted.push(untimed[k].html);
       }
 
+      editor.innerHTML = sorted.join('<br>');
+    }
+
+    // カテゴリソート: Calendar → Slack → Gmail → Backlog の順にグループ化
+    function sortEditorByCategory() {
+      var editor = document.getElementById('todayTasks');
+      if (!editor) return;
+
+      var html = editor.innerHTML;
+      var lines = html.split(/<br\s*\/?>/i);
+
+      var calendar = [];
+      var slack = [];
+      var gmail = [];
+      var backlog = [];
+      var other = [];
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var textOnly = line.replace(/<[^>]+>/g, '').trim();
+        if (!textOnly) continue;
+
+        if (line.indexOf('[Slack]') !== -1 || line.indexOf('color: #4A154B') !== -1) {
+          slack.push(line);
+        } else if (line.indexOf('[Gmail]') !== -1 || line.indexOf('color: #EA4335') !== -1) {
+          gmail.push(line);
+        } else if (line.indexOf('[Backlog]') !== -1 || line.indexOf('color: #42CE9F') !== -1) {
+          backlog.push(line);
+        } else {
+          // カレンダー予定 or その他
+          calendar.push(line);
+        }
+      }
+
+      var sorted = calendar.concat(slack).concat(gmail).concat(backlog).concat(other);
       editor.innerHTML = sorted.join('<br>');
     }
 
@@ -3247,6 +3322,12 @@
       
       // WYSIWYGエディタにカレンダー予定とSlack/Gmail/Backlog履歴を設定（Gmailは要約時のみ自動挿入、それ以外はサイドバーから選択）
       document.getElementById('todayTasks').innerHTML = lines.join('<br>');
+      
+      // 設定に応じた初期ソートを自動適用
+      if (currentSortOrder === 'time') {
+        sortEditorByTime();
+      }
+      // categoryの場合はデフォルトのカテゴリ順（Calendar→Slack→Gmail→Backlog）で既に表示されているのでそのまま
       
       // Gmail履歴をサイドバーに表示（ピッカー方式）
       try {
