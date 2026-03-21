@@ -258,7 +258,7 @@ function fetchIssueSummaries_(config, issueMap) {
       );
       entry.summary = issue.summary || '(課題名不明)';
       entry.issueKey = issue.issueKey || issueKey;
-      entry.actualHours = (issue.actualHours != null) ? issue.actualHours : null;
+      entry.actualHours = (issue.actualHours != null) ? issue.actualHours : 0;
       fetchedCount++;
     } catch (e) {
       Logger.log('BACKLOG_ISSUE_FETCH_FAILED: issueKey=' + issueKey + ' error=' + e.message);
@@ -294,10 +294,9 @@ function formatBacklogReport_(config, issueMap) {
       line = entry.completedTime + '~ ' + line;
     }
 
-    // 実績時間を追加（0hも表示）
-    if (entry.actualHours != null) {
-      line += '（実績: ' + entry.actualHours + 'h）';
-    }
+    // 実績時間を常に表示（0hでも表示して入力を促す）
+    var hours = (entry.actualHours != null) ? entry.actualHours : 0;
+    line += '（実績: ' + hours + 'h）';
 
     lines.push(line);
   }
