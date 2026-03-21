@@ -1805,8 +1805,8 @@ function generateTaskSummary_(rawTexts, toolName) {
  * @param {boolean} includeReceived - 受信メッセージを含めるか
  * @returns {Object} {success, items, rawTexts, error}
  */
-function getSlackHistory(includeSent, includeReceived) {
-  Logger.log('Slack履歴取得開始（送信:' + includeSent + ', 受信:' + includeReceived + '）');
+function getSlackHistory(includeSent, includeReceived, dateString) {
+  Logger.log('Slack履歴取得開始（送信:' + includeSent + ', 受信:' + includeReceived + ', 日付:' + (dateString || '今日') + '）');
 
   try {
     const userToken = getSlackUserToken_();
@@ -1814,20 +1814,29 @@ function getSlackHistory(includeSent, includeReceived) {
       return { success: false, items: [], rawTexts: [], error: 'Slack未連携です。「Slack連携（認可）」を実行してください。' };
     }
 
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    // 対象日を設定（dateStringがあればその日、なければ今日）
+    let targetDate;
+    if (dateString) {
+      const parts = dateString.split('-');
+      targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    } else {
+      targetDate = new Date();
+    }
+    const todayStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0);
+    const todayEnd = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59);
 
-    // 昨日の日付でafter:フィルタ（after:は指定日を除外するため、昨日を指定すると今日のメッセージが取得される）
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    // 前日の日付でafter:フィルタ（after:は指定日を除外するため、前日を指定すると対象日のメッセージが取得される）
+    const yesterday = new Date(targetDate.getTime() - 24 * 60 * 60 * 1000);
     const yesterdayStr = Utilities.formatDate(yesterday, TIMEZONE, 'yyyy-MM-dd');
+    // 過去日指定時はbefore:で翌日を指定して範囲を絞る
+    const beforeFilter = dateString ? ' before:' + Utilities.formatDate(new Date(targetDate.getTime() + 24 * 60 * 60 * 1000), TIMEZONE, 'yyyy-MM-dd') : '';
 
     const items = [];
     const rawTexts = [];
 
     // 送信メッセージ（from:me）
     if (includeSent) {
-      const sentQuery = 'from:me after:' + yesterdayStr;
+      const sentQuery = 'from:me after:' + yesterdayStr + beforeFilter;
       const sentItems = fetchSlackMessages_(userToken, sentQuery, todayStart, todayEnd, '送信');
       items.push.apply(items, sentItems.items);
       rawTexts.push.apply(rawTexts, sentItems.rawTexts);
@@ -1835,7 +1844,7 @@ function getSlackHistory(includeSent, includeReceived) {
 
     // 受信メッセージ（to:me = メンションやDM）
     if (includeReceived) {
-      const receivedQuery = 'to:me after:' + yesterdayStr;
+      const receivedQuery = 'to:me after:' + yesterdayStr + beforeFilter;
       const receivedItems = fetchSlackMessages_(userToken, receivedQuery, todayStart, todayEnd, '受信');
       items.push.apply(items, receivedItems.items);
       rawTexts.push.apply(rawTexts, receivedItems.rawTexts);
@@ -1943,20 +1952,30 @@ function fetchSlackMessages_(userToken, query, todayStart, todayEnd, direction) 
  * @param {boolean} includeReceived - 受信メールも含めるか
  * @returns {Object} {success, items, rawTexts, error}
  */
-function getGmailHistory(includeSent, includeReceived) {
-  Logger.log('Gmail履歴取得開始（送信:' + includeSent + ', 受信:' + includeReceived + '）');
+function getGmailHistory(includeSent, includeReceived, dateString) {
+  Logger.log('Gmail履歴取得開始（送信:' + includeSent + ', 受信:' + includeReceived + ', 日付:' + (dateString || '今日') + '）');
 
   try {
-    const today = new Date();
-    // after:は指定日を除外するため、昨日を指定して今日のメールを取得
-    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    // 対象日を設定（dateStringがあればその日、なければ今日）
+    let targetDate;
+    if (dateString) {
+      const parts = dateString.split('-');
+      targetDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    } else {
+      targetDate = new Date();
+    }
+    // after:は指定日を除外するため、前日を指定して対象日のメールを取得
+    const yesterday = new Date(targetDate.getTime() - 24 * 60 * 60 * 1000);
     const dateStr = Utilities.formatDate(yesterday, TIMEZONE, 'yyyy/MM/dd');
+    // before:で対象日の翌日を指定して範囲を絞る
+    const nextDay = new Date(targetDate.getTime() + 24 * 60 * 60 * 1000);
+    const nextDayStr = Utilities.formatDate(nextDay, TIMEZONE, 'yyyy/MM/dd');
     const items = [];
     const rawTexts = [];
 
     // 送信メール（最大20件に制限して高速化）
     if (includeSent) {
-    const sentQuery = 'in:sent after:' + dateStr;
+    const sentQuery = 'in:sent after:' + dateStr + (dateString ? ' before:' + nextDayStr : '');
     const sentThreads = GmailApp.search(sentQuery, 0, 20);
 
     for (let i = 0; i < sentThreads.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
@@ -1991,7 +2010,7 @@ function getGmailHistory(includeSent, includeReceived) {
 
     // 受信メール（設定がONの場合のみ）
     if (includeReceived) {
-      const receivedQuery = 'in:inbox after:' + dateStr + ' -in:sent';  // dateStrは昨日なので今日のメールが含まれる
+      const receivedQuery = 'in:inbox after:' + dateStr + (dateString ? ' before:' + nextDayStr : '') + ' -in:sent';
       const receivedThreads = GmailApp.search(receivedQuery, 0, 20);
 
       for (let j = 0; j < receivedThreads.length && items.length < MAX_ITEMS_PER_TOOL; j++) {
@@ -2065,11 +2084,11 @@ function getAllToolHistoryV3(dateString) {
     result.errors.push('[カレンダー] ' + e.message);
   }
 
-  // Slack履歴（常に今日）— 送信・受信を個別制御
+  // Slack履歴（日付指定対応）— 送信・受信を個別制御
   var slackRawTexts = [];
   if (settings.slackSent || settings.slackReceived) {
     try {
-      const slackResult = getSlackHistory(settings.slackSent, settings.slackReceived);
+      const slackResult = getSlackHistory(settings.slackSent, settings.slackReceived, dateString);
       result.slack = { items: slackResult.items, error: slackResult.error, summary: '' };
       slackRawTexts = slackResult.rawTexts || [];
       if (!slackResult.success && slackResult.error) {
@@ -2081,11 +2100,11 @@ function getAllToolHistoryV3(dateString) {
     }
   }
 
-  // Gmail履歴（常に今日）— 送信・受信を個別制御
+  // Gmail履歴（日付指定対応）— 送信・受信を個別制御
   var gmailRawTexts = [];
   if (settings.gmail || settings.gmailReceived) {
     try {
-      const gmailResult = getGmailHistory(settings.gmail, settings.gmailReceived);
+      const gmailResult = getGmailHistory(settings.gmail, settings.gmailReceived, dateString);
       result.gmail = { items: gmailResult.items, error: gmailResult.error, summary: '' };
       gmailRawTexts = gmailResult.rawTexts || [];
       if (!gmailResult.success && gmailResult.error) {
@@ -2125,11 +2144,11 @@ function getAllToolHistoryV3(dateString) {
     Logger.log('AI要約エラー（継続）: ' + e.message);
   }
 
-  // Backlog完了課題（常に今日）
+  // Backlog完了課題（日付指定対応）
   result.backlog = { text: '', error: '' };
   if (settings.backlog) {
     try {
-      var backlogText = getBacklogReport();
+      var backlogText = getBacklogReport(dateString);
       result.backlog = { text: backlogText, error: '' };
     } catch (e) {
       Logger.log('Backlog取得エラー: ' + e.message);

@@ -103,11 +103,11 @@ function backlogApiGet_(url) {
  * @param {string} timezone - タイムゾーン
  * @returns {boolean} 本日ならtrue
  */
-function backlogIsTodayJst_(isoString, timezone) {
+function backlogIsTargetDateJst_(isoString, timezone, targetDateString) {
   var d = new Date(isoString);
-  var today = Utilities.formatDate(new Date(), timezone, 'yyyy-MM-dd');
+  var compareDate = targetDateString || Utilities.formatDate(new Date(), timezone, 'yyyy-MM-dd');
   var target = Utilities.formatDate(d, timezone, 'yyyy-MM-dd');
-  return today === target;
+  return compareDate === target;
 }
 
 // ============================================
@@ -135,7 +135,7 @@ function getBacklogMyself_(config) {
  * @param {number} userId - ユーザーID
  * @returns {Array} 本日のアクティビティ一覧
  */
-function getBacklogTodayActivities_(config, userId) {
+function getBacklogActivitiesForDate_(config, userId, targetDateString) {
   var allActivities = [];
   var maxId = null;
   var query = config.activityTypes.map(function(v) {
@@ -158,13 +158,13 @@ function getBacklogTodayActivities_(config, userId) {
     if (activities.length === 0) break;
 
     for (var i = 0; i < activities.length; i++) {
-      if (backlogIsTodayJst_(activities[i].created, config.timezone)) {
+      if (backlogIsTargetDateJst_(activities[i].created, config.timezone, targetDateString)) {
         allActivities.push(activities[i]);
       }
     }
 
     var lastActivity = activities[activities.length - 1];
-    if (!backlogIsTodayJst_(lastActivity.created, config.timezone)) {
+    if (!backlogIsTargetDateJst_(lastActivity.created, config.timezone, targetDateString)) {
       break;
     }
 
@@ -320,11 +320,11 @@ function formatBacklogReport_(config, issueMap) {
  *
  * @returns {string} Backlog完了課題テキスト
  */
-function getBacklogReport() {
+function getBacklogReport(dateString) {
   try {
     var config = getBacklogConfig_();
     var myself = getBacklogMyself_(config);
-    var activities = getBacklogTodayActivities_(config, myself.id);
+    var activities = getBacklogActivitiesForDate_(config, myself.id, dateString || null);
 
     Logger.log('Backlog: 本日のアクティビティ取得完了 count=' + activities.length);
 
@@ -333,7 +333,7 @@ function getBacklogReport() {
     Logger.log('Backlog: 完了課題数=' + completedCount);
 
     if (completedCount === 0) {
-      return 'Backlog完了課題\n本日完了した課題はありません';
+      return 'Backlog完了課題\n' + (dateString ? dateString + 'に' : '本日') + '完了した課題はありません';
     }
 
     issueMap = fetchIssueSummaries_(config, issueMap);
