@@ -1671,6 +1671,7 @@
             </div>
           </div>
           <button id="loadCalendarBtn" onclick="loadEventsForSelectedDate()" style="background: #27ae60; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;">取得</button>
+          <button id="sortByTimeBtn" onclick="sortEditorByTime()" style="background: #3498db; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" title="全エントリを時間順にソート">時間ソート</button>
         </div>
       </div>
       <div class="textarea-with-toolbar">
@@ -2960,6 +2961,56 @@
       loadEventsForSelectedDate();
     }
 
+    // ============================================
+    // 時間ソート機能
+    // エディタ内の全行をHH:mm~プレフィックスで時間順にソート
+    // ============================================
+    function sortEditorByTime() {
+      var editor = document.getElementById('todayTasks');
+      if (!editor) return;
+
+      // エディタのHTMLを<br>で分割して行配列にする
+      var html = editor.innerHTML;
+      var lines = html.split(/<br\s*\/?>/i);
+
+      // 各行から時間を抽出してソート用データを作る
+      var timeRegex = /^(\d{2}:\d{2})~/;
+      var timed = [];
+      var untimed = [];
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        // HTMLタグを除去してテキスト部分から時間を抽出
+        var textOnly = line.replace(/<[^>]+>/g, '').trim();
+        var match = textOnly.match(timeRegex);
+        if (match) {
+          timed.push({ time: match[1], html: line });
+        } else if (textOnly) {
+          // 時間なしの行（カレンダー予定の「10:00-11:00 会議」形式も検出）
+          var calMatch = textOnly.match(/^(\d{2}:\d{2})/);
+          if (calMatch) {
+            timed.push({ time: calMatch[1], html: line });
+          } else {
+            untimed.push(line);
+          }
+        }
+      }
+
+      // 時間のある行を時間順にソート
+      timed.sort(function(a, b) { return a.time.localeCompare(b.time); });
+
+      // ソート済みの行を結合（時間ありを先に、時間なしを最後に）
+      var sorted = [];
+      for (var j = 0; j < timed.length; j++) {
+        sorted.push(timed[j].html);
+      }
+      for (var k = 0; k < untimed.length; k++) {
+        sorted.push(untimed[k].html);
+      }
+
+      editor.innerHTML = sorted.join('<br>');
+    }
+
     function changeDate(days) {
       var yearSelect = document.getElementById('yearSelect');
       var monthSelect = document.getElementById('monthSelect');
@@ -3123,7 +3174,8 @@
       } else if (result.slack && result.slack.items) {
         for (var m = 0; m < result.slack.items.length; m++) {
           var sItem = result.slack.items[m];
-          lines.push('<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(sItem.content));
+          var slackTimePrefix = sItem.time ? sItem.time + '~ ' : '';
+          lines.push(slackTimePrefix + '<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(sItem.content));
         }
       }
       
@@ -3148,7 +3200,8 @@
       } else if (result.gmail && result.gmail.items) {
         for (var gm = 0; gm < result.gmail.items.length; gm++) {
           var gItem = result.gmail.items[gm];
-          lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(gItem.content));
+          var gmailTimePrefix = gItem.time ? gItem.time + '~ ' : '';
+          lines.push(gmailTimePrefix + '<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(gItem.content));
         }
       }
       
