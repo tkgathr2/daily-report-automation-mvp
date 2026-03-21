@@ -1737,21 +1737,22 @@ function generateTaskSummary_(rawTexts, toolName) {
   if (!rawTexts || rawTexts.length === 0) return '';
 
   var dataLines = rawTexts.map(function(item) {
-    return '- [' + item.direction + '] ' + (item.channel ? item.channel + ': ' : '') + item.text;
+    var timeStr = item.time ? item.time + ' ' : '';
+    return '- ' + timeStr + '[' + item.direction + '] ' + (item.channel ? item.channel + ': ' : '') + item.text;
   }).join('\n');
 
   var prompt = 'あなたは日報作成アシスタントです。以下の' + toolName + 'の送受信履歴を分析し、プロジェクト・案件・話題ごとにグルーピングして日報用の要約を作成してください。\n\n'
     + '【出力フォーマット】\n'
     + 'グループ見出し（プロジェクト名やチャンネル名）\n'
-    + '・箇条書き項目1\n'
-    + '・箇条書き項目2\n'
+    + '・HH:mm~ 箇条書き項目1\n'
+    + '・HH:mm~ 箇条書き項目2\n'
     + '\n'
     + '別のグループ見出し\n'
     + '・箇条書き項目\n\n'
     + '【ルール】\n'
     + '- 関連するメッセージを同じグループにまとめる\n'
     + '- グループ見出しはプロジェクト名・チャンネル名・案件名など（装飾記号なし）\n'
-    + '- 各箇条書きは「・」で始め、何をしたか・結果を簡潔に書く（30文字以内推奨）\n'
+    + '- 各箇条書きは「・」で始め、時刻（HH:mm~）を先頭に付けて、何をしたか・結果を簡潔に書く（例: ・09:30~ 資料送付）\n'
     + '- グループ間は空行で区切る\n'
     + '- 挨拶や雑談は除外\n'
     + '- 最大5グループ、各グループ最大5項目\n\n'
@@ -1923,10 +1924,11 @@ function fetchSlackMessages_(userToken, query, todayStart, todayEnd, direction) 
         content: '[' + direction + '] ' + prefix + ': 「' + displayText + '」'
       });
 
-      // AI要約用に全文テキストを保存
+      // AI要約用に全文テキストを保存（時刻付き）
       rawTexts.push({
         direction: direction,
         channel: prefix,
+        time: Utilities.formatDate(msgDate, TIMEZONE, TIME_FORMAT),
         text: fullText.substring(0, 500)
       });
     }
@@ -1976,10 +1978,11 @@ function getGmailHistory(includeSent, includeReceived) {
         content: '送信: 「' + displaySubject + '」'
       });
 
-      // AI要約用に件名+本文を保存
+      // AI要約用に件名+本文を保存（時刻付き）
       rawTexts.push({
         direction: '送信',
         channel: to.length > 30 ? to.substring(0, 30) + '...' : to,
+        time: Utilities.formatDate(date, TIMEZONE, TIME_FORMAT),
         text: '件名: ' + subject + ' / 本文: ' + body.substring(0, 300)
       });
     }
@@ -2018,6 +2021,7 @@ function getGmailHistory(includeSent, includeReceived) {
         rawTexts.push({
           direction: '受信',
           channel: rFrom.length > 30 ? rFrom.substring(0, 30) + '...' : rFrom,
+          time: Utilities.formatDate(rDate, TIMEZONE, TIME_FORMAT),
           text: '件名: ' + rSubject + ' / 本文: ' + rBody.substring(0, 300)
         });
       }
