@@ -3244,55 +3244,67 @@
         aiSummaryErrors.push('[Gmail] ' + result.gmail.summaryError);
       }
 
-      // Slack履歴を追加（AI要約があればグループ構造で表示、なければ生データ）
+      // Slack履歴を追加（統一フラット形式: HH:mm~ [Slack] 内容）
       if (result.slack && result.slack.summary) {
         var slackSummaryLines = result.slack.summary.split('\n');
+        var slackCurrentHeading = '';
         for (var sl = 0; sl < slackSummaryLines.length; sl++) {
-          var slLine = slackSummaryLines[sl];
-          if (slLine.trim() === '') {
-            // グループ間の空行
-            lines.push('');
-            continue;
-          }
-          if (slLine.trim().startsWith('・')) {
-            // 箇条書き行: インデント付きで表示
-            lines.push('<span style="color: #4A154B; padding-left: 1.5em;">\u3000' + escapeHtml(slLine.trim()) + '</span>');
+          var slLine = slackSummaryLines[sl].trim();
+          if (slLine === '') continue;
+          if (slLine.startsWith('・')) {
+            // 箇条書き行: 時刻を抽出してフラット形式に変換
+            var slBulletContent = slLine.substring(1).trim();
+            var slTimeMatch = slBulletContent.match(/^(\d{2}:\d{2})~\s*/);
+            var slTimePrefix = '';
+            var slRestContent = slBulletContent;
+            if (slTimeMatch) {
+              slTimePrefix = slTimeMatch[1] + '~ ';
+              slRestContent = slBulletContent.substring(slTimeMatch[0].length);
+            }
+            var slDisplayContent = slackCurrentHeading ? slackCurrentHeading + ' / ' + slRestContent : slRestContent;
+            lines.push(slTimePrefix + '<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(slDisplayContent));
           } else {
-            // グループ見出し行: 太字で表示
-            lines.push('<span style="color: #4A154B; font-weight: bold;">[Slack] ' + escapeHtml(slLine.trim()) + '</span>');
+            // グループ見出し行: 次の箇条書きのプレフィックスとして保持
+            slackCurrentHeading = slLine;
           }
         }
       } else if (result.slack && result.slack.items) {
         for (var m = 0; m < result.slack.items.length; m++) {
           var sItem = result.slack.items[m];
-          var slackTimePrefix = sItem.time ? sItem.time + '~ ' : '';
-          lines.push(slackTimePrefix + '<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(sItem.content));
+          var slackItemTimePrefix = sItem.time ? sItem.time + '~ ' : '';
+          lines.push(slackItemTimePrefix + '<span style="color: #4A154B; font-weight: bold;">[Slack]</span> ' + escapeHtml(sItem.content));
         }
       }
       
-      // Gmail履歴を追加（AI要約があればグループ構造で表示、なければ生データ）
+      // Gmail履歴を追加（統一フラット形式: HH:mm~ [Gmail] 内容）
       if (result.gmail && result.gmail.summary) {
         var gmailSummaryLines = result.gmail.summary.split('\n');
+        var gmailCurrentHeading = '';
         for (var gl = 0; gl < gmailSummaryLines.length; gl++) {
-          var glLine = gmailSummaryLines[gl];
-          if (glLine.trim() === '') {
-            // グループ間の空行
-            lines.push('');
-            continue;
-          }
-          if (glLine.trim().startsWith('・')) {
-            // 箇条書き行: インデント付きで表示
-            lines.push('<span style="color: #EA4335; padding-left: 1.5em;">\u3000' + escapeHtml(glLine.trim()) + '</span>');
+          var glLine = gmailSummaryLines[gl].trim();
+          if (glLine === '') continue;
+          if (glLine.startsWith('・')) {
+            // 箇条書き行: 時刻を抽出してフラット形式に変換
+            var glBulletContent = glLine.substring(1).trim();
+            var glTimeMatch = glBulletContent.match(/^(\d{2}:\d{2})~\s*/);
+            var glTimePrefix = '';
+            var glRestContent = glBulletContent;
+            if (glTimeMatch) {
+              glTimePrefix = glTimeMatch[1] + '~ ';
+              glRestContent = glBulletContent.substring(glTimeMatch[0].length);
+            }
+            var glDisplayContent = gmailCurrentHeading ? gmailCurrentHeading + ' / ' + glRestContent : glRestContent;
+            lines.push(glTimePrefix + '<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(glDisplayContent));
           } else {
-            // グループ見出し行: 太字で表示
-            lines.push('<span style="color: #EA4335; font-weight: bold;">[Gmail] ' + escapeHtml(glLine.trim()) + '</span>');
+            // グループ見出し行: 次の箇条書きのプレフィックスとして保持
+            gmailCurrentHeading = glLine;
           }
         }
       } else if (result.gmail && result.gmail.items) {
         for (var gm = 0; gm < result.gmail.items.length; gm++) {
           var gItem = result.gmail.items[gm];
-          var gmailTimePrefix = gItem.time ? gItem.time + '~ ' : '';
-          lines.push(gmailTimePrefix + '<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(gItem.content));
+          var gmailItemTimePrefix = gItem.time ? gItem.time + '~ ' : '';
+          lines.push(gmailItemTimePrefix + '<span style="color: #EA4335; font-weight: bold;">[Gmail]</span> ' + escapeHtml(gItem.content));
         }
       }
       
