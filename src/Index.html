@@ -1584,38 +1584,28 @@
       <button id="help-btn" style="position: absolute; top: 10px; right: 10px; background: #3498db; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">使い方</button>
     </div>
     
-    <div id="updateNotice" style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 50%, #ff4757 100%); border: none; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; font-size: 13px; color: white; box-shadow: 0 6px 25px rgba(255, 107, 53, 0.5); position: relative; overflow: hidden;">
-      <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.08); border-radius: 50%;"></div>
-      <div style="position: absolute; bottom: -30px; left: -10px; width: 80px; height: 80px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; position: relative;">
+    <div id="updateNotice" style="background: #fff; border: 2px solid #e74c3c; border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; font-size: 14px; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
         <div style="display: flex; align-items: center;">
-          <span style="background: #fff; color: #ff4757; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 900; margin-right: 10px; letter-spacing: 1px; animation: pulse 2s infinite;">MAJOR UPDATE</span>
-          <strong style="font-size: 16px; text-shadow: 0 1px 3px rgba(0,0,0,0.2);">AI日報アシスタント誕生</strong>
+          <span style="background: #e74c3c; color: #fff; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 10px;">NEW</span>
+          <strong style="font-size: 17px; color: #222;">AI日報アシスタント誕生</strong>
         </div>
-        <button onclick="dismissUpdateNotice()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;">閉じる</button>
+        <button onclick="dismissUpdateNotice()" style="background: #f5f5f5; border: 1px solid #ddd; color: #888; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">閉じる</button>
       </div>
-      <div style="background: rgba(255,255,255,0.15); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; backdrop-filter: blur(4px);">
-        <div style="font-size: 14px; font-weight: bold; margin-bottom: 6px;">Slack・Gmail・Backlogの履歴をAIが自動で要約</div>
-        <div style="font-size: 12px; opacity: 0.9; line-height: 1.6;">取得ボタンを押すだけで、AIがあなたの1日の業務を分析。プロジェクトごとに整理して、時刻付きで日報に自動挿入します。もう手入力は不要です。</div>
+      <p style="margin: 0 0 14px 0; font-size: 14px; line-height: 1.7; color: #444;">取得ボタンを押すだけで、<strong>AIがSlack・Gmail・Backlogの履歴を自動で要約</strong>。プロジェクトごとに整理して、時刻付きで日報に挿入します。</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;">
+        <span style="background: #ffeaea; color: #c0392b; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">AI要約</span>
+        <span style="background: #fff3e0; color: #e67e22; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">時刻自動付与</span>
+        <span style="background: #e8f5e9; color: #27ae60; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">時間ソート</span>
+        <span style="background: #e3f2fd; color: #2980b9; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">カテゴリソート</span>
+        <span style="background: #f3e5f5; color: #8e44ad; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">統一レイアウト</span>
+        <span style="background: #e0f2f1; color: #00897b; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold;">Backlog完了課題</span>
       </div>
-      <div class="news-list" style="max-height: 260px; overflow-y: auto; padding-right: 4px; position: relative;">
-        <ul style="margin: 0; padding-left: 18px; opacity: 0.95; list-style: none;">
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>AI要約機能</strong> - Slack/Gmailの履歴をAIがプロジェクト別に自動グルーピング</li>
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>時刻自動付与</strong> - 全データに「09:39~」形式の時刻を自動表示</li>
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>時間ソート</strong> - ワンクリックで全データを時間順に並べ替え</li>
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>カテゴリソート</strong> - Slack / Gmail / Backlog をツール別に表示</li>
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>統一レイアウト</strong> - 全ツールが同じ見やすいフォーマットに統一</li>
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>Backlog完了課題</strong> - 完了時間・実績時間を自動取得して表示</li>
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.4); padding-left: 10px;"><span style="opacity: 0.7; font-size: 11px; margin-right: 6px;">NEW</span><strong>Slack送信/受信の個別制御</strong> - 送信・受信を別々にON/OFF可能</li>
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.3); padding-left: 10px;"><span style="opacity: 0.5; font-size: 11px; margin-right: 6px;">2026/03</span>ログイン90日間維持・残業時間入力・Notion連携廃止</li>
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.3); padding-left: 10px;"><span style="opacity: 0.5; font-size: 11px; margin-right: 6px;">2026/03</span>Backlog連携・ピル型トグルUI・エラー表示改善</li>
-          <li style="margin-bottom: 8px; padding-left: 0; border-left: 2px solid rgba(255,255,255,0.3); padding-left: 10px;"><span style="opacity: 0.5; font-size: 11px; margin-right: 6px;">2026/02</span>v4.0リリース・Slack連携強化・Gmail自動取得・サイドバー追加</li>
-        </ul>
+      <div style="border-top: 1px solid #eee; padding-top: 10px; font-size: 12px; color: #999; line-height: 1.8;">
+        2026/03 ログイン90日間維持 / 残業時間入力 / Backlog連携 / ピル型トグルUI<br>
+        2026/02 v4.0リリース / Slack連携強化 / Gmail自動取得 / サイドバー追加
       </div>
     </div>
-    <style>
-      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-    </style>
 
     <!-- ローディング表示 -->
     <div id="loading" class="loading">
