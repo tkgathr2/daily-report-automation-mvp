@@ -289,16 +289,14 @@ function formatBacklogReport_(config, issueMap) {
     var issueUrl = config.baseUrl + '/view/' + entry.issueKey;
     var line = '- <' + issueUrl + '|' + entry.issueKey + ' ' + entry.summary + '>';
 
-    // 完了時間と実績時間を追加
-    var meta = [];
+    // 完了時間をスケジュール形式で先頭に追加（例: 12:18~）
     if (entry.completedTime) {
-      meta.push('完了: ' + entry.completedTime);
+      line = entry.completedTime + '~ ' + line;
     }
-    if (entry.actualHours != null && entry.actualHours > 0) {
-      meta.push('実績: ' + entry.actualHours + 'h');
-    }
-    if (meta.length > 0) {
-      line += '（' + meta.join(' / ') + '）';
+
+    // 実績時間を追加（0hも表示）
+    if (entry.actualHours != null) {
+      line += '（実績: ' + entry.actualHours + 'h）';
     }
 
     lines.push(line);
