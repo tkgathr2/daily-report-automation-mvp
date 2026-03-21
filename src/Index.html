@@ -3235,6 +3235,15 @@
         }
       }
       
+      // AI要約エラーがあれば表示
+      var aiSummaryErrors = [];
+      if (result.slack && result.slack.summaryError) {
+        aiSummaryErrors.push('[Slack] ' + result.slack.summaryError);
+      }
+      if (result.gmail && result.gmail.summaryError) {
+        aiSummaryErrors.push('[Gmail] ' + result.gmail.summaryError);
+      }
+
       // Slack履歴を追加（AI要約があればグループ構造で表示、なければ生データ）
       if (result.slack && result.slack.summary) {
         var slackSummaryLines = result.slack.summary.split('\n');
@@ -3350,6 +3359,12 @@
       }
       
       // エラーがあれば表示
+      if (aiSummaryErrors.length > 0) {
+        result.errors = result.errors || [];
+        for (var ae = 0; ae < aiSummaryErrors.length; ae++) {
+          result.errors.push(aiSummaryErrors[ae]);
+        }
+      }
       if (result.errors && result.errors.length > 0) {
         showMessage('一部のツールで取得に失敗しました: ' + result.errors.join(', '), true);
       } else if (lines.length === 0 && (!result.gmail || result.gmail.items.length === 0)) {

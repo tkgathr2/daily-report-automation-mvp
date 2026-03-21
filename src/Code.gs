@@ -40,10 +40,10 @@ const DATE_FORMAT_V2 = 'yyyy年MM月dd日';
 const USER_PROPERTY_TOOL_SETTINGS = 'TOOL_SETTINGS';
 const MAX_ITEMS_PER_TOOL = 50;
 
-// AI要約定数
-const PROPERTY_GEMINI_API_KEY = 'GEMINI_API_KEY';
-const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+// AI要約定数（Claude API）
+const PROPERTY_ANTHROPIC_API_KEY = 'ANTHROPIC_API_KEY';
+const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
 // アプリURL（フッター用）
 const APP_URL = 'https://nippou.up.railway.app';
@@ -1631,45 +1631,60 @@ function saveToolSettings(settings) {
 }
 
 /**
- * Gemini APIでテキストをAI要約する
+ * Claude APIでテキストをAI要約する
  * @param {string} prompt - プロンプト
- * @returns {string} 要約テキスト（失敗時は空文字）
+ * @returns {{text: string, error: string}} 要約結果
  */
-function summarizeWithGemini_(prompt) {
+function summarizeWithClaude_(prompt) {
   try {
-    const apiKey = PropertiesService.getScriptProperties().getProperty(PROPERTY_GEMINI_API_KEY);
+    const apiKey = PropertiesService.getScriptProperties().getProperty(PROPERTY_ANTHROPIC_API_KEY);
     if (!apiKey) {
-      Logger.log('GEMINI_API_KEY未設定のためAI要約スキップ');
-      return '';
+      Logger.log('ANTHROPIC_API_KEY未設定のためAI要約スキップ');
+      return { text: '', error: 'ANTHROPIC_API_KEY未設定。スクリプトプロパティに設定してください。' };
     }
 
-    const url = GEMINI_API_URL + GEMINI_MODEL + ':generateContent?key=' + apiKey;
     const payload = {
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 2048
-      }
+      model: CLAUDE_MODEL,
+      max_tokens: 2048,
+      messages: [{
+        role: 'user',
+        content: prompt
+      }]
     };
 
-    const res = UrlFetchApp.fetch(url, {
+    const res = UrlFetchApp.fetch(CLAUDE_API_URL, {
       method: 'post',
-      contentType: 'application/json',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     });
 
+    const statusCode = res.getResponseCode();
     const json = JSON.parse(res.getContentText());
-    if (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) {
-      return json.candidates[0].content.parts[0].text || '';
+
+    if (statusCode === 429) {
+      Logger.log('Claude API rate limit (429)');
+      return { text: '', error: 'AI要約: APIレート制限に達しました。しばらく待ってから再試行してください。' };
     }
-    Logger.log('Gemini応答パース失敗: ' + res.getContentText().substring(0, 200));
-    return '';
+
+    if (statusCode >= 400) {
+      var errMsg = (json.error && json.error.message) ? json.error.message : 'HTTP ' + statusCode;
+      Logger.log('Claude APIエラー: ' + errMsg);
+      return { text: '', error: 'AI要約エラー: ' + errMsg };
+    }
+
+    if (json.content && json.content[0] && json.content[0].text) {
+      return { text: json.content[0].text, error: '' };
+    }
+    Logger.log('Claude応答パース失敗: ' + res.getContentText().substring(0, 200));
+    return { text: '', error: '' };
   } catch (e) {
-    Logger.log('summarizeWithGemini_ error: ' + e.message);
-    return '';
+    Logger.log('summarizeWithClaude_ error: ' + e.message);
+    return { text: '', error: 'AI要約エラー: ' + e.message };
   }
 }
 
@@ -1703,8 +1718,10 @@ function generateTaskSummary_(rawTexts, toolName) {
     + '- 最大5グループ、各グループ最大5項目\n\n'
     + '【' + toolName + '履歴】\n' + dataLines;
 
-  var summary = summarizeWithGemini_(prompt);
-  if (!summary) return '';
+  var aiResult = summarizeWithClaude_(prompt);
+  if (aiResult.error) return { text: '', error: aiResult.error };
+  var summary = aiResult.text;
+  if (!summary) return { text: '', error: '' };
 
   // グループ構造を保持した後処理 + フォールバック
   var lines = summary.split('\n');
@@ -1736,10 +1753,10 @@ function generateTaskSummary_(rawTexts, toolName) {
 
   // フォールバック: cleaned が空なら元のsummaryをそのまま返す
   if (cleaned.length === 0) {
-    return summary;
+    return { text: summary, error: '' };
   }
 
-  return cleaned.join('\n');
+  return { text: cleaned.join('\n'), error: '' };
 }
 
 /**
@@ -2040,17 +2057,25 @@ function getAllToolHistoryV3(dateString) {
   // AI要約（Gemini APIキーが設定されている場合のみ）
   try {
     if (slackRawTexts.length > 0) {
-      var slackSummary = generateTaskSummary_(slackRawTexts, 'Slack');
-      if (slackSummary) {
-        result.slack.summary = slackSummary;
-        Logger.log('Slack AI要約完了: ' + slackSummary.split('\n').length + '件');
+      var slackSummaryResult = generateTaskSummary_(slackRawTexts, 'Slack');
+      if (slackSummaryResult.text) {
+        result.slack.summary = slackSummaryResult.text;
+        Logger.log('Slack AI要約完了: ' + slackSummaryResult.text.split('\n').length + '件');
+      }
+      if (slackSummaryResult.error) {
+        result.slack.summaryError = slackSummaryResult.error;
+        Logger.log('Slack AI要約エラー: ' + slackSummaryResult.error);
       }
     }
     if (gmailRawTexts.length > 0) {
-      var gmailSummary = generateTaskSummary_(gmailRawTexts, 'Gmail');
-      if (gmailSummary) {
-        result.gmail.summary = gmailSummary;
-        Logger.log('Gmail AI要約完了: ' + gmailSummary.split('\n').length + '件');
+      var gmailSummaryResult = generateTaskSummary_(gmailRawTexts, 'Gmail');
+      if (gmailSummaryResult.text) {
+        result.gmail.summary = gmailSummaryResult.text;
+        Logger.log('Gmail AI要約完了: ' + gmailSummaryResult.text.split('\n').length + '件');
+      }
+      if (gmailSummaryResult.error) {
+        result.gmail.summaryError = gmailSummaryResult.error;
+        Logger.log('Gmail AI要約エラー: ' + gmailSummaryResult.error);
       }
     }
   } catch (e) {
