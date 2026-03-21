@@ -1539,7 +1539,7 @@ function getToolSettings() {
       .getProperty(USER_PROPERTY_TOOL_SETTINGS);
 
     if (!dataStr) {
-      return { slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false };
+      return { slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false, sortOrder: 'category' };
     }
 
     const parsed = JSON.parse(dataStr);
@@ -1551,11 +1551,12 @@ function getToolSettings() {
       slackReceived: slackReceived,
       gmail: parsed.gmail !== false,
       gmailReceived: !!parsed.gmailReceived,
-      backlog: !!parsed.backlog
+      backlog: !!parsed.backlog,
+      sortOrder: parsed.sortOrder || 'category'
     };
   } catch (e) {
     Logger.log('getToolSettings error: ' + e.message);
-    return { slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false };
+    return { slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false, sortOrder: 'category' };
   }
 }
 
