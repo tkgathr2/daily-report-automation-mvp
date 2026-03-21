@@ -4969,16 +4969,7 @@
         // 残業時間を取得
         var overtimeHours = parseInt(document.getElementById('overtimeHours').value) || 0;
         var overtimeMinutes = parseInt(document.getElementById('overtimeMinutes').value) || 0;
-        var overtimeText = '';
-        if (overtimeHours > 0 || overtimeMinutes > 0) {
-          if (overtimeHours > 0 && overtimeMinutes > 0) {
-            overtimeText = overtimeHours + '時間' + overtimeMinutes + '分';
-          } else if (overtimeHours > 0) {
-            overtimeText = overtimeHours + '時間';
-          } else {
-            overtimeText = overtimeMinutes + '分';
-          }
-        }
+        var overtimeText = overtimeHours + '時間' + overtimeMinutes + '分';
 
         var reportData = {
           header: header,
@@ -5296,7 +5287,6 @@
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
       initUpdateNotice();  // お知らせ表示制御を初期化
       initTutorial();  // 使い方ガイドを初期化
-      initSettingsPanel();  // 設定パネルの初期値を適用
       
       // SlackチャンネルIDをサーバーから取得
       google.script.run
@@ -5322,6 +5312,7 @@
           initDraftAutoSave();  // 下書き自動保存を初期化
           restoreDraft();  // 下書きがあれば復元を提案
           initNameRegistration();  // 名前登録機能を初期化
+          initSettingsPanel();  // 設定パネルの初期値を適用
         })
         .withFailureHandler(function(error) {
           console.error('ユーザー情報取得エラー:', error);
@@ -5329,6 +5320,7 @@
           initDraftAutoSave();
           restoreDraft();
           initNameRegistration();
+          initSettingsPanel();  // 設定パネルの初期値を適用
         })
         .getCurrentUserInfo();
       
