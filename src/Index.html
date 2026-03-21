@@ -1571,6 +1571,319 @@
         min-height: 44px;
       }
     }
+
+    /* ============================================ */
+    /* 設定パネル                                    */
+    /* ============================================ */
+    .settings-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 16px rgba(102,126,234,0.4);
+      cursor: pointer;
+      z-index: 9998;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .settings-fab:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(102,126,234,0.5);
+    }
+    .settings-fab:active {
+      transform: scale(0.95);
+    }
+
+    .settings-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .settings-overlay.show {
+      display: flex;
+    }
+
+    .settings-panel {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 520px;
+      margin: 20px auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+      overflow: hidden;
+      animation: settingsSlideUp 0.3s ease;
+    }
+    @keyframes settingsSlideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .settings-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 22px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+    .settings-panel-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .settings-panel-close {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .settings-panel-close:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .settings-panel-body {
+      padding: 0;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+
+    .settings-section {
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .settings-section:last-child {
+      border-bottom: none;
+    }
+
+    .settings-section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 22px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .settings-section-header:hover {
+      background: #f8f9fa;
+    }
+    .settings-section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #333;
+    }
+    .settings-section-icon {
+      font-size: 18px;
+      width: 28px;
+      text-align: center;
+    }
+    .settings-section-arrow {
+      font-size: 12px;
+      color: #999;
+      transition: transform 0.2s;
+    }
+    .settings-section.open .settings-section-arrow {
+      transform: rotate(90deg);
+    }
+
+    .settings-section-content {
+      display: none;
+      padding: 0 22px 16px 22px;
+    }
+    .settings-section.open .settings-section-content {
+      display: block;
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+    .settings-row-label {
+      font-size: 14px;
+      color: #444;
+    }
+    .settings-row-desc {
+      font-size: 12px;
+      color: #999;
+      margin-top: 2px;
+    }
+
+    /* トグルスイッチ */
+    .settings-toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .settings-toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .settings-toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #ccc;
+      border-radius: 24px;
+      transition: 0.3s;
+    }
+    .settings-toggle-slider:before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    .settings-toggle input:checked + .settings-toggle-slider {
+      background: #667eea;
+    }
+    .settings-toggle input:checked + .settings-toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    /* 設定内のボタン */
+    .settings-btn {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #333;
+      cursor: pointer;
+      text-align: left;
+      margin-bottom: 8px;
+      transition: background 0.15s;
+    }
+    .settings-btn:hover {
+      background: #eef0f2;
+    }
+    .settings-btn:last-child {
+      margin-bottom: 0;
+    }
+    .settings-btn-danger {
+      color: #e74c3c;
+      border-color: #f5c6cb;
+    }
+    .settings-btn-danger:hover {
+      background: #fef0ef;
+    }
+
+    /* セレクト */
+    .settings-select {
+      padding: 6px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      background: #fff;
+      color: #333;
+    }
+
+    /* フォントサイズプレビュー */
+    .settings-font-btns {
+      display: flex;
+      gap: 6px;
+    }
+    .settings-font-btn {
+      padding: 4px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.15s;
+    }
+    .settings-font-btn.active {
+      background: #667eea;
+      color: #fff;
+      border-color: #667eea;
+    }
+
+    .settings-version {
+      text-align: center;
+      padding: 12px 22px;
+      font-size: 12px;
+      color: #bbb;
+      background: #fafafa;
+    }
+
+    /* ショートカットリスト */
+    .shortcut-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .shortcut-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .shortcut-list li:last-child {
+      border-bottom: none;
+    }
+    .shortcut-key {
+      background: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #555;
+    }
+
+    @media (max-width: 600px) {
+      .settings-fab {
+        bottom: 16px;
+        right: 16px;
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+      }
+      .settings-panel {
+        max-width: 100%;
+        margin: 10px;
+        border-radius: 12px;
+      }
+      .settings-panel-body {
+        max-height: 75vh;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1882,6 +2195,266 @@
   </div>
   -->
   </div><!-- /.app-wrapper -->
+
+  <!-- 右下フローティング設定ボタン -->
+  <button class="settings-fab" onclick="openSettingsPanel()" title="設定">&#9881;</button>
+
+  <!-- 設定パネルオーバーレイ -->
+  <div id="settingsOverlay" class="settings-overlay" onclick="if(event.target===this)closeSettingsPanel()">
+    <div class="settings-panel">
+      <div class="settings-panel-header">
+        <h2>&#9881; 設定</h2>
+        <button class="settings-panel-close" onclick="closeSettingsPanel()">&times;</button>
+      </div>
+      <div class="settings-panel-body">
+
+        <!-- 1. プロフィール -->
+        <div class="settings-section" data-section="profile">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#128100;</span>
+              <span>プロフィール</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <button class="settings-btn" onclick="showNameEditModal(); closeSettingsPanel();">&#9998; 氏名を編集</button>
+          </div>
+        </div>
+
+        <!-- 2. データ取得デフォルト -->
+        <div class="settings-section" data-section="defaults">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#128230;</span>
+              <span>データ取得デフォルト</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <p style="font-size: 12px; color: #999; margin: 0 0 10px 0;">起動時のピルのON/OFF初期値を設定</p>
+            <div class="settings-row">
+              <div><div class="settings-row-label">Slack送信</div></div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsDefaultSlackSent" onchange="onSettingsDefaultChange()">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-row-label">Slack受信</div></div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsDefaultSlackReceived" onchange="onSettingsDefaultChange()">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-row-label">Gmail送信</div></div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsDefaultGmail" onchange="onSettingsDefaultChange()">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-row-label">Gmail受信</div></div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsDefaultGmailReceived" onchange="onSettingsDefaultChange()">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-row-label">Backlog</div></div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsDefaultBacklog" onchange="onSettingsDefaultChange()">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 表示設定 -->
+        <div class="settings-section" data-section="display">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#128065;</span>
+              <span>表示設定</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <div class="settings-row">
+              <div><div class="settings-row-label">初期ソート順</div></div>
+              <select class="settings-select" id="settingsDefaultSort" onchange="onSettingsDefaultChange()">
+                <option value="category">カテゴリソート</option>
+                <option value="time">時間ソート</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">AI要約</div>
+                <div class="settings-row-desc">Slack・Gmail履歴をAIで要約</div>
+              </div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsAiSummary" checked onchange="onSettingsDefaultChange()">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 連携設定 -->
+        <div class="settings-section" data-section="integration">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#128279;</span>
+              <span>連携設定</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <button class="settings-btn" onclick="showBacklogKeyModal(); closeSettingsPanel();">&#128273; Backlog APIキー設定</button>
+            <button class="settings-btn" onclick="reauthorizeSlack(); closeSettingsPanel();">&#128260; Slack再連携</button>
+          </div>
+        </div>
+
+        <!-- 5. テーマ・外観 -->
+        <div class="settings-section" data-section="theme">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#127912;</span>
+              <span>テーマ・外観</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <div class="settings-row">
+              <div><div class="settings-row-label">ダークモード</div></div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsDarkMode" onchange="toggleDarkMode(this.checked)">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-row-label">フォントサイズ</div></div>
+              <div class="settings-font-btns">
+                <button class="settings-font-btn" onclick="setFontSize('small', this)" style="font-size: 12px;">小</button>
+                <button class="settings-font-btn active" onclick="setFontSize('medium', this)" style="font-size: 14px;">中</button>
+                <button class="settings-font-btn" onclick="setFontSize('large', this)" style="font-size: 16px;">大</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. 残業時間デフォルト -->
+        <div class="settings-section" data-section="overtime">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#9200;</span>
+              <span>残業時間デフォルト</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <div class="settings-row">
+              <div>
+                <div class="settings-row-label">デフォルト残業時間</div>
+                <div class="settings-row-desc">起動時に自動設定される残業時間</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <select class="settings-select" id="settingsDefaultOvertimeHours" onchange="onSettingsDefaultChange()" style="min-width: 50px;">
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+                <span style="font-size: 13px;">h</span>
+                <select class="settings-select" id="settingsDefaultOvertimeMinutes" onchange="onSettingsDefaultChange()" style="min-width: 50px;">
+                  <option value="0">0</option>
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="15">15</option>
+                  <option value="20">20</option>
+                  <option value="25">25</option>
+                  <option value="30">30</option>
+                  <option value="35">35</option>
+                  <option value="40">40</option>
+                  <option value="45">45</option>
+                  <option value="50">50</option>
+                  <option value="55">55</option>
+                </select>
+                <span style="font-size: 13px;">m</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. ショートカット -->
+        <div class="settings-section" data-section="shortcuts">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#9000;</span>
+              <span>ショートカット</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <ul class="shortcut-list">
+              <li><span>日報を送信</span><span class="shortcut-key">Ctrl + Enter</span></li>
+              <li><span>太字</span><span class="shortcut-key">Ctrl + B</span></li>
+              <li><span>斜体</span><span class="shortcut-key">Ctrl + I</span></li>
+              <li><span>下線</span><span class="shortcut-key">Ctrl + U</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 8. お知らせ -->
+        <div class="settings-section" data-section="news">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#128227;</span>
+              <span>お知らせ</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <button class="settings-btn" onclick="reshowUpdateNotice(); closeSettingsPanel();">&#128240; 最新のお知らせを再表示</button>
+          </div>
+        </div>
+
+        <!-- 9. データ管理 -->
+        <div class="settings-section" data-section="data">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#128451;</span>
+              <span>データ管理</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <button class="settings-btn" onclick="exportDailyReport()">&#128196; 現在の日報をテキストでコピー</button>
+            <button class="settings-btn settings-btn-danger" onclick="clearDraftData()">&#128465; 下書きデータをクリア</button>
+          </div>
+        </div>
+
+        <!-- 10. その他 -->
+        <div class="settings-section" data-section="other">
+          <div class="settings-section-header" onclick="toggleSettingsSection(this)">
+            <div class="settings-section-title">
+              <span class="settings-section-icon">&#8943;</span>
+              <span>その他</span>
+            </div>
+            <span class="settings-section-arrow">&#9654;</span>
+          </div>
+          <div class="settings-section-content">
+            <button class="settings-btn" onclick="showTutorial(); closeSettingsPanel();">&#128218; 使い方ガイドを表示</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="settings-version">簡単日報君 v4.0</div>
+    </div>
+  </div>
 
   <!-- フローティング履歴サイドバー（非表示） -->
   <div id="historySidebar" class="history-sidebar" style="display: none !important;">
@@ -3952,6 +4525,276 @@
     }
 
     // ============================================
+    // 設定パネル（フローティング歯車ボタン）
+    // ============================================
+    var SETTINGS_STORAGE_KEY = 'kantan_nippou_settings';
+
+    function getSettingsStorageKey() {
+      return getUserStorageKey(SETTINGS_STORAGE_KEY);
+    }
+
+    function loadLocalSettings() {
+      try {
+        var raw = localStorage.getItem(getSettingsStorageKey());
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveLocalSettings(settings) {
+      try {
+        var existing = loadLocalSettings();
+        var merged = Object.assign({}, existing, settings);
+        localStorage.setItem(getSettingsStorageKey(), JSON.stringify(merged));
+      } catch (e) {
+        console.error('設定保存エラー:', e);
+      }
+    }
+
+    function openSettingsPanel() {
+      var overlay = document.getElementById('settingsOverlay');
+      overlay.classList.add('show');
+      syncSettingsPanelFromState();
+    }
+
+    function closeSettingsPanel() {
+      var overlay = document.getElementById('settingsOverlay');
+      overlay.classList.remove('show');
+    }
+
+    function toggleSettingsSection(headerEl) {
+      var section = headerEl.parentElement;
+      section.classList.toggle('open');
+    }
+
+    function syncSettingsPanelFromState() {
+      var settings = loadLocalSettings();
+
+      // データ取得デフォルト（ピル初期値）
+      var el;
+      el = document.getElementById('settingsDefaultSlackSent');
+      if (el) el.checked = settings.defaultSlackSent !== false;
+      el = document.getElementById('settingsDefaultSlackReceived');
+      if (el) el.checked = !!settings.defaultSlackReceived;
+      el = document.getElementById('settingsDefaultGmail');
+      if (el) el.checked = settings.defaultGmail !== false;
+      el = document.getElementById('settingsDefaultGmailReceived');
+      if (el) el.checked = !!settings.defaultGmailReceived;
+      el = document.getElementById('settingsDefaultBacklog');
+      if (el) el.checked = !!settings.defaultBacklog;
+
+      // 表示設定
+      el = document.getElementById('settingsDefaultSort');
+      if (el) el.value = settings.defaultSort || 'category';
+      el = document.getElementById('settingsAiSummary');
+      if (el) el.checked = settings.aiSummary !== false;
+
+      // ダークモード
+      el = document.getElementById('settingsDarkMode');
+      if (el) el.checked = !!settings.darkMode;
+
+      // フォントサイズ
+      var fontSize = settings.fontSize || 'medium';
+      var fontBtns = document.querySelectorAll('.settings-font-btn');
+      fontBtns.forEach(function(btn) {
+        btn.classList.remove('active');
+        if (btn.textContent.trim() === ({small:'小', medium:'中', large:'大'})[fontSize]) {
+          btn.classList.add('active');
+        }
+      });
+
+      // 残業時間デフォルト
+      el = document.getElementById('settingsDefaultOvertimeHours');
+      if (el) el.value = settings.defaultOvertimeHours || '0';
+      el = document.getElementById('settingsDefaultOvertimeMinutes');
+      if (el) el.value = settings.defaultOvertimeMinutes || '0';
+    }
+
+    function onSettingsDefaultChange() {
+      var settings = {
+        defaultSlackSent: document.getElementById('settingsDefaultSlackSent').checked,
+        defaultSlackReceived: document.getElementById('settingsDefaultSlackReceived').checked,
+        defaultGmail: document.getElementById('settingsDefaultGmail').checked,
+        defaultGmailReceived: document.getElementById('settingsDefaultGmailReceived').checked,
+        defaultBacklog: document.getElementById('settingsDefaultBacklog').checked,
+        defaultSort: document.getElementById('settingsDefaultSort').value,
+        aiSummary: document.getElementById('settingsAiSummary').checked,
+        defaultOvertimeHours: document.getElementById('settingsDefaultOvertimeHours').value,
+        defaultOvertimeMinutes: document.getElementById('settingsDefaultOvertimeMinutes').value
+      };
+      saveLocalSettings(settings);
+    }
+
+    // ダークモード
+    function toggleDarkMode(enabled) {
+      saveLocalSettings({ darkMode: enabled });
+      applyDarkMode(enabled);
+    }
+
+    function applyDarkMode(enabled) {
+      if (enabled) {
+        document.body.style.background = '#1a1a2e';
+        document.body.style.color = '#e0e0e0';
+        document.querySelectorAll('.container, .section, .settings-panel').forEach(function(el) {
+          el.style.background = '#16213e';
+          el.style.color = '#e0e0e0';
+        });
+        document.querySelectorAll('.header').forEach(function(el) {
+          el.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)';
+        });
+        document.querySelectorAll('.wysiwyg-editor').forEach(function(el) {
+          el.style.background = '#0f3460';
+          el.style.color = '#e0e0e0';
+        });
+      } else {
+        document.body.style.background = '';
+        document.body.style.color = '';
+        document.querySelectorAll('.container, .section, .settings-panel').forEach(function(el) {
+          el.style.background = '';
+          el.style.color = '';
+        });
+        document.querySelectorAll('.header').forEach(function(el) {
+          el.style.background = '';
+        });
+        document.querySelectorAll('.wysiwyg-editor').forEach(function(el) {
+          el.style.background = '';
+          el.style.color = '';
+        });
+      }
+    }
+
+    // フォントサイズ
+    function setFontSize(size, btnEl) {
+      saveLocalSettings({ fontSize: size });
+      applyFontSize(size);
+      document.querySelectorAll('.settings-font-btn').forEach(function(b) { b.classList.remove('active'); });
+      if (btnEl) btnEl.classList.add('active');
+    }
+
+    function applyFontSize(size) {
+      var baseSize = { small: '13px', medium: '15px', large: '17px' }[size] || '15px';
+      document.querySelector('.container').style.fontSize = baseSize;
+    }
+
+    // お知らせ再表示
+    function reshowUpdateNotice() {
+      localStorage.removeItem('dismissed_news_version');
+      var updateNotice = document.getElementById('updateNotice');
+      if (updateNotice) {
+        updateNotice.style.display = '';
+        updateNotice.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+
+    // 日報テキストコピー（データ管理）
+    function exportDailyReport() {
+      var text = buildReportTextForExport();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          alert('日報テキストをクリップボードにコピーしました。');
+        }).catch(function() {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    }
+
+    function buildReportTextForExport() {
+      var date = (document.getElementById('reportDate') || {}).textContent || '';
+      var name = (document.getElementById('reportUserName') || {}).textContent || '';
+      var todayTasks = getEditorText('todayTasks');
+      var notices = getEditorText('notices');
+      var salesPoints = getEditorText('salesPoints');
+      var nextTasks = getEditorText('nextTasks');
+      
+      var lines = [];
+      lines.push('【日報】' + date + ' ' + name);
+      lines.push('');
+      lines.push('■ 今日やったこと');
+      lines.push(todayTasks);
+      lines.push('');
+      lines.push('■ わかった事・問題・共有事項');
+      lines.push(notices);
+      lines.push('');
+      lines.push('■ 売上・利益・経費削減に関わるポイント');
+      lines.push(salesPoints);
+      lines.push('');
+      lines.push('■ 次すること');
+      lines.push(nextTasks);
+      return lines.join('\n');
+    }
+
+    function getEditorText(editorId) {
+      var el = document.getElementById(editorId);
+      if (!el) return '';
+      return (el.innerText || el.textContent || '').trim();
+    }
+
+    function fallbackCopyText(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); alert('日報テキストをクリップボードにコピーしました。'); }
+      catch (e) { alert('コピーに失敗しました。'); }
+      document.body.removeChild(ta);
+    }
+
+    // 下書きクリア
+    function clearDraftData() {
+      if (!confirm('下書きデータを削除しますか？この操作は元に戻せません。')) return;
+      try {
+        localStorage.removeItem(getUserStorageKey('kantan_nippou_draft'));
+        alert('下書きデータをクリアしました。');
+      } catch (e) {
+        alert('クリアに失敗しました。');
+      }
+    }
+
+    // Slack再連携
+    function reauthorizeSlack() {
+      var connectBtn = document.getElementById('btnSlackConnect');
+      if (connectBtn) {
+        connectBtn.click();
+      } else {
+        alert('Slack連携ボタンが見つかりません。ページを再読み込みしてください。');
+      }
+    }
+
+    // 設定パネルの初期化（起動時にデフォルト設定を適用）
+    function initSettingsPanel() {
+      var settings = loadLocalSettings();
+
+      // ダークモード適用
+      if (settings.darkMode) {
+        applyDarkMode(true);
+      }
+
+      // フォントサイズ適用
+      if (settings.fontSize && settings.fontSize !== 'medium') {
+        applyFontSize(settings.fontSize);
+      }
+
+      // 残業時間デフォルト適用
+      if (settings.defaultOvertimeHours || settings.defaultOvertimeMinutes) {
+        var hEl = document.getElementById('overtimeHours');
+        var mEl = document.getElementById('overtimeMinutes');
+        if (hEl && settings.defaultOvertimeHours) hEl.value = settings.defaultOvertimeHours;
+        if (mEl && settings.defaultOvertimeMinutes) mEl.value = settings.defaultOvertimeMinutes;
+      }
+    }
+
+    // AI要約設定を取得（他の関数から参照用）
+    function isAiSummaryEnabled() {
+      var settings = loadLocalSettings();
+      return settings.aiSummary !== false;
+    }
+
+    // ============================================
     // V2バリデーション
     // ============================================
     function validateSectionsV2() {
@@ -4453,6 +5296,7 @@
       initGlobalCtrlEnter();  // グローバルCtrl+Enterハンドラーを初期化
       initUpdateNotice();  // お知らせ表示制御を初期化
       initTutorial();  // 使い方ガイドを初期化
+      initSettingsPanel();  // 設定パネルの初期値を適用
       
       // SlackチャンネルIDをサーバーから取得
       google.script.run
