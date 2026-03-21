@@ -2974,7 +2974,7 @@
       var lines = html.split(/<br\s*\/?>/i);
 
       // 各行から時間を抽出してソート用データを作る
-      var timeRegex = /^(\d{2}:\d{2})~/;
+      // 対応形式: "HH:mm~ [Slack/Gmail/Backlog]...", "HH:mm-HH:mm 予定名", "[Backlog] HH:mm~ ..."
       var timed = [];
       var untimed = [];
 
@@ -2982,16 +2982,23 @@
         var line = lines[i];
         // HTMLタグを除去してテキスト部分から時間を抽出
         var textOnly = line.replace(/<[^>]+>/g, '').trim();
-        var match = textOnly.match(timeRegex);
+        // パターン1: 行頭の "HH:mm~" (Slack/Gmail/Backlog)
+        var match = textOnly.match(/^(\d{2}:\d{2})~/);
         if (match) {
           timed.push({ time: match[1], html: line });
-        } else if (textOnly) {
-          // 時間なしの行（カレンダー予定の「10:00-11:00 会議」形式も検出）
-          var calMatch = textOnly.match(/^(\d{2}:\d{2})/);
+        } else {
+          // パターン2: カレンダー予定の "HH:mm-HH:mm" 形式
+          var calMatch = textOnly.match(/^(\d{2}:\d{2})[-−]/);
           if (calMatch) {
             timed.push({ time: calMatch[1], html: line });
           } else {
-            untimed.push(line);
+            // パターン3: レガシー "[Backlog] HH:mm~" 形式（フォールバック）
+            var backlogMatch = textOnly.match(/^\[Backlog\]\s*(\d{2}:\d{2})~/);
+            if (backlogMatch) {
+              timed.push({ time: backlogMatch[1], html: line });
+            } else if (textOnly) {
+              untimed.push(line);
+            }
           }
         }
       }
@@ -3225,7 +3232,14 @@
               escaped = escaped.replace(/&lt;(https?:\/\/[^|]+)\|([^&]+)&gt;/g, '<a href="$1" target="_blank" style="color: #42CE9F; text-decoration: underline;">$2</a>');
               // 残りのURLもクリック可能なリンクに変換（href属性内のURLを除外）
               escaped = escaped.replace(/(?<!=\")(https?:\/\/[^\s<\"]+)/g, '<a href="$1" target="_blank" style="color: #42CE9F; text-decoration: underline;">$1</a>');
-              lines.push('<span style="color: #42CE9F; font-weight: bold;">[Backlog]</span> ' + escaped);
+              // 時刻プレフィックスを[Backlog]タグの前に移動（ソート対応）
+              var backlogTimeMatch = btLine.match(/^(\d{2}:\d{2})~/);
+              var backlogTimePrefix = '';
+              if (backlogTimeMatch) {
+                backlogTimePrefix = backlogTimeMatch[1] + '~ ';
+                escaped = escaped.replace(/^\d{2}:\d{2}~\s*/, '');
+              }
+              lines.push(backlogTimePrefix + '<span style="color: #42CE9F; font-weight: bold;">[Backlog]</span> ' + escaped);
             }
           }
         }
