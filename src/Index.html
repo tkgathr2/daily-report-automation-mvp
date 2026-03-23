@@ -1969,6 +1969,10 @@
         <span>【今日やったこと】</span>
         <div style="display: flex; align-items: center; gap: 6px;">
           <div class="tool-pills" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+            <div class="tool-pill active" data-tool="calendar" data-setting="settingCalendar" onclick="togglePill(this)" style="--pill-color: #4285F4; --pill-bg: #e8f0fe;">
+              <span class="tool-dot"></span>
+              <span>カレンダー</span>
+            </div>
             <div class="tool-pill active" data-tool="slack-sent" data-setting="settingSlackSent" onclick="togglePill(this)" style="--pill-color: #4A154B; --pill-bg: #f8f0f8;">
               <span class="tool-dot"></span>
               <span>Slack送信</span>
@@ -2234,6 +2238,13 @@
           <div class="settings-section-content">
             <p style="font-size: 12px; color: #999; margin: 0 0 10px 0;">起動時のピルのON/OFF初期値を設定</p>
             <div class="settings-row">
+              <div><div class="settings-row-label">カレンダー</div></div>
+              <label class="settings-toggle">
+                <input type="checkbox" id="settingsDefaultCalendar" onchange="onSettingsDefaultChange()">
+                <span class="settings-toggle-slider"></span>
+              </label>
+            </div>
+            <div class="settings-row">
               <div><div class="settings-row-label">Slack送信</div></div>
               <label class="settings-toggle">
                 <input type="checkbox" id="settingsDefaultSlackSent" onchange="onSettingsDefaultChange()">
@@ -2313,6 +2324,11 @@
           <div class="settings-section-content">
             <button class="settings-btn" onclick="showBacklogKeyModal(); closeSettingsPanel();">&#128273; Backlog APIキー設定</button>
             <button class="settings-btn" onclick="reauthorizeSlack(); closeSettingsPanel();">&#128260; Slack再連携</button>
+            <div style="margin-top: 12px; padding: 10px; background: #f0f7ff; border-radius: 8px; font-size: 12px; color: #555; line-height: 1.6;">
+              <strong>&#128231; Gmail / &#128197; Googleカレンダー</strong><br>
+              ログイン中のGoogleアカウントのGmail・カレンダーが自動で取得されます。<br>
+              他のユーザーのデータは一切表示されません。
+            </div>
           </div>
         </div>
 
@@ -3482,6 +3498,7 @@
     function loadToolSettings() {
       google.script.run
         .withSuccessHandler(function(settings) {
+          setPillActive('settingCalendar', settings.calendar !== false);
           setPillActive('settingSlackSent', settings.slackSent !== false);
           setPillActive('settingSlackReceived', !!settings.slackReceived);
           setPillActive('settingGmail', settings.gmail !== false);
@@ -3501,6 +3518,7 @@
 
     function saveToolSettingsUI() {
       var settings = {
+        calendar: isPillActive('settingCalendar'),
         slackSent: isPillActive('settingSlackSent'),
         slackReceived: isPillActive('settingSlackReceived'),
         gmail: isPillActive('settingGmail'),
@@ -3579,6 +3597,7 @@
 
     function saveSortOrderSetting(order) {
       var settings = {
+        calendar: isPillActive('settingCalendar'),
         slackSent: isPillActive('settingSlackSent'),
         slackReceived: isPillActive('settingSlackReceived'),
         gmail: isPillActive('settingGmail'),
@@ -4573,6 +4592,8 @@
 
       // データ取得デフォルト（ピル初期値）
       var el;
+      el = document.getElementById('settingsDefaultCalendar');
+      if (el) el.checked = settings.defaultCalendar !== false;
       el = document.getElementById('settingsDefaultSlackSent');
       if (el) el.checked = settings.defaultSlackSent !== false;
       el = document.getElementById('settingsDefaultSlackReceived');
@@ -4613,6 +4634,7 @@
 
     function onSettingsDefaultChange() {
       var settings = {
+        defaultCalendar: document.getElementById('settingsDefaultCalendar').checked,
         defaultSlackSent: document.getElementById('settingsDefaultSlackSent').checked,
         defaultSlackReceived: document.getElementById('settingsDefaultSlackReceived').checked,
         defaultGmail: document.getElementById('settingsDefaultGmail').checked,
