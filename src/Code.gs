@@ -1584,15 +1584,14 @@ function saveUserBacklogApiKey(apiKey) {
 }
 
 /**
- * ユーザー別Backlog APIキーを取得（UserProperties優先、なければScriptProperties）
+ * ユーザー別Backlog APIキーを取得（UserPropertiesのみ）
+ * 共有キー（ScriptProperties）へのフォールバックは廃止。
+ * 他人のAPIキーで取得すると、その人のBacklogログが全員に表示されるため。
  * @returns {string} APIキー（未設定なら空文字）
  */
 function getUserBacklogApiKey() {
   try {
-    var userKey = PropertiesService.getUserProperties().getProperty(USER_PROPERTY_BACKLOG_API_KEY);
-    if (userKey) return userKey;
-    // フォールバック: ScriptPropertiesの共有キー（後方互換）
-    return PropertiesService.getScriptProperties().getProperty('BACKLOG_API_KEY') || '';
+    return PropertiesService.getUserProperties().getProperty(USER_PROPERTY_BACKLOG_API_KEY) || '';
   } catch (e) {
     Logger.log('getUserBacklogApiKey error: ' + e.message);
     return '';
@@ -1609,8 +1608,7 @@ function getBacklogKeyStatus() {
     var spaceUrl = props.getProperty('BACKLOG_SPACE_BASE_URL') || '';
     var userKey = PropertiesService.getUserProperties().getProperty(USER_PROPERTY_BACKLOG_API_KEY);
     if (userKey) return { hasKey: true, isUserKey: true, spaceUrl: spaceUrl };
-    var sharedKey = props.getProperty('BACKLOG_API_KEY');
-    if (sharedKey) return { hasKey: true, isUserKey: false, spaceUrl: spaceUrl };
+    // 共有キーは参照しない（他人のログが表示される問題を防止）
     return { hasKey: false, isUserKey: false, spaceUrl: spaceUrl };
   } catch (e) {
     return { hasKey: false, isUserKey: false, spaceUrl: '' };
