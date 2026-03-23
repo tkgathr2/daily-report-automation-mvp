@@ -675,6 +675,9 @@ function doGet(e) {
       return createAccessDeniedPage();
     }
 
+    // Backlog共有APIキーの自動削除（他人のデータ表示防止）
+    try { removeSharedBacklogApiKey(); } catch (ignore) {}
+
     // 通常表示
     return HtmlService.createHtmlOutputFromFile('Index')
       .setTitle('簡単日報君')
@@ -1585,43 +1588,36 @@ function saveUserBacklogApiKey(apiKey) {
 
 /**
  * ユーザー別Backlog APIキーを取得（UserPropertiesのみ）
- * ScriptPropertiesの共有キーは、現在のユーザーのものであれば自動移行する。
- * 他人のキーは移行しない（他人のBacklogログが表示される問題を防止）。
+ * 共有キー（ScriptProperties）は一切使用しない。
  * @returns {string} APIキー（未設定なら空文字）
  */
 function getUserBacklogApiKey() {
   try {
-    var userProps = PropertiesService.getUserProperties();
-    var userKey = userProps.getProperty(USER_PROPERTY_BACKLOG_API_KEY);
-    if (userKey) return userKey;
-
-    // 自動移行: ScriptPropertiesにキーがあれば、所有者チェックして移行
-    var scriptProps = PropertiesService.getScriptProperties();
-    var sharedKey = scriptProps.getProperty('BACKLOG_API_KEY');
-    if (sharedKey) {
-      try {
-        var baseUrl = scriptProps.getProperty('BACKLOG_SPACE_BASE_URL');
-        if (baseUrl) {
-          var myself = backlogApiGet_(
-            baseUrl + '/api/v2/users/myself?apiKey=' + encodeURIComponent(sharedKey)
-          );
-          var currentEmail = Session.getActiveUser().getEmail();
-          if (myself.mailAddress && currentEmail &&
-              myself.mailAddress.toLowerCase() === currentEmail.toLowerCase()) {
-            userProps.setProperty(USER_PROPERTY_BACKLOG_API_KEY, sharedKey);
-            Logger.log('Backlog APIキーを自動移行: ' + currentEmail);
-            return sharedKey;
-          }
-        }
-      } catch (migErr) {
-        Logger.log('Backlog APIキー自動移行スキップ: ' + migErr.message);
-      }
-    }
-
-    return '';
+    return PropertiesService.getUserProperties().getProperty(USER_PROPERTY_BACKLOG_API_KEY) || '';
   } catch (e) {
     Logger.log('getUserBacklogApiKey error: ' + e.message);
     return '';
+  }
+}
+
+/**
+ * ScriptPropertiesからBacklog共有APIキーを削除する（一度だけ実行）
+ * 共有キーが残っていると旧バージョンのコードで他人のデータが表示される可能性がある
+ */
+function removeSharedBacklogApiKey() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var sharedKey = props.getProperty('BACKLOG_API_KEY');
+    if (sharedKey) {
+      props.deleteProperty('BACKLOG_API_KEY');
+      Logger.log('ScriptPropertiesからBACKLOG_API_KEYを削除しました');
+      return true;
+    }
+    Logger.log('BACKLOG_API_KEYは既に削除されています');
+    return false;
+  } catch (e) {
+    Logger.log('removeSharedBacklogApiKey error: ' + e.message);
+    return false;
   }
 }
 
