@@ -1585,13 +1585,40 @@ function saveUserBacklogApiKey(apiKey) {
 
 /**
  * ユーザー別Backlog APIキーを取得（UserPropertiesのみ）
- * 共有キー（ScriptProperties）へのフォールバックは廃止。
- * 他人のAPIキーで取得すると、その人のBacklogログが全員に表示されるため。
+ * ScriptPropertiesの共有キーは、現在のユーザーのものであれば自動移行する。
+ * 他人のキーは移行しない（他人のBacklogログが表示される問題を防止）。
  * @returns {string} APIキー（未設定なら空文字）
  */
 function getUserBacklogApiKey() {
   try {
-    return PropertiesService.getUserProperties().getProperty(USER_PROPERTY_BACKLOG_API_KEY) || '';
+    var userProps = PropertiesService.getUserProperties();
+    var userKey = userProps.getProperty(USER_PROPERTY_BACKLOG_API_KEY);
+    if (userKey) return userKey;
+
+    // 自動移行: ScriptPropertiesにキーがあれば、所有者チェックして移行
+    var scriptProps = PropertiesService.getScriptProperties();
+    var sharedKey = scriptProps.getProperty('BACKLOG_API_KEY');
+    if (sharedKey) {
+      try {
+        var baseUrl = scriptProps.getProperty('BACKLOG_SPACE_BASE_URL');
+        if (baseUrl) {
+          var myself = backlogApiGet_(
+            baseUrl + '/api/v2/users/myself?apiKey=' + encodeURIComponent(sharedKey)
+          );
+          var currentEmail = Session.getActiveUser().getEmail();
+          if (myself.mailAddress && currentEmail &&
+              myself.mailAddress.toLowerCase() === currentEmail.toLowerCase()) {
+            userProps.setProperty(USER_PROPERTY_BACKLOG_API_KEY, sharedKey);
+            Logger.log('Backlog APIキーを自動移行: ' + currentEmail);
+            return sharedKey;
+          }
+        }
+      } catch (migErr) {
+        Logger.log('Backlog APIキー自動移行スキップ: ' + migErr.message);
+      }
+    }
+
+    return '';
   } catch (e) {
     Logger.log('getUserBacklogApiKey error: ' + e.message);
     return '';
