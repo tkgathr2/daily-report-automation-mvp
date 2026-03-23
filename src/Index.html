@@ -5163,6 +5163,12 @@
       if (text.indexOf('[Gmail]') !== -1) {
         buttons.push('<button onclick="reauthorizeGmail()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #EA4335; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;">&#9993; Gmail再認証する</button>');
       }
+      if (text.indexOf('[Backlog]') !== -1) {
+        buttons.push('<button onclick="showBacklogKeyModal()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #42CE9F; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;">&#128273; Backlog APIキー設定</button>');
+      }
+      if (text.indexOf('[カレンダー]') !== -1) {
+        buttons.push('<button onclick="openSettingsPanel()" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: #4285F4; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;">&#9881; 設定を確認</button>');
+      }
       if (buttons.length > 0) {
         html += '<div style="display: flex; gap: 8px; flex-wrap: wrap;">' + buttons.join('') + '</div>';
       }
@@ -5188,7 +5194,7 @@
 
     function showMessage(text, isError) {
       const messageElement = document.getElementById('message');
-      var hasActionButton = isError && (text.indexOf('[Slack]') !== -1 || text.indexOf('[Gmail]') !== -1);
+      var hasActionButton = isError && (text.indexOf('[Slack]') !== -1 || text.indexOf('[Gmail]') !== -1 || text.indexOf('[Backlog]') !== -1 || text.indexOf('[カレンダー]') !== -1);
       if (hasActionButton) {
         messageElement.innerHTML = buildErrorHtml(text);
       } else {
