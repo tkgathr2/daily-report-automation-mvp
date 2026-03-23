@@ -1545,7 +1545,7 @@ function getToolSettings() {
       .getProperty(USER_PROPERTY_TOOL_SETTINGS);
 
     if (!dataStr) {
-      return { slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false, sortOrder: 'category' };
+      return { calendar: true, slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false, sortOrder: 'category' };
     }
 
     const parsed = JSON.parse(dataStr);
@@ -1553,6 +1553,7 @@ function getToolSettings() {
     var slackSent = parsed.slackSent !== undefined ? !!parsed.slackSent : (parsed.slack !== false);
     var slackReceived = !!parsed.slackReceived;
     return {
+      calendar: parsed.calendar !== false,
       slackSent: slackSent,
       slackReceived: slackReceived,
       gmail: parsed.gmail !== false,
@@ -1562,7 +1563,7 @@ function getToolSettings() {
     };
   } catch (e) {
     Logger.log('getToolSettings error: ' + e.message);
-    return { slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false, sortOrder: 'category' };
+    return { calendar: true, slackSent: true, slackReceived: false, gmail: true, gmailReceived: false, backlog: false, sortOrder: 'category' };
   }
 }
 
@@ -2097,13 +2098,15 @@ function getAllToolHistoryV3(dateString) {
 
   const settings = getToolSettings();
 
-  // カレンダー予定取得（日付指定対応）
-  try {
-    result.calendar = getEventsForDate(dateString);
-  } catch (e) {
-    Logger.log('カレンダー取得エラー: ' + e.message);
-    result.calendar = '';
-    result.errors.push('[カレンダー] ' + e.message);
+  // カレンダー予定取得（日付指定対応）— 設定がONの場合のみ
+  if (settings.calendar !== false) {
+    try {
+      result.calendar = getEventsForDate(dateString);
+    } catch (e) {
+      Logger.log('カレンダー取得エラー: ' + e.message);
+      result.calendar = '';
+      result.errors.push('[カレンダー] ' + e.message);
+    }
   }
 
   // Slack履歴（日付指定対応）— 送信・受信を個別制御
