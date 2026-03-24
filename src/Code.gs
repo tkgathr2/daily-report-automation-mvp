@@ -1987,6 +1987,8 @@ function getGmailHistory(includeSent, includeReceived, dateString) {
     } else {
       targetDate = new Date();
     }
+    // 対象日のJST 00:00:00 〜 23:59:59 の範囲を計算
+    const targetDateStr = Utilities.formatDate(targetDate, TIMEZONE, 'yyyy-MM-dd');
     // after:は指定日を除外するため、前日を指定して対象日のメールを取得
     const yesterday = new Date(targetDate.getTime() - 24 * 60 * 60 * 1000);
     const dateStr = Utilities.formatDate(yesterday, TIMEZONE, 'yyyy/MM/dd');
@@ -1998,13 +2000,16 @@ function getGmailHistory(includeSent, includeReceived, dateString) {
 
     // 送信メール（最大20件に制限して高速化）
     if (includeSent) {
-    const sentQuery = 'in:sent after:' + dateStr + (dateString ? ' before:' + nextDayStr : '');
+    const sentQuery = 'in:sent after:' + dateStr + ' before:' + nextDayStr;
     const sentThreads = GmailApp.search(sentQuery, 0, 20);
 
     for (let i = 0; i < sentThreads.length && items.length < MAX_ITEMS_PER_TOOL; i++) {
       const messages = sentThreads[i].getMessages();
       const lastMessage = messages[messages.length - 1];
       const date = lastMessage.getDate();
+      // JST日付でフィルタ（前日夜のメールを除外）
+      const msgDateStr = Utilities.formatDate(date, TIMEZONE, 'yyyy-MM-dd');
+      if (msgDateStr !== targetDateStr) continue;
       let subject = lastMessage.getSubject() || '(件名なし)';
       let body = lastMessage.getPlainBody() || '';
       let to = lastMessage.getTo() || '';
@@ -2033,13 +2038,16 @@ function getGmailHistory(includeSent, includeReceived, dateString) {
 
     // 受信メール（設定がONの場合のみ）
     if (includeReceived) {
-      const receivedQuery = 'in:inbox after:' + dateStr + (dateString ? ' before:' + nextDayStr : '') + ' -in:sent';
+      const receivedQuery = 'in:inbox after:' + dateStr + ' before:' + nextDayStr + ' -in:sent';
       const receivedThreads = GmailApp.search(receivedQuery, 0, 20);
 
       for (let j = 0; j < receivedThreads.length && items.length < MAX_ITEMS_PER_TOOL; j++) {
         const rMessages = receivedThreads[j].getMessages();
         const rLastMessage = rMessages[rMessages.length - 1];
         const rDate = rLastMessage.getDate();
+        // JST日付でフィルタ（前日夜のメールを除外）
+        const rMsgDateStr = Utilities.formatDate(rDate, TIMEZONE, 'yyyy-MM-dd');
+        if (rMsgDateStr !== targetDateStr) continue;
         let rSubject = rLastMessage.getSubject() || '(件名なし)';
         let rFrom = rLastMessage.getFrom() || '';
         let rBody = rLastMessage.getPlainBody() || '';
