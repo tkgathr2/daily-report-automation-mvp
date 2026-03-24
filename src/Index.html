@@ -1965,16 +1965,9 @@
 
     <!-- 今日やったこと -->
     <div class="section textarea-container">
-      <div class="section-title" style="display: flex; flex-direction: column; gap: 6px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>【今日やったこと】</span>
-          <div style="display: flex; align-items: center; gap: 4px;">
-            <button id="loadCalendarBtn" onclick="loadEventsForSelectedDate()" style="background: #27ae60; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;">取得</button>
-            <button id="sortByTimeBtn" onclick="applySortOrder('time')" style="background: #95a5a6; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" title="全エントリを時間順にソート">時間ソート</button>
-            <button id="sortByCategoryBtn" onclick="applySortOrder('category')" style="background: #3498db; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" title="カテゴリ別にソート">カテゴリソート</button>
-          </div>
-        </div>
-        <div class="tool-pills" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+      <div class="section-title" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+        <span style="white-space: nowrap;">【今日やったこと】</span>
+        <div class="tool-pills" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap; flex: 1;">
           <div class="tool-pill active" data-tool="calendar" data-setting="settingCalendar" onclick="togglePill(this)" style="--pill-color: #4285F4; --pill-bg: #e8f0fe;">
             <span class="tool-dot"></span>
             <span>カレンダー</span>
@@ -1999,6 +1992,11 @@
             <span class="tool-dot"></span>
             <span>Backlog</span>
           </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px; margin-left: auto;">
+          <button id="loadCalendarBtn" onclick="loadEventsForSelectedDate()" style="background: #27ae60; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;">取得</button>
+          <button id="sortByTimeBtn" onclick="applySortOrder('time')" style="background: #95a5a6; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" title="全エントリを時間順にソート">時間ソート</button>
+          <button id="sortByCategoryBtn" onclick="applySortOrder('category')" style="background: #3498db; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s;" title="カテゴリ別にソート">カテゴリソート</button>
         </div>
       </div>
       <div class="textarea-with-toolbar">
