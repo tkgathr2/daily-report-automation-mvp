@@ -906,6 +906,12 @@ function getSlackAuthorizeUrl() {
     state: state
   };
 
+  // ワークスペースを自動選択（Script Propertiesに保存済みのteam IDを使用）
+  const teamId = PropertiesService.getScriptProperties().getProperty('SLACK_TEAM_ID') || '';
+  if (teamId) {
+    params.team = teamId;
+  }
+
   return 'https://slack.com/oauth/v2/authorize?' + toQueryString_(params);
 }
 
@@ -1029,6 +1035,11 @@ function handleSlackOAuthCallback_(e) {
     }
 
     saveSlackUserToken_(userToken, slackUserId, teamId);
+
+    // team IDをScript Properties（共有）にも保存（次回以降の全ユーザーのOAuthでワークスペース自動選択に使用）
+    if (teamId) {
+      PropertiesService.getScriptProperties().setProperty('SLACK_TEAM_ID', teamId);
+    }
 
     var tokenPrefix = userToken.substring(0, 5);
     return HtmlService.createHtmlOutput(
