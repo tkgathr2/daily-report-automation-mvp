@@ -1693,71 +1693,126 @@ function summarizeWithAI_(prompt) {
 }
 
 function callClaudeAPI_(prompt, apiKey) {
-  try {
-    const payload = {
-      model: CLAUDE_MODEL,
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: prompt }]
-    };
-    const res = UrlFetchApp.fetch(CLAUDE_API_URL, {
-      method: 'post',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
-      },
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    });
-    const statusCode = res.getResponseCode();
-    const json = JSON.parse(res.getContentText());
-    if (statusCode === 429) {
-      return { text: '', error: 'Claude APIレート制限' };
+  var maxAttempts = 2; // 429（瞬間的なレート制限）に対する軽いリトライ
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const payload = {
+        model: CLAUDE_MODEL,
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }]
+      };
+      const res = UrlFetchApp.fetch(CLAUDE_API_URL, {
+        method: 'post',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+      const statusCode = res.getResponseCode();
+      const json = JSON.parse(res.getContentText());
+      if (statusCode === 429) {
+        if (attempt < maxAttempts) { Utilities.sleep(1200); continue; }
+        return { text: '', error: 'Claude APIレート制限' };
+      }
+      if (statusCode >= 400) {
+        var errMsg = (json.error && json.error.message) ? json.error.message : 'HTTP ' + statusCode;
+        return { text: '', error: 'Claude API: ' + errMsg };
+      }
+      if (json.content && json.content[0] && json.content[0].text) {
+        Logger.log('Claude APIで要約成功');
+        return { text: json.content[0].text, error: '' };
+      }
+      return { text: '', error: 'Claude応答パース失敗' };
+    } catch (e) {
+      return { text: '', error: 'Claude API: ' + e.message };
     }
-    if (statusCode >= 400) {
-      var errMsg = (json.error && json.error.message) ? json.error.message : 'HTTP ' + statusCode;
-      return { text: '', error: 'Claude API: ' + errMsg };
-    }
-    if (json.content && json.content[0] && json.content[0].text) {
-      Logger.log('Claude APIで要約成功');
-      return { text: json.content[0].text, error: '' };
-    }
-    return { text: '', error: 'Claude応答パース失敗' };
-  } catch (e) {
-    return { text: '', error: 'Claude API: ' + e.message };
   }
+  return { text: '', error: 'Claude APIレート制限' };
 }
 
 function callGeminiAPI_(prompt, apiKey) {
-  try {
-    const url = GEMINI_API_URL + GEMINI_MODEL + ':generateContent?key=' + apiKey;
-    const payload = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
-    };
-    const res = UrlFetchApp.fetch(url, {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    });
-    const statusCode = res.getResponseCode();
-    const json = JSON.parse(res.getContentText());
-    if (statusCode === 429) {
-      return { text: '', error: 'AI要約: API利用上限に達しました。しばらく待ってから再試行してください。' };
+  var maxAttempts = 2; // 429（瞬間的なレート制限）に対する軽いリトライ
+  for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const url = GEMINI_API_URL + GEMINI_MODEL + ':generateContent?key=' + apiKey;
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
+      };
+      const res = UrlFetchApp.fetch(url, {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+      const statusCode = res.getResponseCode();
+      const json = JSON.parse(res.getContentText());
+      if (statusCode === 429) {
+        if (attempt < maxAttempts) { Utilities.sleep(1200); continue; }
+        return { text: '', error: 'AI要約: API利用上限に達しました。しばらく待ってから再試行してください。' };
+      }
+      if (statusCode >= 400) {
+        var errMsg = (json.error && json.error.message) ? json.error.message : 'HTTP ' + statusCode;
+        return { text: '', error: 'Gemini API: ' + errMsg };
+      }
+      if (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) {
+        Logger.log('Gemini APIで要約成功');
+        return { text: json.candidates[0].content.parts[0].text || '', error: '' };
+      }
+      return { text: '', error: 'Gemini応答パース失敗' };
+    } catch (e) {
+      return { text: '', error: 'Gemini API: ' + e.message };
     }
-    if (statusCode >= 400) {
-      var errMsg = (json.error && json.error.message) ? json.error.message : 'HTTP ' + statusCode;
-      return { text: '', error: 'Gemini API: ' + errMsg };
-    }
-    if (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) {
-      Logger.log('Gemini APIで要約成功');
-      return { text: json.candidates[0].content.parts[0].text || '', error: '' };
-    }
-    return { text: '', error: 'Gemini応答パース失敗' };
-  } catch (e) {
-    return { text: '', error: 'Gemini API: ' + e.message };
   }
+  return { text: '', error: 'AI要約: API利用上限に達しました。しばらく待ってから再試行してください。' };
+}
+
+/**
+ * AI要約が使えないとき（APIキー未設定・利用上限・障害）の代替要約。
+ * 生テキストをチャンネル/宛先ごとにグルーピングし、AI要約と同じ
+ * 「見出し / ・HH:mm~ 内容」フォーマットで返す。これにより日報が
+ * 外部LLMの状態に依存して空になることを防ぐ。
+ * @param {Array} rawTexts - [{time, direction, channel, text}]
+ * @returns {string} グルーピング済みテキスト（失敗時は空文字）
+ */
+function buildFallbackSummary_(rawTexts) {
+  if (!rawTexts || rawTexts.length === 0) return '';
+  var groups = {};
+  var order = [];
+  for (var i = 0; i < rawTexts.length; i++) {
+    var item = rawTexts[i] || {};
+    var key = (item.channel && String(item.channel).trim())
+      ? String(item.channel).trim()
+      : ('[' + (item.direction || '記録') + ']');
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(item);
+  }
+  var out = [];
+  var MAX_GROUPS = 8;
+  var MAX_ITEMS = 8;
+  for (var g = 0; g < order.length && g < MAX_GROUPS; g++) {
+    var key2 = order[g];
+    var items = groups[key2];
+    var bullets = [];
+    for (var j = 0; j < items.length && bullets.length < MAX_ITEMS; j++) {
+      var it = items[j];
+      var text = (it.text || '').replace(/\s+/g, ' ').trim();
+      if (!text) continue;
+      if (text.length > 60) text = text.substring(0, 60) + '…';
+      var timeStr = it.time ? (it.time + '~ ') : '';
+      var dir = it.direction ? ('[' + it.direction + '] ') : '';
+      bullets.push('・' + timeStr + dir + text);
+    }
+    if (bullets.length === 0) continue;
+    out.push(key2);
+    for (var b = 0; b < bullets.length; b++) out.push(bullets[b]);
+    out.push('');
+  }
+  while (out.length > 0 && out[out.length - 1] === '') out.pop();
+  return out.join('\n');
 }
 
 /**
@@ -1793,9 +1848,21 @@ function generateTaskSummary_(rawTexts, toolName) {
     + '【' + toolName + '履歴】\n' + dataLines;
 
   var aiResult = summarizeWithAI_(prompt);
-  if (aiResult.error) return { text: '', error: aiResult.error };
+  // AI要約が失敗（APIキー未設定・利用上限・障害等）しても日報のデータを失わないよう、
+  // 機械的グルーピング（チャンネル/宛先ごと）で代替し、UIには通常どおり内容を表示する。
+  if (aiResult.error || !aiResult.text) {
+    var fallback = buildFallbackSummary_(rawTexts);
+    if (fallback) {
+      Logger.log(toolName + ' AI要約フォールバック（機械グルーピング）使用: ' + (aiResult.error || '空応答'));
+      return { text: fallback, error: '' };
+    }
+    return { text: '', error: aiResult.error || '' };
+  }
   var summary = aiResult.text;
-  if (!summary) return { text: '', error: '' };
+  if (!summary) {
+    var fb2 = buildFallbackSummary_(rawTexts);
+    return { text: fb2 || '', error: '' };
+  }
 
   // グループ構造を保持した後処理 + フォールバック
   var lines = summary.split('\n');
