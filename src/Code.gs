@@ -42,7 +42,7 @@ const MAX_ITEMS_PER_TOOL = 50;
 
 // AI要約定数（Claude優先、Geminiフォールバック）
 const PROPERTY_ANTHROPIC_API_KEY = 'ANTHROPIC_API_KEY';
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_MODEL = 'claude-sonnet-4-6';
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 const PROPERTY_GEMINI_API_KEY = 'GEMINI_API_KEY';
 const GEMINI_MODEL = 'gemini-2.0-flash';
