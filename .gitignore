@@ -1,0 +1,19 @@
+# 環境変数・秘匿情報（誤コミット防止）
+.env
+.env.*
+!.env.example
+
+# clasp（Google Apps Script）の OAuth 認証情報
+# scriptId/projectId のみの .clasp.json は追跡してよいが、
+# 認証トークンを含む .clasprc.json は絶対にコミットしない
+.clasprc.json
+
+# 依存・ビルド成果物
+node_modules/
+dist/
+build/
+
+# ログ・一時ファイル
+*.log
+npm-debug.log*
+.DS_Store
